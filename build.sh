@@ -49,6 +49,9 @@ cp -r includes "${BUILD_DIR}/${PLUGIN_SLUG}/"
 # Copy admin directory
 cp -r admin "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
+# Copy public directory
+cp -r public "${BUILD_DIR}/${PLUGIN_SLUG}/"
+
 # Create languages directory (even if empty, for i18n readiness)
 mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/languages"
 

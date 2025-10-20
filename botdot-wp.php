@@ -3,7 +3,7 @@
  * Plugin Name: BotDot WordPress
  * Plugin URI: https://botdot.ai
  * Description: Server-side JSON-LD injection from mirror domain for AI discoverability. Fetches and injects JSON-LD from a configurable mirror domain into page headers.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: BotDot Team
  * Author URI: https://botdot.ai
  * License: GPL v2 or later
@@ -33,7 +33,7 @@ if (!defined('ABSPATH')) {
  * Plugin version.
  * Start at version 0.1.0 and use SemVer - https://semver.org
  */
-define('BOTDOT_WP_VERSION', '0.1.0');
+define('BOTDOT_WP_VERSION', '0.2.0');
 
 /**
  * Plugin file path
