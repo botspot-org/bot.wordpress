@@ -1,7 +1,7 @@
 /**
  * BotDot WP Appendix Styles
  *
- * Minimal structural CSS - most styling inherited from theme
+ * Inherits theme styles while providing clean structural CSS
  *
  * @package BotDot_WP
  * @version 0.2.0
@@ -9,37 +9,88 @@
 
 /* Main appendix container */
 .botdot-appendix {
-    margin-top: 2em;
-    margin-bottom: 2em;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    clear: both;
 }
 
 /* Details/Summary accordion */
 .botdot-appendix-details {
-    border: 1px solid currentColor;
-    border-radius: 4px;
+    background-color: var(--wp--preset--color--background, rgba(0, 0, 0, 0.02));
+    border: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.1));
+    border-radius: 6px;
     padding: 0;
-    opacity: 0.9;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.botdot-appendix-details:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.botdot-appendix-details[open] {
+    background-color: var(--wp--preset--color--background, #fff);
 }
 
 .botdot-appendix-summary {
-    padding: 1em;
+    padding: 1.25rem 1.5rem;
     cursor: pointer;
     font-weight: 600;
+    font-size: 1.1em;
     user-select: none;
+    list-style: none;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.botdot-appendix-summary::-webkit-details-marker {
+    display: none;
+}
+
+.botdot-appendix-summary::before {
+    content: '▶';
+    position: absolute;
+    left: 1rem;
+    transition: transform 0.2s ease;
+    opacity: 0.6;
+}
+
+.botdot-appendix-details[open] .botdot-appendix-summary::before {
+    transform: rotate(90deg);
 }
 
 .botdot-appendix-summary:hover {
-    opacity: 0.8;
+    background-color: var(--wp--preset--color--foreground, rgba(0, 0, 0, 0.03));
+}
+
+.botdot-appendix-title {
+    padding-left: 1.5rem;
 }
 
 .botdot-appendix-content {
-    padding: 1em;
-    border-top: 1px solid currentColor;
+    padding: 1.5rem;
+    border-top: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.1));
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Appendix items */
 .botdot-appendix-item {
-    margin-bottom: 1.5em;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: var(--wp--preset--color--background, rgba(0, 0, 0, 0.01));
+    border-radius: 4px;
+    border-left: 3px solid var(--wp--preset--color--primary, #0073aa);
 }
 
 .botdot-appendix-item:last-child {
@@ -48,71 +99,158 @@
 
 .botdot-appendix-item-type {
     margin-top: 0;
-    margin-bottom: 0.5em;
+    margin-bottom: 0.75rem;
     font-size: 1.1em;
+    font-weight: 700;
+    color: var(--wp--preset--color--primary, #0073aa);
+    text-transform: capitalize;
 }
 
 /* Properties list */
 .botdot-appendix-properties {
     margin: 0;
+    display: grid;
+    grid-template-columns: minmax(120px, auto) 1fr;
+    gap: 0.75rem 1.5rem;
 }
 
 .botdot-appendix-properties dt {
     font-weight: 600;
-    margin-top: 0.5em;
+    color: var(--wp--preset--color--foreground, #333);
+    align-self: start;
+    padding-top: 0.25rem;
 }
 
 .botdot-appendix-properties dd {
-    margin-left: 1.5em;
-    margin-bottom: 0.5em;
+    margin: 0;
+    color: var(--wp--preset--color--foreground, #666);
+    word-break: break-word;
+}
+
+/* Mobile: stack properties vertically */
+@media (max-width: 640px) {
+    .botdot-appendix-properties {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .botdot-appendix-properties dt {
+        font-size: 0.9em;
+        margin-bottom: -0.25rem;
+    }
 }
 
 /* Nested content */
 .botdot-appendix-nested {
-    margin-left: 1em;
-    padding-left: 1em;
-    border-left: 2px solid currentColor;
-    opacity: 0.9;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    padding-left: 1rem;
+    border-left: 3px solid var(--wp--preset--color--secondary, rgba(0, 0, 0, 0.15));
+    background-color: var(--wp--preset--color--background, rgba(0, 0, 0, 0.02));
+    border-radius: 3px;
 }
 
 /* Lists */
 .botdot-appendix-list {
-    margin: 0.5em 0;
-    padding-left: 1.5em;
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+    list-style-type: circle;
+}
+
+.botdot-appendix-list li {
+    margin-bottom: 0.25rem;
 }
 
 /* Links */
 .botdot-appendix-link {
     word-break: break-all;
+    color: var(--wp--preset--color--link, #0073aa);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    transition: all 0.2s ease;
+}
+
+.botdot-appendix-link:hover {
+    text-decoration-style: solid;
+    opacity: 0.8;
 }
 
 /* Metadata */
 .botdot-appendix-metadata {
-    margin-top: 1.5em;
-    padding-top: 1em;
-    border-top: 1px solid currentColor;
-    opacity: 0.7;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.1));
+    text-align: right;
+}
+
+.botdot-appendix-meta-text {
+    color: var(--wp--preset--color--foreground, #666);
+    font-size: 0.85em;
+    font-style: italic;
 }
 
 /* Generic data */
+.botdot-appendix-data {
+    display: grid;
+    grid-template-columns: minmax(120px, auto) 1fr;
+    gap: 0.75rem 1.5rem;
+}
+
 .botdot-appendix-data dt {
     font-weight: 600;
-    margin-top: 0.5em;
+    color: var(--wp--preset--color--foreground, #333);
 }
 
 .botdot-appendix-data dd {
-    margin-left: 1.5em;
-    margin-bottom: 0.5em;
+    margin: 0;
+    color: var(--wp--preset--color--foreground, #666);
+}
+
+@media (max-width: 640px) {
+    .botdot-appendix-data {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
 }
 
 /* Text content */
 .botdot-appendix-text {
-    line-height: 1.6;
+    line-height: 1.7;
+    color: var(--wp--preset--color--foreground, #444);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .botdot-appendix-details {
+        background-color: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .botdot-appendix-details[open] {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .botdot-appendix-summary:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .botdot-appendix-item {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
 }
 
 /* Print styles */
 @media print {
     .botdot-appendix-details[open] .botdot-appendix-content {
         display: block;
+    }
+
+    .botdot-appendix-summary::before {
+        display: none;
+    }
+
+    .botdot-appendix-details {
+        border: 1px solid #ccc;
+        page-break-inside: avoid;
     }
 }

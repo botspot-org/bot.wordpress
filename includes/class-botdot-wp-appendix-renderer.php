@@ -28,6 +28,121 @@ if (!defined('WPINC')) {
 class BotDot_WP_Appendix_Renderer {
 
     /**
+     * Detected theme FAQ/accordion classes
+     *
+     * @since    0.2.0
+     * @access   private
+     * @var      array|null    $theme_classes    Cached theme classes.
+     */
+    private static $theme_classes = null;
+
+    /**
+     * Detect theme's FAQ/accordion structure
+     *
+     * @since    0.2.0
+     * @return   array    Array of theme-specific classes.
+     */
+    private static function detect_theme_classes() {
+        if (self::$theme_classes !== null) {
+            return self::$theme_classes;
+        }
+
+        $classes = array(
+            'wrapper' => 'botdot-appendix',
+            'details' => 'botdot-appendix-details',
+            'summary' => 'botdot-appendix-summary',
+            'title' => 'botdot-appendix-title',
+            'content' => 'botdot-appendix-content',
+        );
+
+        // Get current theme
+        $theme = wp_get_theme();
+        $theme_name = $theme->get('Name');
+        $theme_template = $theme->get_template();
+
+        // Common theme patterns
+        $theme_patterns = array(
+            // Divi
+            'Divi' => array(
+                'wrapper' => 'et_pb_toggle',
+                'details' => 'et_pb_toggle_content',
+                'summary' => 'et_pb_toggle_title',
+                'title' => 'et_pb_toggle_heading',
+                'content' => 'et_pb_toggle_content',
+            ),
+            // Avada
+            'Avada' => array(
+                'wrapper' => 'fusion-accordian',
+                'details' => 'fusion-panel',
+                'summary' => 'panel-title',
+                'title' => 'fusion-toggle-heading',
+                'content' => 'panel-body',
+            ),
+            // Astra
+            'Astra' => array(
+                'wrapper' => 'ast-accordion',
+                'details' => 'ast-accordion-item',
+                'summary' => 'ast-accordion-header',
+                'title' => 'ast-accordion-title',
+                'content' => 'ast-accordion-content',
+            ),
+            // GeneratePress
+            'GeneratePress' => array(
+                'wrapper' => 'accordion-container',
+                'details' => 'accordion-item',
+                'summary' => 'accordion-title',
+                'title' => 'accordion-heading',
+                'content' => 'accordion-content',
+            ),
+            // OceanWP
+            'OceanWP' => array(
+                'wrapper' => 'oceanwp-accordion',
+                'details' => 'oceanwp-accordion-item',
+                'summary' => 'oceanwp-accordion-title',
+                'title' => 'accordion-heading',
+                'content' => 'oceanwp-accordion-content',
+            ),
+        );
+
+        // Check if theme has a known pattern
+        foreach ($theme_patterns as $pattern_name => $pattern_classes) {
+            if (stripos($theme_name, $pattern_name) !== false || stripos($theme_template, $pattern_name) !== false) {
+                $classes = array_merge($classes, $pattern_classes);
+                break;
+            }
+        }
+
+        // Allow filtering for custom themes
+        $classes = apply_filters('botdot_wp_theme_classes', $classes, $theme_name, $theme_template);
+
+        self::$theme_classes = $classes;
+        return $classes;
+    }
+
+    /**
+     * Check if theme uses a specific accordion plugin
+     *
+     * @since    0.2.0
+     * @return   string|false    Plugin identifier or false.
+     */
+    private static function detect_accordion_plugin() {
+        // Check for popular accordion plugins
+        $plugins = array(
+            'elementor' => class_exists('\\Elementor\\Plugin'),
+            'wpbakery' => class_exists('Vc_Manager'),
+            'gutenberg-blocks' => function_exists('register_block_type'),
+        );
+
+        foreach ($plugins as $plugin => $active) {
+            if ($active) {
+                return $plugin;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Render appendix as accordion HTML
      *
      * @since    0.2.0
@@ -45,6 +160,7 @@ class BotDot_WP_Appendix_Renderer {
             'title' => BotDot_WP_Options::get('appendix_title', 'AI Appendix'),
             'open' => BotDot_WP_Options::get('appendix_open_default', false),
             'show_metadata' => true,
+            'use_theme_classes' => true,
         );
 
         $args = wp_parse_args($args, $defaults);
@@ -52,18 +168,27 @@ class BotDot_WP_Appendix_Renderer {
         // Apply filter to allow customization
         $args = apply_filters('botdot_wp_appendix_args', $args, $appendix_data);
 
+        // Get theme classes if enabled
+        $theme_classes = $args['use_theme_classes'] ? self::detect_theme_classes() : array(
+            'wrapper' => 'botdot-appendix',
+            'details' => 'botdot-appendix-details',
+            'summary' => 'botdot-appendix-summary',
+            'title' => 'botdot-appendix-title',
+            'content' => 'botdot-appendix-content',
+        );
+
         // Start output buffering
         ob_start();
 
         ?>
         <!-- BotDot WP Appendix Start -->
-        <aside class="botdot-appendix" id="botdot-appendix">
-            <details class="botdot-appendix-details" <?php echo $args['open'] ? 'open' : ''; ?>>
-                <summary class="botdot-appendix-summary">
-                    <span class="botdot-appendix-title"><?php echo esc_html($args['title']); ?></span>
+        <aside class="<?php echo esc_attr($theme_classes['wrapper']); ?> botdot-appendix" id="botdot-appendix" role="complementary" aria-label="<?php echo esc_attr($args['title']); ?>">
+            <details class="<?php echo esc_attr($theme_classes['details']); ?> botdot-appendix-details" <?php echo $args['open'] ? 'open' : ''; ?>>
+                <summary class="<?php echo esc_attr($theme_classes['summary']); ?> botdot-appendix-summary" role="button" aria-expanded="<?php echo $args['open'] ? 'true' : 'false'; ?>">
+                    <span class="<?php echo esc_attr($theme_classes['title']); ?> botdot-appendix-title"><?php echo esc_html($args['title']); ?></span>
                 </summary>
 
-                <div class="botdot-appendix-content">
+                <div class="<?php echo esc_attr($theme_classes['content']); ?> botdot-appendix-content">
                     <?php echo self::render_content($appendix_data, $args); ?>
                 </div>
             </details>
