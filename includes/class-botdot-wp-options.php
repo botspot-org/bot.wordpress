@@ -219,12 +219,12 @@ class BotDot_WP_Options {
      * Sanitize option value before saving
      *
      * @since    0.1.0
-     * @access   private
+     * @access   public
      * @param    string    $option_name    The option name.
      * @param    mixed     $value          The option value.
      * @return   mixed                     The sanitized value.
      */
-    private static function sanitize_option_value($option_name, $value) {
+    public static function sanitize_option_value($option_name, $value) {
         switch ($option_name) {
             case 'mirror_domain':
                 // Remove http/https and trailing slash

@@ -117,6 +117,88 @@ GPL v2 or later
 
 For issues and questions, please use the GitHub issue tracker.
 
+## Debugging
+
+If you encounter a fatal error during activation, the plugin now provides detailed error messages:
+
+### Check WordPress Error Log
+
+The plugin logs all errors to your WordPress debug log. To enable it, add these lines to your `wp-config.php`:
+
+```php
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+define('WP_DEBUG_DISPLAY', false);
+```
+
+Error log location: `wp-content/debug.log`
+
+### Pre-Activation Check
+
+Before installing, you can validate the plugin files:
+
+```bash
+./debug-check.sh
+```
+
+This will check:
+- PHP syntax errors
+- File structure
+- Class dependencies
+- Common issues
+
+### Common Issues
+
+1. **Fatal error on activation**: Usually means a required class wasn't loaded
+   - Check `wp-content/debug.log` for details
+   - Run `./debug-check.sh` to verify files
+
+2. **White screen**: PHP fatal error
+   - Enable WP_DEBUG_LOG in wp-config.php
+   - Check error log
+
+3. **Plugin deactivates immediately**: Requirements not met
+   - Check PHP version (7.4+)
+   - Check for required extensions (curl, json)
+
+## Development & Testing
+
+### Test Server
+
+A test server is included for local development and testing:
+
+```bash
+# Quick start (installs dependencies and starts server)
+./run-test-server.sh
+
+# Or manually
+pip install -r requirements.txt
+python3 test-server.py
+```
+
+The test server runs on `http://localhost:5000` and serves random JSON-LD at any path:
+
+- Request `http://localhost:5000/blog/my-post.json` to get JSON-LD
+- Request `http://localhost:5000/blog/my-post` to get the appendix
+
+Configure your plugin to use `localhost:5000` as the mirror domain for testing.
+
+### Testing the Plugin
+
+1. Start the test server: `./run-test-server.sh`
+2. In WordPress, configure mirror domain: `localhost:5000`
+3. Enable the plugin
+4. Visit any page/post on your WordPress site
+5. View page source to see injected JSON-LD
+
+### Building the Plugin
+
+```bash
+./build.sh
+```
+
+This creates a distributable zip file in `dist/botdot-wp-{version}.zip`
+
 ## Credits
 
 Developed by the BotDot Team

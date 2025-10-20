@@ -60,6 +60,12 @@ find "${BUILD_DIR}" -name ".git*" -delete
 find "${BUILD_DIR}" -name "*.bak" -delete
 find "${BUILD_DIR}" -name "*.tmp" -delete
 find "${BUILD_DIR}" -name "*~" -delete
+find "${BUILD_DIR}" -name "test-server.py" -delete
+find "${BUILD_DIR}" -name "run-test-server.sh" -delete
+find "${BUILD_DIR}" -name "build.sh" -delete
+find "${BUILD_DIR}" -name "requirements.txt" -delete
+find "${BUILD_DIR}" -name "TODO.md" -delete
+find "${BUILD_DIR}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Create the zip file
 echo -e "${YELLOW}Creating zip archive...${NC}"

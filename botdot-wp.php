@@ -74,16 +74,42 @@ define('BOTDOT_WP_MIN_PHP_VERSION', '7.4');
  * The code that runs during plugin activation.
  */
 function activate_botdot_wp() {
+    // Load the Options class first (required by activator)
+    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-options.php';
     require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-activator.php';
-    BotDot_WP_Activator::activate();
+
+    try {
+        BotDot_WP_Activator::activate();
+    } catch (Exception $e) {
+        // Log activation error
+        error_log('BotDot WP Activation Error: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+
+        // Deactivate the plugin
+        deactivate_plugins(plugin_basename(__FILE__));
+
+        // Show error to user
+        wp_die(
+            'BotDot WP could not be activated. Error: ' . esc_html($e->getMessage()) .
+            '<br><br>Check your error log for more details.' .
+            '<br><br><a href="' . admin_url('plugins.php') . '">Back to Plugins</a>'
+        );
+    }
 }
 
 /**
  * The code that runs during plugin deactivation.
  */
 function deactivate_botdot_wp() {
+    // Load required classes
+    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-logger.php';
     require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-deactivator.php';
-    BotDot_WP_Deactivator::deactivate();
+
+    try {
+        BotDot_WP_Deactivator::deactivate();
+    } catch (Exception $e) {
+        error_log('BotDot WP Deactivation Error: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -173,12 +199,31 @@ function botdot_wp_init() {
     // Load text domain
     botdot_wp_load_textdomain();
 
-    // Include the main plugin class
-    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp.php';
+    try {
+        // Include the main plugin class
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp.php';
 
-    // Run the plugin
-    $plugin = new BotDot_WP();
-    $plugin->run();
+        // Run the plugin
+        $plugin = new BotDot_WP();
+        $plugin->run();
+    } catch (Exception $e) {
+        // Log initialization error
+        error_log('BotDot WP Initialization Error: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+
+        // Show admin notice
+        add_action('admin_notices', function() use ($e) {
+            ?>
+            <div class="notice notice-error">
+                <p>
+                    <strong>BotDot WP Error:</strong>
+                    <?php echo esc_html($e->getMessage()); ?>
+                </p>
+                <p>Check your error log for more details.</p>
+            </div>
+            <?php
+        });
+    }
 }
 
 /**
