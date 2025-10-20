@@ -1,0 +1,65 @@
+<?php
+/**
+ * Fired during plugin activation
+ *
+ * @link       https://botdot.ai
+ * @since      0.1.0
+ *
+ * @package    BotDot_WP
+ * @subpackage BotDot_WP/includes
+ */
+
+// If this file is called directly, abort.
+if (!defined('WPINC')) {
+    die;
+}
+
+/**
+ * Fired during plugin activation.
+ *
+ * This class defines all code necessary to run during the plugin's activation.
+ *
+ * @since      0.1.0
+ * @package    BotDot_WP
+ * @subpackage BotDot_WP/includes
+ * @author     BotDot Team
+ */
+class BotDot_WP_Activator {
+
+    /**
+     * Plugin activation actions.
+     *
+     * Sets up default options and creates activation notice.
+     *
+     * @since    0.1.0
+     */
+    public static function activate() {
+        // Set default options if they don't exist
+        if (!BotDot_WP_Options::exists('mirror_domain')) {
+            BotDot_WP_Options::set('mirror_domain', '');
+        }
+
+        if (!BotDot_WP_Options::exists('enabled')) {
+            BotDot_WP_Options::set('enabled', false);
+        }
+
+        if (!BotDot_WP_Options::exists('fetch_timeout')) {
+            BotDot_WP_Options::set('fetch_timeout', 10);
+        }
+
+        if (!BotDot_WP_Options::exists('inject_on_post_types')) {
+            BotDot_WP_Options::set('inject_on_post_types', array('post', 'page'));
+        }
+
+        if (!BotDot_WP_Options::exists('exclude_page_ids')) {
+            BotDot_WP_Options::set('exclude_page_ids', array());
+        }
+
+        if (!BotDot_WP_Options::exists('debug_mode')) {
+            BotDot_WP_Options::set('debug_mode', false);
+        }
+
+        // Set activation notice
+        set_transient('botdot_wp_activation_notice', true, 60);
+    }
+}
