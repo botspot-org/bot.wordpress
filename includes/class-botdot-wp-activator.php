@@ -80,6 +80,18 @@ class BotDot_WP_Activator {
             BotDot_WP_Options::set('appendix_on_post_types', array('post', 'page'));
         }
 
+        // Theme & Styling defaults
+        if (!BotDot_WP_Options::exists('theme_classes_enabled')) {
+            BotDot_WP_Options::set('theme_classes_enabled', true);
+        }
+
+        if (!BotDot_WP_Options::exists('custom_theme_classes')) {
+            BotDot_WP_Options::set(
+                'custom_theme_classes',
+                BotDot_WP_Options::get_default('custom_theme_classes')
+            );
+        }
+
         // Set activation notice
         set_transient('botdot_wp_activation_notice', true, 60);
     }

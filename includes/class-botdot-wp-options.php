@@ -47,6 +47,15 @@ class BotDot_WP_Options {
         'appendix_position' => 'bottom',
         'appendix_open_default' => false,
         'appendix_on_post_types' => array('post', 'page'),
+        // Theme & Styling settings
+        'theme_classes_enabled' => true,
+        'custom_theme_classes' => array(
+            'wrapper' => '',
+            'details' => '',
+            'summary' => '',
+            'title' => '',
+            'content' => '',
+        ),
     );
 
     /**
@@ -206,6 +215,7 @@ class BotDot_WP_Options {
             case 'debug_mode':
             case 'appendix_enabled':
             case 'appendix_open_default':
+            case 'theme_classes_enabled':
                 return (bool) $value;
 
             case 'fetch_timeout':
@@ -215,6 +225,17 @@ class BotDot_WP_Options {
             case 'exclude_page_ids':
             case 'appendix_on_post_types':
                 return is_array($value) ? $value : array();
+
+            case 'custom_theme_classes':
+                if (!is_array($value)) {
+                    return self::$defaults['custom_theme_classes'];
+                }
+
+                $defaults = self::$defaults['custom_theme_classes'];
+                $value = array_intersect_key($value, $defaults);
+                $value = array_map('trim', $value);
+
+                return array_merge($defaults, $value);
 
             case 'mirror_domain':
             case 'appendix_title':
@@ -248,6 +269,7 @@ class BotDot_WP_Options {
             case 'debug_mode':
             case 'appendix_enabled':
             case 'appendix_open_default':
+            case 'theme_classes_enabled':
                 return (bool) $value;
 
             case 'fetch_timeout':
@@ -272,6 +294,21 @@ class BotDot_WP_Options {
                     return array_map('absint', $value);
                 }
                 return array();
+
+            case 'custom_theme_classes':
+                if (!is_array($value)) {
+                    return self::$defaults['custom_theme_classes'];
+                }
+
+                $defaults = self::$defaults['custom_theme_classes'];
+                $sanitized = array();
+
+                foreach ($defaults as $key => $default) {
+                    $class_value = isset($value[$key]) ? sanitize_text_field($value[$key]) : '';
+                    $sanitized[$key] = trim($class_value);
+                }
+
+                return $sanitized;
 
             default:
                 if (is_string($value)) {

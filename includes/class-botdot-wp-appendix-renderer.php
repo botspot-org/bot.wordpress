@@ -37,28 +37,114 @@ class BotDot_WP_Appendix_Renderer {
     private static $theme_classes = null;
 
     /**
-     * Detect theme's FAQ/accordion structure
+     * Get the default BotDot appendix classes
      *
-     * @since    0.2.0
-     * @return   array    Array of theme-specific classes.
+     * @since    0.3.0
+     * @access   private
+     * @return   array    Default class mapping.
      */
-    private static function detect_theme_classes() {
-        if (self::$theme_classes !== null) {
-            return self::$theme_classes;
-        }
-
-        $classes = array(
+    private static function get_default_classes() {
+        return array(
             'wrapper' => 'botdot-appendix',
             'details' => 'botdot-appendix-details',
             'summary' => 'botdot-appendix-summary',
             'title' => 'botdot-appendix-title',
             'content' => 'botdot-appendix-content',
         );
+    }
+
+    /**
+     * Normalize custom theme classes array
+     *
+     * @since    0.3.0
+     * @access   private
+     * @param    mixed    $classes    Raw custom classes.
+     * @return   array                Normalized class mapping.
+     */
+    private static function prepare_custom_classes($classes) {
+        $defaults = array_fill_keys(array_keys(self::get_default_classes()), '');
+
+        if (!is_array($classes)) {
+            return $defaults;
+        }
+
+        $classes = array_intersect_key($classes, $defaults);
+        $classes = array_map('trim', $classes);
+
+        return array_merge($defaults, $classes);
+    }
+
+    /**
+     * Determine if the supplied classes contain overrides
+     *
+     * @since    0.3.0
+     * @access   private
+     * @param    array    $classes    Class mapping to check.
+     * @return   bool                 True if there is at least one override.
+     */
+    private static function has_custom_class_values($classes) {
+        if (!is_array($classes)) {
+            return false;
+        }
+
+        foreach ($classes as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Detect theme's FAQ/accordion structure
+     *
+     * @since    0.2.0
+     * @since    0.3.0   Respects plugin theme settings.
+     * @return   array    Array of theme-specific classes.
+     */
+    private static function detect_theme_classes($force_refresh = false) {
+        if (!$force_refresh && self::$theme_classes !== null) {
+            return self::$theme_classes;
+        }
+
+        $defaults = self::get_default_classes();
 
         // Get current theme
         $theme = wp_get_theme();
         $theme_name = $theme->get('Name');
         $theme_template = $theme->get_template();
+
+        $auto_detection_enabled = BotDot_WP_Options::get('theme_classes_enabled', true);
+        $custom_classes = self::prepare_custom_classes(BotDot_WP_Options::get('custom_theme_classes', array()));
+        $has_custom = self::has_custom_class_values($custom_classes);
+
+        if (!$auto_detection_enabled) {
+            $classes = $has_custom ? array_merge($defaults, $custom_classes) : $defaults;
+        } elseif ($has_custom) {
+            $classes = array_merge($defaults, $custom_classes);
+        } else {
+            $classes = self::auto_detect_theme_classes($theme_name, $theme_template);
+        }
+
+        $classes = wp_parse_args($classes, $defaults);
+        $classes = apply_filters('botdot_wp_theme_classes', $classes, $theme_name, $theme_template);
+
+        self::$theme_classes = $classes;
+        return $classes;
+    }
+
+    /**
+     * Auto-detect theme FAQ/accordion classes
+     *
+     * @since    0.3.0
+     * @access   private
+     * @param    string   $theme_name       Active theme name.
+     * @param    string   $theme_template   Active theme template (slug).
+     * @return   array                      Auto-detected class mapping.
+     */
+    private static function auto_detect_theme_classes($theme_name, $theme_template) {
+        $classes = self::get_default_classes();
 
         // Common theme patterns
         $theme_patterns = array(
@@ -112,11 +198,64 @@ class BotDot_WP_Appendix_Renderer {
             }
         }
 
-        // Allow filtering for custom themes
-        $classes = apply_filters('botdot_wp_theme_classes', $classes, $theme_name, $theme_template);
-
-        self::$theme_classes = $classes;
         return $classes;
+    }
+
+    /**
+     * Get the effective theme classes after applying plugin settings
+     *
+     * @since    0.3.0
+     * @param    bool     $force_refresh   Optional. Recalculate classes even if cached.
+     * @return   array                     Class mapping used during rendering.
+     */
+    public static function get_theme_classes($force_refresh = false) {
+        return self::detect_theme_classes($force_refresh);
+    }
+
+    /**
+     * Get the raw auto-detected theme classes (ignores plugin settings)
+     *
+     * @since    0.3.0
+     * @return   array    Class mapping discovered via detection heuristics.
+     */
+    public static function get_auto_detected_theme_classes() {
+        $theme = wp_get_theme();
+        return self::auto_detect_theme_classes($theme->get('Name'), $theme->get_template());
+    }
+
+    /**
+     * Get the default BotDot appendix class mapping
+     *
+     * @since    0.3.0
+     * @return   array    Default class mapping used when no detection applies.
+     */
+    public static function get_default_theme_classes() {
+        return self::get_default_classes();
+    }
+
+    /**
+     * Provide a summary of the current theme detection state
+     *
+     * @since    0.3.0
+     * @return   array    Summary data for use in the admin UI.
+     */
+    public static function get_detection_summary() {
+        $theme = wp_get_theme();
+        $theme_name = $theme->get('Name');
+        $theme_template = $theme->get_template();
+        $custom_classes = BotDot_WP_Options::get('custom_theme_classes', array());
+
+        return array(
+            'theme_name' => $theme_name,
+            'theme_template' => $theme_template,
+            'accordion_plugin' => self::detect_accordion_plugin(),
+            'auto_detection_enabled' => BotDot_WP_Options::get('theme_classes_enabled', true),
+            'auto_classes' => self::auto_detect_theme_classes($theme_name, $theme_template),
+            'effective_classes' => self::get_theme_classes(true),
+            'default_classes' => self::get_default_theme_classes(),
+            'custom_classes' => $custom_classes,
+            'has_custom_classes' => self::has_custom_class_values($custom_classes),
+        );
     }
 
     /**
@@ -169,13 +308,9 @@ class BotDot_WP_Appendix_Renderer {
         $args = apply_filters('botdot_wp_appendix_args', $args, $appendix_data);
 
         // Get theme classes if enabled
-        $theme_classes = $args['use_theme_classes'] ? self::detect_theme_classes() : array(
-            'wrapper' => 'botdot-appendix',
-            'details' => 'botdot-appendix-details',
-            'summary' => 'botdot-appendix-summary',
-            'title' => 'botdot-appendix-title',
-            'content' => 'botdot-appendix-content',
-        );
+        $theme_classes = $args['use_theme_classes']
+            ? self::get_theme_classes()
+            : self::get_default_theme_classes();
 
         // Start output buffering
         ob_start();

@@ -168,6 +168,7 @@ class BotDot_WP {
         // AJAX handlers
         $this->loader->add_action('wp_ajax_botdot_wp_test_connection', $plugin_admin, 'handle_test_connection');
         $this->loader->add_action('wp_ajax_botdot_wp_clear_errors', $plugin_admin, 'handle_clear_errors');
+        $this->loader->add_action('wp_ajax_botdot_wp_detect_theme_classes', $plugin_admin, 'handle_detect_theme_classes');
 
         // Admin notices for errors
         $this->loader->add_action('admin_notices', $plugin_admin, 'display_admin_notices');

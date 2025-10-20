@@ -123,9 +123,13 @@ def serve_json_ld(path):
 
 @app.route('/<path:path>')
 def serve_appendix(path):
-    """Serve the 'appendix' - same JSON-LD without .json extension"""
+    """Serve the 'appendix' - same JSON-LD without .json extension
 
-    # Same logic as .json endpoint
+    In the real BotDot system, this would serve JSON that the WP plugin
+    fetches and renders as HTML within the page.
+    """
+
+    # Same logic as .json endpoint but typically less schemas
     num_schemas = random.randint(1, 2)
     selected_schemas = random.sample(SCHEMAS, num_schemas)
 
@@ -134,6 +138,7 @@ def serve_appendix(path):
     else:
         response_data = selected_schemas[0]
 
+    # Add metadata
     if isinstance(response_data, list):
         for schema in response_data:
             schema['_requested_path'] = f"/{path}"
@@ -144,7 +149,7 @@ def serve_appendix(path):
         response_data['_timestamp'] = datetime.now().isoformat()
         response_data['_type'] = 'appendix'
 
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Served appendix for: /{path}")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Served appendix JSON for: /{path}")
 
     return jsonify(response_data)
 
