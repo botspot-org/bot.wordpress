@@ -1,9 +1,9 @@
 <?php
 /**
- * HTTP fetcher class for the BotDot WP plugin
+ * Appendix fetcher class for the BotDot WP plugin
  *
  * @link       https://botdot.ai
- * @since      0.1.0
+ * @since      0.2.0
  *
  * @package    BotDot_WP
  * @subpackage BotDot_WP/includes
@@ -15,17 +15,16 @@ if (!defined('WPINC')) {
 }
 
 /**
- * HTTP fetcher class for the BotDot WP plugin.
+ * Appendix fetcher class for the BotDot WP plugin.
  *
- * This class handles fetching JSON-LD from the mirror domain using
- * the WordPress HTTP API.
+ * This class handles fetching appendix content from the mirror domain.
  *
- * @since      0.1.0
+ * @since      0.2.0
  * @package    BotDot_WP
  * @subpackage BotDot_WP/includes
  * @author     BotDot Team
  */
-class BotDot_WP_Fetcher {
+class BotDot_WP_Appendix_Fetcher {
 
     /**
      * Determine the protocol (http or https) based on the domain
@@ -45,13 +44,13 @@ class BotDot_WP_Fetcher {
     }
 
     /**
-     * Fetch JSON-LD from mirror domain
+     * Fetch appendix from mirror domain
      *
-     * @since    0.1.0
+     * @since    0.2.0
      * @param    string    $url_path    The URL path to fetch (e.g., /blog/my-post).
-     * @return   array|WP_Error         The JSON-LD data as array, or WP_Error on failure.
+     * @return   array|WP_Error         The appendix data as array, or WP_Error on failure.
      */
-    public static function fetch_json_ld($url_path) {
+    public static function fetch_appendix($url_path) {
         // Get mirror domain from options
         $mirror_domain = BotDot_WP_Options::get('mirror_domain');
 
@@ -62,10 +61,10 @@ class BotDot_WP_Fetcher {
             );
         }
 
-        // Build the full URL
+        // Build the full URL (without .json extension)
         $url_path = ltrim($url_path, '/');
         $protocol = self::get_protocol($mirror_domain);
-        $url = $protocol . '://' . $mirror_domain . '/' . $url_path . '.json';
+        $url = $protocol . '://' . $mirror_domain . '/' . $url_path;
 
         // Get timeout from options
         $timeout = BotDot_WP_Options::get('fetch_timeout', 10);
@@ -73,7 +72,7 @@ class BotDot_WP_Fetcher {
         // Log debug info if debug mode is enabled
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug(sprintf(
-                'Fetching JSON-LD from: %s',
+                'Fetching appendix from: %s',
                 $url
             ));
         }
@@ -89,7 +88,7 @@ class BotDot_WP_Fetcher {
         // Check for HTTP errors
         if (is_wp_error($response)) {
             BotDot_WP_Logger::log_error(sprintf(
-                'HTTP request failed for %s: %s',
+                'HTTP request failed for appendix %s: %s',
                 $url,
                 $response->get_error_message()
             ));
@@ -107,7 +106,7 @@ class BotDot_WP_Fetcher {
                 )
             );
             BotDot_WP_Logger::log_error(sprintf(
-                'HTTP %d error for %s',
+                'HTTP %d error for appendix %s',
                 $status_code,
                 $url
             ));
@@ -123,7 +122,7 @@ class BotDot_WP_Fetcher {
                 __('Empty response received', 'botdot-wp')
             );
             BotDot_WP_Logger::log_error(sprintf(
-                'Empty response from %s',
+                'Empty response from appendix %s',
                 $url
             ));
             return $error;
@@ -141,22 +140,9 @@ class BotDot_WP_Fetcher {
                 )
             );
             BotDot_WP_Logger::log_error(sprintf(
-                'Invalid JSON from %s: %s',
+                'Invalid JSON from appendix %s: %s',
                 $url,
                 json_last_error_msg()
-            ));
-            return $error;
-        }
-
-        // Validate JSON-LD structure (basic check)
-        if (!self::validate_json_ld($json_data)) {
-            $error = new WP_Error(
-                'invalid_json_ld',
-                __('Response does not appear to be valid JSON-LD', 'botdot-wp')
-            );
-            BotDot_WP_Logger::log_error(sprintf(
-                'Invalid JSON-LD structure from %s',
-                $url
             ));
             return $error;
         }
@@ -164,7 +150,7 @@ class BotDot_WP_Fetcher {
         // Log success if debug mode is enabled
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug(sprintf(
-                'Successfully fetched JSON-LD from: %s',
+                'Successfully fetched appendix from: %s',
                 $url
             ));
         }
@@ -173,44 +159,11 @@ class BotDot_WP_Fetcher {
     }
 
     /**
-     * Validate JSON-LD structure
+     * Test connection to mirror domain for appendix
      *
-     * Performs basic validation to ensure the data looks like JSON-LD
+     * Tests if the mirror domain is accessible for appendix content
      *
-     * @since    0.1.0
-     * @access   private
-     * @param    mixed    $data    The data to validate.
-     * @return   bool              True if valid, false otherwise.
-     */
-    private static function validate_json_ld($data) {
-        // Must be an array or object
-        if (!is_array($data)) {
-            return false;
-        }
-
-        // Should have @context or be an array of objects with @context
-        if (isset($data['@context'])) {
-            return true;
-        }
-
-        // Check if it's an array of JSON-LD objects
-        if (is_array($data) && !empty($data)) {
-            foreach ($data as $item) {
-                if (is_array($item) && isset($item['@context'])) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Test connection to mirror domain
-     *
-     * Tests if the mirror domain is accessible
-     *
-     * @since    0.1.0
+     * @since    0.2.0
      * @param    string    $test_path    Optional. Test path to use. Default '/'.
      * @return   array                   Result array with 'success' and 'message' keys.
      */
@@ -247,7 +200,7 @@ class BotDot_WP_Fetcher {
         return array(
             'success' => ($status_code >= 200 && $status_code < 400),
             'message' => sprintf(
-                __('Connection successful. HTTP status: %d', 'botdot-wp'),
+                __('Appendix connection successful. HTTP status: %d', 'botdot-wp'),
                 $status_code
             ),
             'status_code' => $status_code,

@@ -59,6 +59,27 @@ class BotDot_WP_Activator {
             BotDot_WP_Options::set('debug_mode', false);
         }
 
+        // Appendix options
+        if (!BotDot_WP_Options::exists('appendix_enabled')) {
+            BotDot_WP_Options::set('appendix_enabled', false);
+        }
+
+        if (!BotDot_WP_Options::exists('appendix_title')) {
+            BotDot_WP_Options::set('appendix_title', 'AI Appendix');
+        }
+
+        if (!BotDot_WP_Options::exists('appendix_position')) {
+            BotDot_WP_Options::set('appendix_position', 'bottom');
+        }
+
+        if (!BotDot_WP_Options::exists('appendix_open_default')) {
+            BotDot_WP_Options::set('appendix_open_default', false);
+        }
+
+        if (!BotDot_WP_Options::exists('appendix_on_post_types')) {
+            BotDot_WP_Options::set('appendix_on_post_types', array('post', 'page'));
+        }
+
         // Set activation notice
         set_transient('botdot_wp_activation_notice', true, 60);
     }

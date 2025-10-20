@@ -41,6 +41,12 @@ class BotDot_WP_Options {
         'inject_on_post_types' => array('post', 'page'),
         'exclude_page_ids' => array(),
         'debug_mode' => false,
+        // Appendix settings
+        'appendix_enabled' => false,
+        'appendix_title' => 'AI Appendix',
+        'appendix_position' => 'bottom',
+        'appendix_open_default' => false,
+        'appendix_on_post_types' => array('post', 'page'),
     );
 
     /**
@@ -198,6 +204,8 @@ class BotDot_WP_Options {
         switch ($option_name) {
             case 'enabled':
             case 'debug_mode':
+            case 'appendix_enabled':
+            case 'appendix_open_default':
                 return (bool) $value;
 
             case 'fetch_timeout':
@@ -205,9 +213,12 @@ class BotDot_WP_Options {
 
             case 'inject_on_post_types':
             case 'exclude_page_ids':
+            case 'appendix_on_post_types':
                 return is_array($value) ? $value : array();
 
             case 'mirror_domain':
+            case 'appendix_title':
+            case 'appendix_position':
                 return trim($value);
 
             default:
@@ -235,12 +246,22 @@ class BotDot_WP_Options {
 
             case 'enabled':
             case 'debug_mode':
+            case 'appendix_enabled':
+            case 'appendix_open_default':
                 return (bool) $value;
 
             case 'fetch_timeout':
                 return max(1, min(60, (int) $value)); // Between 1 and 60 seconds
 
+            case 'appendix_title':
+                return sanitize_text_field($value);
+
+            case 'appendix_position':
+                $allowed_positions = array('bottom', 'shortcode');
+                return in_array($value, $allowed_positions) ? $value : 'bottom';
+
             case 'inject_on_post_types':
+            case 'appendix_on_post_types':
                 if (is_array($value)) {
                     return array_map('sanitize_text_field', $value);
                 }

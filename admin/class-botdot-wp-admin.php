@@ -106,6 +106,32 @@ class BotDot_WP_Admin {
             'default' => false,
         ));
 
+        // Appendix settings
+        register_setting('botdot_wp_settings', 'botdot_wp_appendix_enabled', array(
+            'sanitize_callback' => array($this, 'sanitize_checkbox'),
+            'default' => false,
+        ));
+
+        register_setting('botdot_wp_settings', 'botdot_wp_appendix_title', array(
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => 'AI Appendix',
+        ));
+
+        register_setting('botdot_wp_settings', 'botdot_wp_appendix_position', array(
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => 'bottom',
+        ));
+
+        register_setting('botdot_wp_settings', 'botdot_wp_appendix_open_default', array(
+            'sanitize_callback' => array($this, 'sanitize_checkbox'),
+            'default' => false,
+        ));
+
+        register_setting('botdot_wp_settings', 'botdot_wp_appendix_on_post_types', array(
+            'sanitize_callback' => array($this, 'sanitize_post_types'),
+            'default' => array('post', 'page'),
+        ));
+
         // Add settings sections
         add_settings_section(
             'botdot_wp_general_section',

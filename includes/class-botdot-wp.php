@@ -130,9 +130,24 @@ class BotDot_WP {
         require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-logger.php';
 
         /**
+         * The class responsible for appendix fetching
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-appendix-fetcher.php';
+
+        /**
+         * The class responsible for appendix rendering
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-appendix-renderer.php';
+
+        /**
          * The class responsible for defining all actions that occur in the admin area.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . 'admin/class-botdot-wp-admin.php';
+
+        /**
+         * The class responsible for public-facing functionality
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . 'public/class-botdot-wp-public.php';
 
         $this->loader = new BotDot_WP_Loader();
     }
@@ -167,9 +182,31 @@ class BotDot_WP {
      */
     private function define_public_hooks() {
         $injector = new BotDot_WP_Injector($this->get_plugin_name(), $this->get_version());
+        $public = new BotDot_WP_Public($this->get_plugin_name(), $this->get_version());
 
-        // Hook into wp_head at priority 1 for early injection
+        // Hook into wp_head at priority 1 for early JSON-LD injection
         $this->loader->add_action('wp_head', $injector, 'inject_json_ld', 1);
+
+        // Register appendix shortcode
+        $this->loader->add_action('init', $public, 'register_shortcode');
+
+        // Register WPBakery element (late priority to ensure WPBakery is loaded)
+        $this->loader->add_action('vc_before_init', $public, 'register_wpbakery_element');
+
+        // Register Gutenberg block
+        $this->loader->add_action('init', $public, 'register_gutenberg_block');
+
+        // Enqueue Gutenberg block assets
+        $this->loader->add_action('enqueue_block_editor_assets', $public, 'enqueue_gutenberg_assets');
+
+        // Add TinyMCE button for Classic Editor
+        $this->loader->add_action('admin_init', $public, 'add_tinymce_button');
+
+        // Filter content to add appendix
+        $this->loader->add_filter('the_content', $public, 'filter_content', 20);
+
+        // Enqueue appendix styles
+        $this->loader->add_action('wp_enqueue_scripts', $public, 'enqueue_styles');
     }
 
     /**

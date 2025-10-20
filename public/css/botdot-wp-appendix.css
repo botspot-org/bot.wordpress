@@ -1,0 +1,118 @@
+/**
+ * BotDot WP Appendix Styles
+ *
+ * Minimal structural CSS - most styling inherited from theme
+ *
+ * @package BotDot_WP
+ * @version 0.2.0
+ */
+
+/* Main appendix container */
+.botdot-appendix {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+/* Details/Summary accordion */
+.botdot-appendix-details {
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 0;
+    opacity: 0.9;
+}
+
+.botdot-appendix-summary {
+    padding: 1em;
+    cursor: pointer;
+    font-weight: 600;
+    user-select: none;
+}
+
+.botdot-appendix-summary:hover {
+    opacity: 0.8;
+}
+
+.botdot-appendix-content {
+    padding: 1em;
+    border-top: 1px solid currentColor;
+}
+
+/* Appendix items */
+.botdot-appendix-item {
+    margin-bottom: 1.5em;
+}
+
+.botdot-appendix-item:last-child {
+    margin-bottom: 0;
+}
+
+.botdot-appendix-item-type {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-size: 1.1em;
+}
+
+/* Properties list */
+.botdot-appendix-properties {
+    margin: 0;
+}
+
+.botdot-appendix-properties dt {
+    font-weight: 600;
+    margin-top: 0.5em;
+}
+
+.botdot-appendix-properties dd {
+    margin-left: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Nested content */
+.botdot-appendix-nested {
+    margin-left: 1em;
+    padding-left: 1em;
+    border-left: 2px solid currentColor;
+    opacity: 0.9;
+}
+
+/* Lists */
+.botdot-appendix-list {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+}
+
+/* Links */
+.botdot-appendix-link {
+    word-break: break-all;
+}
+
+/* Metadata */
+.botdot-appendix-metadata {
+    margin-top: 1.5em;
+    padding-top: 1em;
+    border-top: 1px solid currentColor;
+    opacity: 0.7;
+}
+
+/* Generic data */
+.botdot-appendix-data dt {
+    font-weight: 600;
+    margin-top: 0.5em;
+}
+
+.botdot-appendix-data dd {
+    margin-left: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Text content */
+.botdot-appendix-text {
+    line-height: 1.6;
+}
+
+/* Print styles */
+@media print {
+    .botdot-appendix-details[open] .botdot-appendix-content {
+        display: block;
+    }
+}
