@@ -169,6 +169,8 @@ class BotDot_WP {
         $this->loader->add_action('wp_ajax_botdot_wp_test_connection', $plugin_admin, 'handle_test_connection');
         $this->loader->add_action('wp_ajax_botdot_wp_clear_errors', $plugin_admin, 'handle_clear_errors');
         $this->loader->add_action('wp_ajax_botdot_wp_detect_theme_classes', $plugin_admin, 'handle_detect_theme_classes');
+        $this->loader->add_action('wp_ajax_botdot_wp_toggle_page_injection', $plugin_admin, 'handle_toggle_page_injection');
+        $this->loader->add_action('wp_ajax_botdot_wp_bulk_update_pages', $plugin_admin, 'handle_bulk_update_pages');
 
         // Admin notices for errors
         $this->loader->add_action('admin_notices', $plugin_admin, 'display_admin_notices');
@@ -203,8 +205,11 @@ class BotDot_WP {
         // Add TinyMCE button for Classic Editor
         $this->loader->add_action('admin_init', $public, 'add_tinymce_button');
 
-        // Filter content to add appendix
+        // Filter content to add appendix (for bottom placement)
         $this->loader->add_filter('the_content', $public, 'filter_content', 20);
+
+        // Hook for above-footer placement (priority 5 to run before most footer content)
+        $this->loader->add_action('wp_footer', $public, 'inject_above_footer', 5);
 
         // Enqueue appendix styles
         $this->loader->add_action('wp_enqueue_scripts', $public, 'enqueue_styles');

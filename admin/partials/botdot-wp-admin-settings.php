@@ -1,9 +1,9 @@
 <?php
 /**
- * Provide a admin area view for the plugin settings
+ * Provide a admin area view for the plugin settings with tabbed interface
  *
  * @link       https://botdot.ai
- * @since      0.1.0
+ * @since      0.3.0
  *
  * @package    BotDot_WP
  * @subpackage BotDot_WP/admin/partials
@@ -12,6 +12,40 @@
 // If this file is called directly, abort.
 if (!defined('WPINC')) {
     die;
+}
+
+// Get current tab (default to 'api')
+$active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'api';
+
+// Load common data needed for both tabs
+$selected_post_types = BotDot_WP_Options::get('inject_on_post_types', array('post', 'page'));
+$injection_status = BotDot_WP_Options::get('page_injection_status', array());
+$post_types = get_post_types(array('public' => true), 'objects');
+
+// For Pages tab: prepare pagination and query
+if ($active_tab === 'pages') {
+
+    // Pagination
+    $per_page = 20;
+    $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+    $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+
+    // Query args
+    $args = array(
+        'post_type' => !empty($selected_post_types) ? $selected_post_types : 'post',
+        'posts_per_page' => $per_page,
+        'paged' => $current_page,
+        'post_status' => array('publish', 'draft', 'pending', 'future'),
+        'orderby' => 'modified',
+        'order' => 'DESC',
+    );
+
+    if (!empty($search)) {
+        $args['s'] = $search;
+    }
+
+    $query = new WP_Query($args);
+    $total_pages = $query->max_num_pages;
 }
 ?>
 
@@ -40,127 +74,406 @@ if (!defined('WPINC')) {
         </div>
     <?php endif; ?>
 
-    <form method="post" action="options.php">
-        <?php
-        settings_fields('botdot_wp_settings');
-        do_settings_sections('botdot-wp');
-        submit_button();
-        ?>
+    <!-- Tab Navigation -->
+    <h2 class="nav-tab-wrapper">
+        <a href="?page=botdot-wp&tab=api" class="nav-tab <?php echo $active_tab === 'api' ? 'nav-tab-active' : ''; ?>">
+            <?php _e('API & Connection', 'botdot-wp'); ?>
+        </a>
+        <a href="?page=botdot-wp&tab=pages" class="nav-tab <?php echo $active_tab === 'pages' ? 'nav-tab-active' : ''; ?>">
+            <?php _e('Pages & Injection', 'botdot-wp'); ?>
+        </a>
+    </h2>
+
+    <!-- Single Form for All Settings -->
+    <form method="post" action="options.php" id="botdot-wp-settings-form">
+        <?php settings_fields('botdot_wp_settings'); ?>
+
+        <?php if ($active_tab === 'api') : ?>
+            <!-- Hidden fields to preserve Pages tab settings when saving from API tab -->
+            <?php
+            $inject_post_types = BotDot_WP_Options::get('inject_on_post_types', array('post', 'page'));
+            foreach ($inject_post_types as $pt) : ?>
+                <input type="hidden" name="botdot_wp_inject_on_post_types[]" value="<?php echo esc_attr($pt); ?>">
+            <?php endforeach; ?>
+
+            <?php
+            $appendix_post_types = BotDot_WP_Options::get('appendix_on_post_types', array('post', 'page'));
+            foreach ($appendix_post_types as $pt) : ?>
+                <input type="hidden" name="botdot_wp_appendix_on_post_types[]" value="<?php echo esc_attr($pt); ?>">
+            <?php endforeach; ?>
+
+            <input type="hidden" name="botdot_wp_appendix_enabled" value="<?php echo BotDot_WP_Options::get('appendix_enabled') ? '1' : '0'; ?>">
+            <input type="hidden" name="botdot_wp_appendix_title" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_title', 'AI Appendix')); ?>">
+            <input type="hidden" name="botdot_wp_appendix_auto_placement" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_auto_placement', 'above_footer')); ?>">
+            <input type="hidden" name="botdot_wp_appendix_open_default" value="<?php echo BotDot_WP_Options::get('appendix_open_default') ? '1' : '0'; ?>">
+            <input type="hidden" name="botdot_wp_appendix_position" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_position', 'bottom')); ?>">
+
+            <?php
+            $page_injection_status = BotDot_WP_Options::get('page_injection_status', array());
+            foreach ($page_injection_status as $page_id => $enabled) : ?>
+                <input type="hidden" name="botdot_wp_page_injection_status[<?php echo absint($page_id); ?>]" value="<?php echo $enabled ? '1' : '0'; ?>">
+            <?php endforeach; ?>
+
+        <?php elseif ($active_tab === 'pages') : ?>
+            <!-- Hidden fields to preserve API tab settings when saving from Pages tab -->
+            <input type="hidden" name="botdot_wp_mirror_domain" value="<?php echo esc_attr(BotDot_WP_Options::get('mirror_domain')); ?>">
+            <input type="hidden" name="botdot_wp_enabled" value="<?php echo BotDot_WP_Options::get('enabled') ? '1' : '0'; ?>">
+            <input type="hidden" name="botdot_wp_fetch_timeout" value="<?php echo esc_attr(BotDot_WP_Options::get('fetch_timeout', 10)); ?>">
+            <input type="hidden" name="botdot_wp_debug_mode" value="<?php echo BotDot_WP_Options::get('debug_mode') ? '1' : '0'; ?>">
+
+            <!-- Theme settings -->
+            <input type="hidden" name="botdot_wp_theme_classes_enabled" value="<?php echo BotDot_WP_Options::get('theme_classes_enabled', true) ? '1' : '0'; ?>">
+            <?php
+            $custom_theme_classes = BotDot_WP_Options::get('custom_theme_classes', array());
+            foreach ($custom_theme_classes as $key => $value) : ?>
+                <input type="hidden" name="botdot_wp_custom_theme_classes[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>">
+            <?php endforeach; ?>
+
+            <!-- Hidden JSON field to sync AJAX page toggle updates -->
+            <input type="hidden" name="botdot_wp_page_injection_status_json" value="<?php echo esc_attr(json_encode($injection_status)); ?>" id="botdot-page-injection-json">
+        <?php endif; ?>
+
+        <!-- Tab 1: API & Connection -->
+        <div class="tab-content" id="tab-api" style="display: <?php echo $active_tab === 'api' ? 'block' : 'none'; ?>;">
+            <?php
+            do_settings_sections('botdot-wp');
+            submit_button();
+            ?>
+        </div>
+
+        <!-- Tab 2: Pages & Injection -->
+        <div class="tab-content" id="tab-pages" style="display: <?php echo $active_tab === 'pages' ? 'block' : 'none'; ?>;">
+
+            <!-- JSON-LD Injection Settings Section -->
+            <div class="botdot-section">
+                <h2><?php _e('JSON-LD Injection Settings', 'botdot-wp'); ?></h2>
+                <p class="description"><?php _e('Configure which post types can have JSON-LD structured data injected into the page header. This determines which content types will appear in the page management table below.', 'botdot-wp'); ?></p>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row"><?php _e('Enable JSON-LD On', 'botdot-wp'); ?></th>
+                        <td>
+                            <?php foreach ($post_types as $post_type) : ?>
+                                <label style="display: block; margin-bottom: 5px;">
+                                    <input type="checkbox"
+                                           name="botdot_wp_inject_on_post_types[]"
+                                           value="<?php echo esc_attr($post_type->name); ?>"
+                                           <?php checked(in_array($post_type->name, $selected_post_types)); ?>>
+                                    <?php echo esc_html($post_type->label); ?>
+                                </label>
+                            <?php endforeach; ?>
+                            <p class="description">
+                                <?php _e('Select which post types can have JSON-LD structured data injected into the &lt;head&gt; section. This data is fetched from your mirror domain and helps AI systems understand your content.', 'botdot-wp'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <hr>
+
+            <!-- Page Management Table Section -->
+            <div class="botdot-section">
+                <h2><?php _e('Page Management', 'botdot-wp'); ?></h2>
+                <p class="description"><?php _e('Enable or disable injection for specific pages. Checked pages will have both JSON-LD and appendix injection.', 'botdot-wp'); ?></p>
+
+                <!-- Search and Bulk Actions (Outside main form, uses GET) -->
+                <div class="tablenav top">
+                    <div class="alignleft actions bulkactions">
+                        <select name="bulk-action" id="bulk-action-selector-top">
+                            <option value="-1"><?php _e('Bulk Actions', 'botdot-wp'); ?></option>
+                            <option value="enable"><?php _e('Enable Injection', 'botdot-wp'); ?></option>
+                            <option value="disable"><?php _e('Disable Injection', 'botdot-wp'); ?></option>
+                        </select>
+                        <button type="button" id="doaction" class="button action"><?php _e('Apply', 'botdot-wp'); ?></button>
+                    </div>
+
+                    <div class="alignleft actions" style="margin-left: 10px;">
+                        <form method="get" style="display: inline-block; margin: 0;">
+                            <input type="hidden" name="page" value="botdot-wp">
+                            <input type="hidden" name="tab" value="pages">
+                            <input type="search" name="s" value="<?php echo esc_attr($search); ?>" placeholder="<?php esc_attr_e('Search pages...', 'botdot-wp'); ?>">
+                            <button type="submit" class="button"><?php _e('Search', 'botdot-wp'); ?></button>
+                        </form>
+                    </div>
+
+                    <?php if ($total_pages > 1) : ?>
+                        <div class="tablenav-pages">
+                            <span class="displaying-num"><?php printf(_n('%s item', '%s items', $query->found_posts, 'botdot-wp'), number_format_i18n($query->found_posts)); ?></span>
+                            <?php
+                            $page_links = paginate_links(array(
+                                'base' => add_query_arg(array('paged' => '%#%', 'tab' => 'pages')),
+                                'format' => '',
+                                'prev_text' => '&laquo;',
+                                'next_text' => '&raquo;',
+                                'total' => $total_pages,
+                                'current' => $current_page,
+                            ));
+                            echo $page_links;
+                            ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Pages Table -->
+                <table class="wp-list-table widefat fixed striped" id="botdot-pages-table">
+                    <thead>
+                        <tr>
+                            <td class="manage-column column-cb check-column">
+                                <input type="checkbox" id="cb-select-all-1">
+                            </td>
+                            <th scope="col" class="manage-column column-title column-primary">
+                                <?php _e('Title', 'botdot-wp'); ?>
+                            </th>
+                            <th scope="col" class="manage-column">
+                                <?php _e('Type', 'botdot-wp'); ?>
+                            </th>
+                            <th scope="col" class="manage-column">
+                                <?php _e('Status', 'botdot-wp'); ?>
+                            </th>
+                            <th scope="col" class="manage-column">
+                                <?php _e('Last Modified', 'botdot-wp'); ?>
+                            </th>
+                            <th scope="col" class="manage-column">
+                                <?php _e('Injection Enabled', 'botdot-wp'); ?>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($query->have_posts()) : ?>
+                            <?php while ($query->have_posts()) : $query->the_post(); ?>
+                                <?php
+                                $post_id = get_the_ID();
+                                $is_enabled = isset($injection_status[$post_id]) ? $injection_status[$post_id] : true;
+                                $post_type_obj = get_post_type_object(get_post_type());
+                                ?>
+                                <tr>
+                                    <th scope="row" class="check-column">
+                                        <input type="checkbox" name="page_ids[]" value="<?php echo esc_attr($post_id); ?>" class="page-checkbox">
+                                    </th>
+                                    <td class="title column-title column-primary" data-colname="<?php esc_attr_e('Title', 'botdot-wp'); ?>">
+                                        <strong>
+                                            <a href="<?php echo esc_url(get_edit_post_link($post_id)); ?>">
+                                                <?php echo esc_html(get_the_title()); ?>
+                                            </a>
+                                        </strong>
+                                        <div class="row-actions">
+                                            <span class="view">
+                                                <a href="<?php echo esc_url(get_permalink($post_id)); ?>" target="_blank">
+                                                    <?php _e('View', 'botdot-wp'); ?>
+                                                </a>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td data-colname="<?php esc_attr_e('Type', 'botdot-wp'); ?>">
+                                        <?php echo esc_html($post_type_obj->labels->singular_name); ?>
+                                    </td>
+                                    <td data-colname="<?php esc_attr_e('Status', 'botdot-wp'); ?>">
+                                        <?php echo esc_html(get_post_status()); ?>
+                                    </td>
+                                    <td data-colname="<?php esc_attr_e('Last Modified', 'botdot-wp'); ?>">
+                                        <?php echo esc_html(get_the_modified_date()); ?>
+                                    </td>
+                                    <td data-colname="<?php esc_attr_e('Injection Enabled', 'botdot-wp'); ?>">
+                                        <label class="botdot-toggle-switch">
+                                            <input type="checkbox"
+                                                   class="botdot-page-toggle"
+                                                   data-page-id="<?php echo esc_attr($post_id); ?>"
+                                                   <?php checked($is_enabled, true); ?>>
+                                            <span class="botdot-toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                            <?php wp_reset_postdata(); ?>
+                        <?php else : ?>
+                            <tr>
+                                <td colspan="6">
+                                    <?php _e('No pages found.', 'botdot-wp'); ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+
+                <!-- Bottom Pagination -->
+                <?php if ($total_pages > 1) : ?>
+                    <div class="tablenav bottom">
+                        <div class="tablenav-pages">
+                            <?php echo $page_links; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <hr>
+
+            <!-- Appendix Injection Settings Section -->
+            <div class="botdot-section">
+                <h2><?php _e('Appendix Injection Settings', 'botdot-wp'); ?></h2>
+                <p class="description"><?php _e('The appendix is an AI-friendly FAQ section that appears at the bottom of your pages. It provides additional context and information fetched from your mirror domain.', 'botdot-wp'); ?></p>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row"><?php _e('Enable Appendix', 'botdot-wp'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="botdot_wp_appendix_enabled" value="1" <?php checked(BotDot_WP_Options::get('appendix_enabled'), true); ?>>
+                                <?php _e('Enable appendix injection', 'botdot-wp'); ?>
+                            </label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><?php _e('Enable Appendix On', 'botdot-wp'); ?></th>
+                        <td>
+                            <?php $appendix_post_types = BotDot_WP_Options::get('appendix_on_post_types', array('post', 'page')); ?>
+                            <?php foreach ($post_types as $post_type) : ?>
+                                <label style="display: block; margin-bottom: 5px;">
+                                    <input type="checkbox"
+                                           name="botdot_wp_appendix_on_post_types[]"
+                                           value="<?php echo esc_attr($post_type->name); ?>"
+                                           <?php checked(in_array($post_type->name, $appendix_post_types)); ?>>
+                                    <?php echo esc_html($post_type->label); ?>
+                                </label>
+                            <?php endforeach; ?>
+                            <p class="description">
+                                <?php _e('Select which post types can display the appendix FAQ section. This is separate from JSON-LD injection and displays visible content on your pages.', 'botdot-wp'); ?>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><?php _e('Auto Placement', 'botdot-wp'); ?></th>
+                        <td>
+                            <select name="botdot_wp_appendix_auto_placement">
+                                <option value="above_footer" <?php selected(BotDot_WP_Options::get('appendix_auto_placement', 'above_footer'), 'above_footer'); ?>>
+                                    <?php _e('Above Footer (recommended)', 'botdot-wp'); ?>
+                                </option>
+                                <option value="bottom" <?php selected(BotDot_WP_Options::get('appendix_auto_placement', 'above_footer'), 'bottom'); ?>>
+                                    <?php _e('Bottom of Content', 'botdot-wp'); ?>
+                                </option>
+                            </select>
+                            <p class="description">
+                                <?php _e('Choose where the appendix should appear when not manually placed. Manual placement (via Gutenberg block or shortcode) will override this setting.', 'botdot-wp'); ?>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><?php _e('Appendix Title', 'botdot-wp'); ?></th>
+                        <td>
+                            <input type="text" name="botdot_wp_appendix_title" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_title', 'AI Appendix')); ?>" class="regular-text">
+                            <p class="description">
+                                <?php _e('The heading text for the appendix section.', 'botdot-wp'); ?>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><?php _e('Default State', 'botdot-wp'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="botdot_wp_appendix_open_default" value="1" <?php checked(BotDot_WP_Options::get('appendix_open_default'), true); ?>>
+                                <?php _e('Open first item by default', 'botdot-wp'); ?>
+                            </label>
+                            <p class="description">
+                                <?php _e('If enabled, the first FAQ item in the appendix will be expanded when the page loads.', 'botdot-wp'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <?php submit_button(); ?>
+        </div>
     </form>
 </div>
 
 <style>
-    .botdot-theme-collapsible {
-        margin-top: 16px;
-        border: 1px solid #dcdcde;
-        border-radius: 4px;
-        background: #ffffff;
-    }
+/* Tab Content Styling */
+.tab-content {
+    padding-top: 20px;
+}
 
-    .botdot-theme-collapsible summary {
-        margin: 0;
-        padding: 12px 16px;
-        cursor: pointer;
-        font-weight: 600;
-        list-style: none;
-    }
+/* Toggle Switch Styling */
+.botdot-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
 
-    .botdot-theme-collapsible summary:focus {
-        outline: 2px solid #2271b1;
-        outline-offset: 2px;
-    }
+.botdot-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
 
-    .botdot-theme-collapsible summary::-webkit-details-marker {
-        display: none;
-    }
+.botdot-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
 
-    .botdot-theme-collapsible summary::after {
-        content: '+';
-        float: right;
-        font-weight: 400;
-    }
+.botdot-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
 
-    .botdot-theme-collapsible[open] summary::after {
-        content: '-';
-    }
+.botdot-toggle-switch input:checked + .botdot-toggle-slider {
+    background-color: #2271b1;
+}
 
-    .botdot-theme-collapsible table.form-table {
-        margin-top: 0;
-    }
+.botdot-toggle-switch input:checked + .botdot-toggle-slider:before {
+    transform: translateX(20px);
+}
 
-    .botdot-theme-class-fields {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-        margin-top: 8px;
-    }
+.botdot-section {
+    margin-bottom: 30px;
+}
 
-    .botdot-theme-class-field {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .botdot-theme-class-field__label {
-        font-weight: 600;
-    }
-
-    .botdot-theme-detection {
-        margin-top: 16px;
-        padding: 16px;
-        border: 1px solid #dcdcde;
-        border-radius: 4px;
-        background: #ffffff;
-    }
-
-    .botdot-theme-detection__table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 12px 0;
-    }
-
-    .botdot-theme-detection__table th,
-    .botdot-theme-detection__table td {
-        padding: 6px 8px;
-        border-bottom: 1px solid #e3e3e3;
-        text-align: left;
-    }
-
-    .botdot-theme-detection__status p {
-        margin: 0 0 4px;
-    }
-
-    .botdot-theme-preview {
-        margin-top: 16px;
-        padding: 16px;
-        border: 1px dashed #ccd0d4;
-        border-radius: 4px;
-        background: #f6f7f7;
-    }
-
-    .botdot-theme-preview h4 {
-        margin-top: 0;
-    }
-
-    .botdot-theme-preview details {
-        margin-top: 8px;
-    }
-
-    .botdot-inline-status {
-        margin-left: 8px;
-    }
-
-    .botdot-inline-status.is-success {
-        color: #008a20;
-    }
-
-    .botdot-inline-status.is-error {
-        color: #d63638;
-    }
+.botdot-section h2 {
+    margin-top: 0;
+}
 </style>
 
 <script type="text/javascript">
 jQuery(document).ready(function($) {
+    // Ensure ajaxurl is defined
+    if (typeof ajaxurl === 'undefined') {
+        var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+    }
+
+    // Helper function to update the hidden page injection status field
+    function updatePageInjectionHiddenField(pageId, enabled) {
+        var hiddenField = $('#botdot-page-injection-json');
+        if (!hiddenField.length) {
+            return; // Hidden field only exists on Pages tab
+        }
+
+        try {
+            var currentStatus = JSON.parse(hiddenField.val() || '{}');
+            currentStatus[pageId] = enabled;
+            hiddenField.val(JSON.stringify(currentStatus));
+        } catch (e) {
+            console.error('Failed to update page injection status:', e);
+        }
+    }
+
     // Test connection button
     $('#botdot-wp-test-connection').on('click', function(e) {
         e.preventDefault();
@@ -217,27 +530,7 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Collapsible Theme & Styling section
-    var themeIntro = $('#botdot-theme-section-intro');
-    if (themeIntro.length) {
-        var themeTable = themeIntro.next('table.form-table');
-        if (themeTable.length) {
-            var manualHasValues = $('#botdot-theme-class-fields input').filter(function() {
-                return $(this).val().trim().length > 0;
-            }).length > 0;
-            var autoEnabledInit = $('#botdot-wp-theme-classes-enabled').is(':checked');
-            var details = $('<details class="botdot-theme-collapsible"></details>');
-            var summaryText = themeIntro.data('summary') || themeIntro.prev('h2').text();
-            var summary = $('<summary class="botdot-theme-collapsible__summary"></summary>').text(summaryText);
-
-            details.append(summary);
-            themeIntro.before(details);
-            details.append(themeIntro).append(themeTable);
-            details.prop('open', manualHasValues || !autoEnabledInit);
-        }
-    }
-
-    // Theme detection UI
+    // Theme detection and related UI logic (if on API tab)
     var detectionContainer = $('#botdot-theme-detection');
     if (detectionContainer.length) {
         var classKeys = ['wrapper', 'details', 'summary', 'title', 'content'];
@@ -419,5 +712,91 @@ jQuery(document).ready(function($) {
 
         refreshView();
     }
+
+    // Page toggle switches (AJAX)
+    $('.botdot-page-toggle').on('change', function() {
+        var checkbox = $(this);
+        var pageId = checkbox.data('page-id');
+        var enabled = checkbox.is(':checked');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'botdot_wp_toggle_page_injection',
+                nonce: '<?php echo wp_create_nonce('botdot_wp_toggle_page'); ?>',
+                page_id: pageId,
+                enabled: enabled ? 1 : 0
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update hidden field to preserve state on form submit
+                    updatePageInjectionHiddenField(pageId, enabled);
+                } else {
+                    // Revert on error
+                    checkbox.prop('checked', !enabled);
+                    alert(response.data.message || '<?php _e('Failed to update page status', 'botdot-wp'); ?>');
+                }
+            },
+            error: function() {
+                // Revert on error
+                checkbox.prop('checked', !enabled);
+                alert('<?php _e('Request failed', 'botdot-wp'); ?>');
+            }
+        });
+    });
+
+    // Select all checkbox
+    $('#cb-select-all-1').on('change', function() {
+        $('.page-checkbox').prop('checked', $(this).is(':checked'));
+    });
+
+    // Bulk actions
+    $('#doaction').on('click', function(e) {
+        e.preventDefault();
+        var action = $('#bulk-action-selector-top').val();
+
+        if (action === '-1') {
+            alert('<?php _e('Please select an action', 'botdot-wp'); ?>');
+            return;
+        }
+
+        var selectedPages = [];
+        $('.page-checkbox:checked').each(function() {
+            selectedPages.push($(this).val());
+        });
+
+        if (selectedPages.length === 0) {
+            alert('<?php _e('Please select at least one page', 'botdot-wp'); ?>');
+            return;
+        }
+
+        var enabled = action === 'enable';
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'botdot_wp_bulk_update_pages',
+                nonce: '<?php echo wp_create_nonce('botdot_wp_bulk_pages'); ?>',
+                page_ids: selectedPages,
+                enabled: enabled ? 1 : 0
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update hidden field for all affected pages
+                    selectedPages.forEach(function(pageId) {
+                        updatePageInjectionHiddenField(parseInt(pageId), enabled);
+                    });
+                    location.reload();
+                } else {
+                    alert(response.data.message || '<?php _e('Bulk update failed', 'botdot-wp'); ?>');
+                }
+            },
+            error: function() {
+                alert('<?php _e('Request failed', 'botdot-wp'); ?>');
+            }
+        });
+    });
 });
 </script>

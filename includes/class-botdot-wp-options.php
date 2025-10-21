@@ -45,8 +45,10 @@ class BotDot_WP_Options {
         'appendix_enabled' => false,
         'appendix_title' => 'AI Appendix',
         'appendix_position' => 'bottom',
+        'appendix_auto_placement' => 'above_footer',
         'appendix_open_default' => false,
         'appendix_on_post_types' => array('post', 'page'),
+        'page_injection_status' => array(), // [page_id => bool] map for enabled pages
         // Theme & Styling settings
         'theme_classes_enabled' => true,
         'custom_theme_classes' => array(
@@ -282,6 +284,10 @@ class BotDot_WP_Options {
                 $allowed_positions = array('bottom', 'shortcode');
                 return in_array($value, $allowed_positions) ? $value : 'bottom';
 
+            case 'appendix_auto_placement':
+                $allowed_placements = array('above_footer', 'bottom');
+                return in_array($value, $allowed_placements) ? $value : 'above_footer';
+
             case 'inject_on_post_types':
             case 'appendix_on_post_types':
                 if (is_array($value)) {
@@ -294,6 +300,20 @@ class BotDot_WP_Options {
                     return array_map('absint', $value);
                 }
                 return array();
+
+            case 'page_injection_status':
+                if (!is_array($value)) {
+                    return array();
+                }
+                // Ensure all keys are integers (page IDs) and values are booleans
+                $sanitized = array();
+                foreach ($value as $page_id => $enabled) {
+                    $page_id = absint($page_id);
+                    if ($page_id > 0) {
+                        $sanitized[$page_id] = (bool) $enabled;
+                    }
+                }
+                return $sanitized;
 
             case 'custom_theme_classes':
                 if (!is_array($value)) {
@@ -343,8 +363,8 @@ class BotDot_WP_Options {
                 if (empty($value)) {
                     return new WP_Error('empty_mirror_domain', __('Mirror domain cannot be empty', 'botdot-wp'));
                 }
-                // Basic domain validation
-                if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-_.]+[a-zA-Z0-9]$/', $value)) {
+                // Basic domain validation (allows optional port like localhost:5000)
+                if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-_.]+[a-zA-Z0-9](:\d+)?$/', $value)) {
                     return new WP_Error('invalid_mirror_domain', __('Invalid mirror domain format', 'botdot-wp'));
                 }
                 break;

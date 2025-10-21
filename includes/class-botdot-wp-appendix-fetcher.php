@@ -48,7 +48,7 @@ class BotDot_WP_Appendix_Fetcher {
      *
      * @since    0.2.0
      * @param    string    $url_path    The URL path to fetch (e.g., /blog/my-post).
-     * @return   array|WP_Error         The appendix data as array, or WP_Error on failure.
+     * @return   string|WP_Error        The appendix HTML content, or WP_Error on failure.
      */
     public static function fetch_appendix($url_path) {
         // Get mirror domain from options
@@ -61,7 +61,7 @@ class BotDot_WP_Appendix_Fetcher {
             );
         }
 
-        // Build the full URL (without .json extension)
+        // Build the full URL (fetches HTML, not JSON)
         $url_path = ltrim($url_path, '/');
         $protocol = self::get_protocol($mirror_domain);
         $url = $protocol . '://' . $mirror_domain . '/' . $url_path;
@@ -72,16 +72,16 @@ class BotDot_WP_Appendix_Fetcher {
         // Log debug info if debug mode is enabled
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug(sprintf(
-                'Fetching appendix from: %s',
+                'Fetching appendix HTML from: %s',
                 $url
             ));
         }
 
-        // Make HTTP request
+        // Make HTTP request for HTML
         $response = wp_remote_get($url, array(
             'timeout' => $timeout,
             'headers' => array(
-                'Accept' => 'application/json',
+                'Accept' => 'text/html',
             ),
         ));
 
@@ -113,7 +113,7 @@ class BotDot_WP_Appendix_Fetcher {
             return $error;
         }
 
-        // Get response body
+        // Get response body (HTML)
         $body = wp_remote_retrieve_body($response);
 
         if (empty($body)) {
@@ -128,34 +128,17 @@ class BotDot_WP_Appendix_Fetcher {
             return $error;
         }
 
-        // Decode JSON
-        $json_data = json_decode($body, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $error = new WP_Error(
-                'invalid_json',
-                sprintf(
-                    __('Invalid JSON response: %s', 'botdot-wp'),
-                    json_last_error_msg()
-                )
-            );
-            BotDot_WP_Logger::log_error(sprintf(
-                'Invalid JSON from appendix %s: %s',
-                $url,
-                json_last_error_msg()
-            ));
-            return $error;
-        }
-
         // Log success if debug mode is enabled
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug(sprintf(
-                'Successfully fetched appendix from: %s',
-                $url
+                'Successfully fetched appendix HTML from: %s (length: %d bytes)',
+                $url,
+                strlen($body)
             ));
         }
 
-        return $json_data;
+        // Return HTML as-is
+        return $body;
     }
 
     /**

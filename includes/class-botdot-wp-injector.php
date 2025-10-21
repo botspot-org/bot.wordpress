@@ -115,6 +115,9 @@ class BotDot_WP_Injector {
     private function should_inject() {
         // Check if plugin is enabled
         if (!BotDot_WP_Options::get('enabled')) {
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug('JSON-LD injection skipped: plugin not enabled');
+            }
             return false;
         }
 
@@ -125,39 +128,88 @@ class BotDot_WP_Injector {
 
         // Don't inject on 404 pages
         if (is_404()) {
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug('JSON-LD injection skipped: 404 page');
+            }
             return false;
         }
 
         // Don't inject on search results
         if (is_search()) {
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug('JSON-LD injection skipped: search page');
+            }
             return false;
         }
 
         // Don't inject on archive pages (unless specifically allowed)
         if (is_archive() && !apply_filters('botdot_wp_inject_on_archives', false)) {
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug('JSON-LD injection skipped: archive page');
+            }
             return false;
         }
 
         // Check if current post type is allowed
         if (is_singular()) {
+            $current_id = get_the_ID();
+
+            if ($current_id) {
+                // Check page injection status table
+                $injection_status = BotDot_WP_Options::get('page_injection_status', array());
+
+                // If the page has an explicit status set, use that
+                if (isset($injection_status[$current_id])) {
+                    $enabled = (bool) $injection_status[$current_id];
+                    if (BotDot_WP_Options::get('debug_mode')) {
+                        BotDot_WP_Logger::log_debug(sprintf(
+                            'JSON-LD injection for page %d: %s (explicit status)',
+                            $current_id,
+                            $enabled ? 'allowed' : 'blocked'
+                        ));
+                    }
+                    return $enabled;
+                }
+            }
+
+            // Otherwise, check if current post type is allowed (default behavior)
             $post_type = get_post_type();
             $allowed_post_types = BotDot_WP_Options::get('inject_on_post_types', array());
 
             if (!in_array($post_type, $allowed_post_types)) {
+                if (BotDot_WP_Options::get('debug_mode')) {
+                    BotDot_WP_Logger::log_debug(sprintf(
+                        'JSON-LD injection skipped: post type "%s" not in allowed types (%s)',
+                        $post_type,
+                        implode(', ', $allowed_post_types)
+                    ));
+                }
                 return false;
             }
 
-            // Check if current page is excluded
-            $excluded_ids = BotDot_WP_Options::get('exclude_page_ids', array());
-            $current_id = get_the_ID();
-
-            if (in_array($current_id, $excluded_ids)) {
-                return false;
+            // Check legacy exclude list for backwards compatibility
+            if ($current_id) {
+                $excluded_ids = BotDot_WP_Options::get('exclude_page_ids', array());
+                if (in_array($current_id, $excluded_ids)) {
+                    if (BotDot_WP_Options::get('debug_mode')) {
+                        BotDot_WP_Logger::log_debug(sprintf(
+                            'JSON-LD injection skipped: page %d is in exclude list',
+                            $current_id
+                        ));
+                    }
+                    return false;
+                }
             }
         }
 
         // Apply filter to allow custom injection logic
-        return apply_filters('botdot_wp_should_inject', true);
+        $should_inject = apply_filters('botdot_wp_should_inject', true);
+
+        if (BotDot_WP_Options::get('debug_mode') && $should_inject) {
+            BotDot_WP_Logger::log_debug('JSON-LD injection allowed: all checks passed');
+        }
+
+        return $should_inject;
     }
 
     /**

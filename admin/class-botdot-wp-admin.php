@@ -61,12 +61,15 @@ class BotDot_WP_Admin {
      * @since    0.1.0
      */
     public function add_admin_menu() {
-        add_options_page(
-            __('BotDot WP Settings', 'botdot-wp'),
-            __('BotDot WP', 'botdot-wp'),
-            'manage_options',
-            'botdot-wp',
-            array($this, 'display_settings_page')
+        // Add single top-level menu page with tabbed interface
+        add_menu_page(
+            __('BotDot Settings', 'botdot-wp'),  // Page title
+            __('BotDot', 'botdot-wp'),           // Menu title
+            'manage_options',                     // Capability
+            'botdot-wp',                         // Menu slug
+            array($this, 'display_settings_page'), // Callback
+            'dashicons-admin-site-alt3',         // Icon
+            80                                    // Position (after Settings)
         );
     }
 
@@ -132,6 +135,22 @@ class BotDot_WP_Admin {
             'default' => array('post', 'page'),
         ));
 
+        register_setting('botdot_wp_settings', 'botdot_wp_appendix_auto_placement', array(
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => 'above_footer',
+        ));
+
+        register_setting('botdot_wp_settings', 'botdot_wp_page_injection_status', array(
+            'sanitize_callback' => array($this, 'sanitize_page_injection_status'),
+            'default' => array(),
+        ));
+
+        // Hidden JSON field to preserve page injection status from AJAX updates
+        register_setting('botdot_wp_settings', 'botdot_wp_page_injection_status_json', array(
+            'sanitize_callback' => array($this, 'sanitize_page_injection_status_json'),
+            'default' => '',
+        ));
+
         // Theme & styling settings
         register_setting('botdot_wp_settings', 'botdot_wp_theme_classes_enabled', array(
             'sanitize_callback' => array($this, 'sanitize_checkbox'),
@@ -148,13 +167,6 @@ class BotDot_WP_Admin {
             'botdot_wp_general_section',
             __('General Settings', 'botdot-wp'),
             array($this, 'render_general_section'),
-            'botdot-wp'
-        );
-
-        add_settings_section(
-            'botdot_wp_injection_section',
-            __('Injection Settings', 'botdot-wp'),
-            array($this, 'render_injection_section'),
             'botdot-wp'
         );
 
@@ -187,22 +199,6 @@ class BotDot_WP_Admin {
             array($this, 'render_enabled_field'),
             'botdot-wp',
             'botdot_wp_general_section'
-        );
-
-        add_settings_field(
-            'botdot_wp_inject_on_post_types',
-            __('Inject on Post Types', 'botdot-wp'),
-            array($this, 'render_post_types_field'),
-            'botdot-wp',
-            'botdot_wp_injection_section'
-        );
-
-        add_settings_field(
-            'botdot_wp_exclude_page_ids',
-            __('Exclude Page IDs', 'botdot-wp'),
-            array($this, 'render_exclude_pages_field'),
-            'botdot-wp',
-            'botdot_wp_injection_section'
         );
 
         add_settings_field(
@@ -253,15 +249,6 @@ class BotDot_WP_Admin {
      */
     public function render_general_section() {
         echo '<p>' . __('Configure the basic settings for BotDot WP.', 'botdot-wp') . '</p>';
-    }
-
-    /**
-     * Render injection section description
-     *
-     * @since    0.1.0
-     */
-    public function render_injection_section() {
-        echo '<p>' . __('Control which pages and post types receive JSON-LD injection.', 'botdot-wp') . '</p>';
     }
 
     /**
@@ -512,7 +499,7 @@ class BotDot_WP_Admin {
         ?>
         <input type="text" name="botdot_wp_mirror_domain" value="<?php echo esc_attr($value); ?>" class="regular-text" placeholder="ai.example.com">
         <p class="description">
-            <?php _e('The mirror domain to fetch JSON-LD from (without https://). Example: ai.example.com', 'botdot-wp'); ?>
+            <?php _e('The mirror domain to fetch JSON-LD from (without https://). Examples: ai.example.com, localhost:5000', 'botdot-wp'); ?>
         </p>
         <button type="button" id="botdot-wp-test-connection" class="button">
             <?php _e('Test Connection', 'botdot-wp'); ?>
@@ -607,7 +594,7 @@ class BotDot_WP_Admin {
     }
 
     /**
-     * Display the settings page
+     * Display the settings page with tabbed interface
      *
      * @since    0.1.0
      */
@@ -723,6 +710,78 @@ class BotDot_WP_Admin {
     }
 
     /**
+     * Handle AJAX request to toggle page injection status
+     *
+     * @since    0.3.0
+     */
+    public function handle_toggle_page_injection() {
+        check_ajax_referer('botdot_wp_toggle_page', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        }
+
+        $page_id = isset($_POST['page_id']) ? absint($_POST['page_id']) : 0;
+        $enabled = isset($_POST['enabled']) ? (bool) $_POST['enabled'] : false;
+
+        if (!$page_id) {
+            wp_send_json_error(array('message' => __('Invalid page ID', 'botdot-wp')));
+        }
+
+        // Get current status
+        $injection_status = BotDot_WP_Options::get('page_injection_status', array());
+
+        // Update status
+        $injection_status[$page_id] = $enabled;
+
+        // Save
+        BotDot_WP_Options::set('page_injection_status', $injection_status);
+
+        wp_send_json_success(array(
+            'page_id' => $page_id,
+            'enabled' => $enabled,
+        ));
+    }
+
+    /**
+     * Handle AJAX request to bulk update page injection status
+     *
+     * @since    0.3.0
+     */
+    public function handle_bulk_update_pages() {
+        check_ajax_referer('botdot_wp_bulk_pages', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        }
+
+        $page_ids = isset($_POST['page_ids']) ? array_map('absint', (array) $_POST['page_ids']) : array();
+        $enabled = isset($_POST['enabled']) ? (bool) $_POST['enabled'] : false;
+
+        if (empty($page_ids)) {
+            wp_send_json_error(array('message' => __('No pages selected', 'botdot-wp')));
+        }
+
+        // Get current status
+        $injection_status = BotDot_WP_Options::get('page_injection_status', array());
+
+        // Update all pages
+        foreach ($page_ids as $page_id) {
+            if ($page_id > 0) {
+                $injection_status[$page_id] = $enabled;
+            }
+        }
+
+        // Save
+        BotDot_WP_Options::set('page_injection_status', $injection_status);
+
+        wp_send_json_success(array(
+            'count' => count($page_ids),
+            'enabled' => $enabled,
+        ));
+    }
+
+    /**
      * Sanitize mirror domain
      *
      * @since    0.1.0
@@ -796,5 +855,44 @@ class BotDot_WP_Admin {
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Sanitize page injection status array
+     *
+     * @since    0.3.0
+     * @param    mixed    $value    Raw input values.
+     * @return   array              Sanitized page status mapping.
+     */
+    public function sanitize_page_injection_status($value) {
+        $sanitized = BotDot_WP_Options::sanitize_option_value('page_injection_status', $value);
+
+        // Merge with JSON field data if it exists (from AJAX updates)
+        if (isset($_POST['botdot_wp_page_injection_status_json'])) {
+            $json_data = $_POST['botdot_wp_page_injection_status_json'];
+            if (!empty($json_data)) {
+                $json_decoded = json_decode(stripslashes($json_data), true);
+                if (is_array($json_decoded)) {
+                    // Merge: JSON data (from AJAX) takes precedence
+                    $sanitized = array_merge($sanitized, $json_decoded);
+                }
+            }
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Sanitize page injection status JSON field
+     *
+     * @since    0.3.0
+     * @param    string   $value    JSON-encoded page status.
+     * @return   string             Empty string (we merge into main array).
+     */
+    public function sanitize_page_injection_status_json($value) {
+        // This field is just a temporary holder to preserve AJAX updates
+        // The data is merged into page_injection_status by its sanitize callback
+        // We return empty string to avoid storing duplicate data
+        return '';
     }
 }

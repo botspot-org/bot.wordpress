@@ -252,8 +252,13 @@ class BotDot_WP_Public {
             return $content;
         }
 
-        // Don't add if shortcode was already used
-        if ($this->shortcode_used) {
+        // Don't add if auto placement is set to footer
+        if (BotDot_WP_Options::get('appendix_auto_placement') !== 'bottom') {
+            return $content;
+        }
+
+        // Check if manual placement is used (block or shortcode)
+        if ($this->has_manual_placement($content)) {
             return $content;
         }
 
@@ -262,19 +267,8 @@ class BotDot_WP_Public {
             return $content;
         }
 
-        // Check if current post type is allowed
-        $post_type = get_post_type();
-        $allowed_types = BotDot_WP_Options::get('appendix_on_post_types', array('post', 'page'));
-
-        if (!in_array($post_type, $allowed_types)) {
-            return $content;
-        }
-
-        // Check if current page is excluded
-        $excluded_ids = BotDot_WP_Options::get('exclude_page_ids', array());
-        $current_id = get_the_ID();
-
-        if (in_array($current_id, $excluded_ids)) {
+        // Check if injection should happen on this page
+        if (!$this->should_inject_on_current_page()) {
             return $content;
         }
 
@@ -286,6 +280,113 @@ class BotDot_WP_Public {
         }
 
         return $content;
+    }
+
+    /**
+     * Inject appendix above footer
+     *
+     * @since    0.3.0
+     */
+    public function inject_above_footer() {
+        // Don't add if not enabled
+        if (!BotDot_WP_Options::get('appendix_enabled')) {
+            return;
+        }
+
+        // Don't add if position is shortcode-only
+        if (BotDot_WP_Options::get('appendix_position') === 'shortcode') {
+            return;
+        }
+
+        // Only inject if auto placement is set to footer
+        if (BotDot_WP_Options::get('appendix_auto_placement') !== 'above_footer') {
+            return;
+        }
+
+        // Don't add on excerpts or feeds
+        if (!is_singular() || is_feed()) {
+            return;
+        }
+
+        // Check if manual placement is used
+        global $post;
+        if ($post && $this->has_manual_placement($post->post_content)) {
+            return;
+        }
+
+        // Check if injection should happen on this page
+        if (!$this->should_inject_on_current_page()) {
+            return;
+        }
+
+        // Render and output
+        echo $this->render_appendix();
+    }
+
+    /**
+     * Check if manual placement (block or shortcode) is used
+     *
+     * @since    0.3.0
+     * @access   private
+     * @param    string    $content    The post content.
+     * @return   bool                  True if manual placement detected.
+     */
+    private function has_manual_placement($content) {
+        // Check for Gutenberg block
+        if (function_exists('has_block') && has_block('botdot-wp/appendix', $content)) {
+            return true;
+        }
+
+        // Check for shortcode
+        if (has_shortcode($content, 'botdot_appendix')) {
+            return true;
+        }
+
+        // Check if shortcode was already rendered
+        if ($this->shortcode_used) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if injection should happen on the current page
+     *
+     * @since    0.3.0
+     * @access   private
+     * @return   bool    True if should inject, false otherwise.
+     */
+    private function should_inject_on_current_page() {
+        $current_id = get_the_ID();
+
+        if (!$current_id) {
+            return false;
+        }
+
+        // Check page injection status table
+        $injection_status = BotDot_WP_Options::get('page_injection_status', array());
+
+        // If the page has an explicit status set, use that
+        if (isset($injection_status[$current_id])) {
+            return (bool) $injection_status[$current_id];
+        }
+
+        // Otherwise, check if current post type is allowed (default behavior)
+        $post_type = get_post_type();
+        $allowed_types = BotDot_WP_Options::get('appendix_on_post_types', array('post', 'page'));
+
+        if (!in_array($post_type, $allowed_types)) {
+            return false;
+        }
+
+        // Check legacy exclude list for backwards compatibility
+        $excluded_ids = BotDot_WP_Options::get('exclude_page_ids', array());
+        if (in_array($current_id, $excluded_ids)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

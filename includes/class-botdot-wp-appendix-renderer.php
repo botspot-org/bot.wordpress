@@ -342,15 +342,19 @@ class BotDot_WP_Appendix_Renderer {
      *
      * @since    0.2.0
      * @access   private
-     * @param    array     $data    The appendix data.
+     * @param    mixed     $data    The appendix data (HTML string or array).
      * @param    array     $args    Rendering arguments.
      * @return   string             The rendered content HTML.
      */
     private static function render_content($data, $args) {
         ob_start();
 
+        // If data is a string, treat it as HTML and output directly
+        if (is_string($data)) {
+            echo $data;
+        }
         // Check if data has specific structure (JSON-LD)
-        if (isset($data['@context']) && isset($data['@type'])) {
+        elseif (isset($data['@context']) && isset($data['@type'])) {
             // Render JSON-LD structured data
             echo self::render_json_ld($data);
         } elseif (is_array($data) && isset($data[0]) && isset($data[0]['@context'])) {
@@ -363,8 +367,8 @@ class BotDot_WP_Appendix_Renderer {
             echo self::render_generic($data);
         }
 
-        // Show metadata if enabled
-        if ($args['show_metadata'] && isset($data['_timestamp'])) {
+        // Show metadata if enabled (only for array data)
+        if (is_array($data) && $args['show_metadata'] && isset($data['_timestamp'])) {
             echo self::render_metadata($data);
         }
 
