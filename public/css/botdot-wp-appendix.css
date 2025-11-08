@@ -7,70 +7,12 @@
  * @version 0.2.0
  */
 
-/* Main appendix container */
-.botdot-appendix {
+/* Main appendix content container */
+.botdot-appendix-content {
     margin-top: 2rem;
     margin-bottom: 2rem;
     clear: both;
-}
-
-/* Details/Summary accordion */
-.botdot-appendix-details {
-    background-color: var(--wp--preset--color--background, rgba(0, 0, 0, 0.02));
-    border: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.1));
-    border-radius: 6px;
-    padding: 0;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.botdot-appendix-details:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-.botdot-appendix-details[open] {
-    background-color: var(--wp--preset--color--background, #fff);
-}
-
-.botdot-appendix-summary {
-    padding: 1.25rem 1.5rem;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 1.1em;
-    user-select: none;
-    list-style: none;
-    position: relative;
-    transition: all 0.2s ease;
-}
-
-.botdot-appendix-summary::-webkit-details-marker {
-    display: none;
-}
-
-.botdot-appendix-summary::before {
-    content: '▶';
-    position: absolute;
-    left: 1rem;
-    transition: transform 0.2s ease;
-    opacity: 0.6;
-}
-
-.botdot-appendix-details[open] .botdot-appendix-summary::before {
-    transform: rotate(90deg);
-}
-
-.botdot-appendix-summary:hover {
-    background-color: var(--wp--preset--color--foreground, rgba(0, 0, 0, 0.03));
-}
-
-.botdot-appendix-title {
-    padding-left: 1.5rem;
-}
-
-.botdot-appendix-content {
-    padding: 1.5rem;
-    border-top: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.1));
-    animation: fadeIn 0.3s ease;
+    padding: 1.5rem 0;
 }
 
 @keyframes fadeIn {
@@ -221,19 +163,6 @@
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
-    .botdot-appendix-details {
-        background-color: rgba(255, 255, 255, 0.03);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .botdot-appendix-details[open] {
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-
-    .botdot-appendix-summary:hover {
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-
     .botdot-appendix-item {
         background-color: rgba(255, 255, 255, 0.02);
     }
@@ -241,16 +170,7 @@
 
 /* Print styles */
 @media print {
-    .botdot-appendix-details[open] .botdot-appendix-content {
-        display: block;
-    }
-
-    .botdot-appendix-summary::before {
-        display: none;
-    }
-
-    .botdot-appendix-details {
-        border: 1px solid #ccc;
+    .botdot-appendix-content {
         page-break-inside: avoid;
     }
 }

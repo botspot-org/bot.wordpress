@@ -282,7 +282,7 @@ class BotDot_WP_Appendix_Renderer {
     }
 
     /**
-     * Render appendix as accordion HTML
+     * Render appendix as direct content HTML
      *
      * @since    0.2.0
      * @param    array     $appendix_data    The appendix data.
@@ -317,17 +317,9 @@ class BotDot_WP_Appendix_Renderer {
 
         ?>
         <!-- BotDot WP Appendix Start -->
-        <aside class="<?php echo esc_attr($theme_classes['wrapper']); ?> botdot-appendix" id="botdot-appendix" role="complementary" aria-label="<?php echo esc_attr($args['title']); ?>">
-            <details class="<?php echo esc_attr($theme_classes['details']); ?> botdot-appendix-details" <?php echo $args['open'] ? 'open' : ''; ?>>
-                <summary class="<?php echo esc_attr($theme_classes['summary']); ?> botdot-appendix-summary" role="button" aria-expanded="<?php echo $args['open'] ? 'true' : 'false'; ?>">
-                    <span class="<?php echo esc_attr($theme_classes['title']); ?> botdot-appendix-title"><?php echo esc_html($args['title']); ?></span>
-                </summary>
-
-                <div class="<?php echo esc_attr($theme_classes['content']); ?> botdot-appendix-content">
-                    <?php echo self::render_content($appendix_data, $args); ?>
-                </div>
-            </details>
-        </aside>
+        <div class="<?php echo esc_attr($theme_classes['content']); ?> botdot-appendix-content" id="botdot-appendix">
+            <?php echo self::render_content($appendix_data, $args); ?>
+        </div>
         <!-- /BotDot WP Appendix End -->
         <?php
 
