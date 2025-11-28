@@ -81,6 +81,7 @@ class BotDot_WP {
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
+        $this->define_cache_hooks();
     }
 
     /**
@@ -149,6 +150,11 @@ class BotDot_WP {
          */
         require_once BOTDOT_WP_PLUGIN_PATH . 'public/class-botdot-wp-public.php';
 
+        /**
+         * The class responsible for cache clearing and polling
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-cache-clearer.php';
+
         $this->loader = new BotDot_WP_Loader();
     }
 
@@ -213,6 +219,21 @@ class BotDot_WP {
 
         // Enqueue appendix styles
         $this->loader->add_action('wp_enqueue_scripts', $public, 'enqueue_styles');
+    }
+
+    /**
+     * Register all of the hooks related to cache clearing functionality
+     * of the plugin.
+     *
+     * @since    0.3.0
+     * @access   private
+     */
+    private function define_cache_hooks() {
+        // Add custom cron schedule
+        $this->loader->add_filter('cron_schedules', 'BotDot_WP_Cache_Clearer', 'add_cron_schedule');
+
+        // Register cron hook for polling recache trigger
+        $this->loader->add_action('botdot_wp_poll_recache', 'BotDot_WP_Cache_Clearer', 'poll_recache_trigger');
     }
 
     /**

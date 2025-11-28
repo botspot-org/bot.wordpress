@@ -94,5 +94,8 @@ class BotDot_WP_Activator {
 
         // Set activation notice
         set_transient('botdot_wp_activation_notice', true, 60);
+
+        // Schedule cache polling cron job
+        BotDot_WP_Cache_Clearer::schedule_polling();
     }
 }

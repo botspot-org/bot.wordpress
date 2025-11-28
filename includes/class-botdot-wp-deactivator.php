@@ -39,5 +39,8 @@ class BotDot_WP_Deactivator {
 
         // Clear activation notice transient
         delete_transient('botdot_wp_activation_notice');
+
+        // Unschedule cache polling cron job
+        BotDot_WP_Cache_Clearer::unschedule_polling();
     }
 }
