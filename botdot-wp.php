@@ -3,7 +3,7 @@
  * Plugin Name: BotDot WordPress
  * Plugin URI: https://botdot.ai
  * Description: Server-side JSON-LD injection from mirror domain for AI discoverability. Fetches and injects JSON-LD from a configurable mirror domain into page headers.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Author: BotDot Team
  * Author URI: https://botdot.ai
  * License: GPL v2 or later
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package BotDot_WP
- * @version 0.3.0
+ * @version 0.4.0
  */
 
 // If this file is called directly, abort.
@@ -33,7 +33,7 @@ if (!defined('ABSPATH')) {
  * Plugin version.
  * Start at version 0.1.0 and use SemVer - https://semver.org
  */
-define('BOTDOT_WP_VERSION', '0.3.0');
+define('BOTDOT_WP_VERSION', '0.4.0');
 
 /**
  * Plugin file path
@@ -74,8 +74,10 @@ define('BOTDOT_WP_MIN_PHP_VERSION', '7.4');
  * The code that runs during plugin activation.
  */
 function activate_botdot_wp() {
-    // Load the Options class first (required by activator)
+    // Load required classes for activation
     require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-options.php';
+    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-logger.php';
+    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-cache-clearer.php';
     require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-activator.php';
 
     try {
@@ -101,8 +103,10 @@ function activate_botdot_wp() {
  * The code that runs during plugin deactivation.
  */
 function deactivate_botdot_wp() {
-    // Load required classes
+    // Load required classes for deactivation
+    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-options.php';
     require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-logger.php';
+    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-cache-clearer.php';
     require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-deactivator.php';
 
     try {

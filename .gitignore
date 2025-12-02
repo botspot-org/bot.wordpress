@@ -546,3 +546,4 @@ env/
 venv/
 ENV/
 .venv
+GEMINI.md

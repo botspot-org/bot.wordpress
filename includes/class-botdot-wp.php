@@ -177,6 +177,8 @@ class BotDot_WP {
         $this->loader->add_action('wp_ajax_botdot_wp_detect_theme_classes', $plugin_admin, 'handle_detect_theme_classes');
         $this->loader->add_action('wp_ajax_botdot_wp_toggle_page_injection', $plugin_admin, 'handle_toggle_page_injection');
         $this->loader->add_action('wp_ajax_botdot_wp_bulk_update_pages', $plugin_admin, 'handle_bulk_update_pages');
+        $this->loader->add_action('wp_ajax_botdot_wp_manual_cache_poll', $plugin_admin, 'handle_manual_cache_poll');
+        $this->loader->add_action('wp_ajax_botdot_wp_manual_cache_clear', $plugin_admin, 'handle_manual_cache_clear');
 
         // Admin notices for errors
         $this->loader->add_action('admin_notices', $plugin_admin, 'display_admin_notices');
@@ -234,6 +236,9 @@ class BotDot_WP {
 
         // Register cron hook for polling recache trigger
         $this->loader->add_action('botdot_wp_poll_recache', 'BotDot_WP_Cache_Clearer', 'poll_recache_trigger');
+
+        // Register cron hook for re-enabling LiteSpeed Cache
+        $this->loader->add_action('botdot_wp_reenable_litespeed', 'BotDot_WP_Cache_Clearer', 'reenable_litespeed_cache');
     }
 
     /**

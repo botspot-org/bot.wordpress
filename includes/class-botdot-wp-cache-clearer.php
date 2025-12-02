@@ -37,6 +37,10 @@ class BotDot_WP_Cache_Clearer {
      * @return   void
      */
     public static function poll_recache_trigger() {
+        if (BotDot_WP_Options::get('debug_mode')) {
+            BotDot_WP_Logger::log_debug('Starting recache poll trigger check.');
+        }
+
         $mirror_domain = BotDot_WP_Options::get('mirror_domain');
 
         if (empty($mirror_domain)) {
@@ -49,6 +53,13 @@ class BotDot_WP_Cache_Clearer {
         // Determine protocol
         $protocol = self::get_protocol($mirror_domain);
         $url = $protocol . '://' . $mirror_domain . '/.force-recache-trigger';
+
+        if (BotDot_WP_Options::get('debug_mode')) {
+            BotDot_WP_Logger::log_debug(sprintf(
+                'Polling recache trigger URL: %s',
+                $url
+            ));
+        }
 
         // Fetch the recache bit
         $response = wp_remote_get($url, array(
@@ -115,6 +126,29 @@ class BotDot_WP_Cache_Clearer {
     public static function clear_site_cache() {
         $cleared = false;
 
+        if (BotDot_WP_Options::get('debug_mode')) {
+            BotDot_WP_Logger::log_debug('Starting cache clearing process');
+        }
+
+        // WordPress built-in object cache
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+            $cleared = true;
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug('Cleared WordPress object cache');
+            }
+        }
+
+        // Clear all transients (WordPress built-in temporary cache)
+        global $wpdb;
+        $result = $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_%' OR option_name LIKE '_site_transient_%'");
+        if ($result !== false) {
+            $cleared = true;
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug(sprintf('Cleared %d transients from database', $result / 2));
+            }
+        }
+
         // WP Super Cache
         if (function_exists('wp_cache_clear_cache')) {
             wp_cache_clear_cache();
@@ -151,12 +185,58 @@ class BotDot_WP_Cache_Clearer {
             }
         }
 
-        // LiteSpeed Cache
-        if (class_exists('LiteSpeed_Cache_API') && method_exists('LiteSpeed_Cache_API', 'purge_all')) {
-            LiteSpeed_Cache_API::purge_all();
-            $cleared = true;
-            if (BotDot_WP_Options::get('debug_mode')) {
-                BotDot_WP_Logger::log_debug('Cleared LiteSpeed Cache');
+        // LiteSpeed Cache - Turn off, then schedule re-enable after 5 minutes
+        if (class_exists('LiteSpeed\\Core') || class_exists('LiteSpeed_Cache_API')) {
+            // Try to disable LiteSpeed Cache
+            $litespeed_disabled = false;
+
+            // Method 1: Using LiteSpeed Core (newer versions)
+            if (class_exists('LiteSpeed\\Core')) {
+                try {
+                    // Disable cache by setting status to off
+                    if (method_exists('LiteSpeed\\Core', 'set_cache_status')) {
+                        \LiteSpeed\Core::set_cache_status(false);
+                        $litespeed_disabled = true;
+                    }
+                } catch (Exception $e) {
+                    if (BotDot_WP_Options::get('debug_mode')) {
+                        BotDot_WP_Logger::log_debug('LiteSpeed Cache disable method 1 failed: ' . $e->getMessage());
+                    }
+                }
+            }
+
+            // Method 2: Using options (works for most versions)
+            if (!$litespeed_disabled) {
+                $litespeed_options = get_option('litespeed.conf.cache');
+                if ($litespeed_options !== false) {
+                    update_option('botdot_wp_litespeed_previous_state', $litespeed_options, false);
+                    update_option('litespeed.conf.cache', 0, false);
+                    $litespeed_disabled = true;
+                }
+            }
+
+            // Purge the cache
+            if (class_exists('LiteSpeed_Cache_API') && method_exists('LiteSpeed_Cache_API', 'purge_all')) {
+                LiteSpeed_Cache_API::purge_all();
+                $cleared = true;
+            } elseif (class_exists('LiteSpeed\\Purge') && method_exists('LiteSpeed\\Purge', 'purge_all')) {
+                \LiteSpeed\Purge::purge_all();
+                $cleared = true;
+            }
+
+            if ($litespeed_disabled) {
+                // Schedule re-enable after 5 minutes
+                if (!wp_next_scheduled('botdot_wp_reenable_litespeed')) {
+                    wp_schedule_single_event(time() + 300, 'botdot_wp_reenable_litespeed');
+                }
+
+                if (BotDot_WP_Options::get('debug_mode')) {
+                    BotDot_WP_Logger::log_debug('LiteSpeed Cache disabled and purged. Scheduled to re-enable in 5 minutes.');
+                }
+            } elseif ($cleared) {
+                if (BotDot_WP_Options::get('debug_mode')) {
+                    BotDot_WP_Logger::log_debug('Cleared LiteSpeed Cache (disable/enable not supported)');
+                }
             }
         }
 
@@ -224,7 +304,11 @@ class BotDot_WP_Cache_Clearer {
         }
 
         if (!$cleared && BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('No caching plugins detected');
+            BotDot_WP_Logger::log_debug('No caching plugins detected, only WordPress built-in cache cleared');
+        }
+
+        if ($cleared && BotDot_WP_Options::get('debug_mode')) {
+            BotDot_WP_Logger::log_debug('Cache clearing process completed successfully');
         }
 
         return $cleared;
@@ -255,6 +339,10 @@ class BotDot_WP_Cache_Clearer {
      */
     public static function schedule_polling() {
         if (!wp_next_scheduled('botdot_wp_poll_recache')) {
+            // Ensure the custom schedule exists before using it
+            // This is critical during plugin activation when hooks may not be registered yet
+            add_filter('cron_schedules', array('BotDot_WP_Cache_Clearer', 'add_cron_schedule'));
+
             wp_schedule_event(time(), 'botdot_wp_every_2_5_minutes', 'botdot_wp_poll_recache');
 
             if (BotDot_WP_Options::get('debug_mode')) {
@@ -293,5 +381,55 @@ class BotDot_WP_Cache_Clearer {
             'display'  => __('Every 2.5 Minutes', 'botdot-wp'),
         );
         return $schedules;
+    }
+
+    /**
+     * Re-enable LiteSpeed Cache after it was disabled
+     *
+     * This is called by WordPress cron 5 minutes after cache clearing.
+     *
+     * @since    0.4.0
+     * @return   void
+     */
+    public static function reenable_litespeed_cache() {
+        if (BotDot_WP_Options::get('debug_mode')) {
+            BotDot_WP_Logger::log_debug('Attempting to re-enable LiteSpeed Cache');
+        }
+
+        $reenabled = false;
+
+        // Method 1: Using LiteSpeed Core (newer versions)
+        if (class_exists('LiteSpeed\\Core')) {
+            try {
+                if (method_exists('LiteSpeed\\Core', 'set_cache_status')) {
+                    \LiteSpeed\Core::set_cache_status(true);
+                    $reenabled = true;
+                }
+            } catch (Exception $e) {
+                if (BotDot_WP_Options::get('debug_mode')) {
+                    BotDot_WP_Logger::log_debug('LiteSpeed Cache re-enable method 1 failed: ' . $e->getMessage());
+                }
+            }
+        }
+
+        // Method 2: Restore previous state from options
+        if (!$reenabled) {
+            $previous_state = get_option('botdot_wp_litespeed_previous_state');
+            if ($previous_state !== false) {
+                update_option('litespeed.conf.cache', $previous_state, false);
+                delete_option('botdot_wp_litespeed_previous_state');
+                $reenabled = true;
+            }
+        }
+
+        if ($reenabled) {
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug('LiteSpeed Cache re-enabled successfully');
+            }
+        } else {
+            if (BotDot_WP_Options::get('debug_mode')) {
+                BotDot_WP_Logger::log_debug('Could not re-enable LiteSpeed Cache (no previous state found or method not supported)');
+            }
+        }
     }
 }

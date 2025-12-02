@@ -590,6 +590,32 @@ class BotDot_WP_Admin {
         <p class="description">
             <?php _e('Logs additional debug information to the WordPress debug log.', 'botdot-wp'); ?>
         </p>
+        <?php if (defined('WP_DEBUG') && WP_DEBUG) : ?>
+            <div style="margin-top: 15px; padding: 15px; background: #f0f0f1; border-left: 4px solid #2271b1;">
+                <h4 style="margin-top: 0;"><?php _e('Debug Tools', 'botdot-wp'); ?></h4>
+                <p>
+                    <button type="button" id="botdot-wp-manual-poll" class="button">
+                        <?php _e('Trigger Cache Poll Manually', 'botdot-wp'); ?>
+                    </button>
+                    <span id="botdot-wp-manual-poll-result"></span>
+                </p>
+                <p class="description">
+                    <?php _e('Manually trigger the cache poll to test the connection to .force-recache-trigger endpoint.', 'botdot-wp'); ?>
+                </p>
+                <p style="margin-top: 10px;">
+                    <button type="button" id="botdot-wp-manual-clear" class="button button-primary">
+                        <?php _e('Clear Site Cache Now', 'botdot-wp'); ?>
+                    </button>
+                    <span id="botdot-wp-manual-clear-result"></span>
+                </p>
+                <p class="description">
+                    <?php _e('Immediately clear all WordPress caches and detected caching plugin caches.', 'botdot-wp'); ?>
+                </p>
+                <p class="description" style="margin-top: 10px;">
+                    <em><?php _e('These debug tools are only visible when WP_DEBUG is enabled.', 'botdot-wp'); ?></em>
+                </p>
+            </div>
+        <?php endif; ?>
         <?php
     }
 
@@ -779,6 +805,88 @@ class BotDot_WP_Admin {
             'count' => count($page_ids),
             'enabled' => $enabled,
         ));
+    }
+
+    /**
+     * Handle AJAX request to manually trigger cache poll
+     *
+     * @since    0.3.0
+     */
+    public function handle_manual_cache_poll() {
+        check_ajax_referer('botdot_wp_manual_poll', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        }
+
+        // Check if mirror domain is configured
+        $mirror_domain = BotDot_WP_Options::get('mirror_domain');
+        if (empty($mirror_domain)) {
+            wp_send_json_error(array('message' => __('Mirror domain not configured', 'botdot-wp')));
+        }
+
+        // Manually trigger the polling function
+        BotDot_WP_Cache_Clearer::poll_recache_trigger();
+
+        // Check debug log for results (if debug mode is on)
+        $debug_mode = BotDot_WP_Options::get('debug_mode', false);
+
+        if ($debug_mode) {
+            wp_send_json_success(array(
+                'message' => __('Cache poll triggered successfully. Check debug log for details.', 'botdot-wp')
+            ));
+        } else {
+            wp_send_json_success(array(
+                'message' => __('Cache poll triggered successfully.', 'botdot-wp')
+            ));
+        }
+    }
+
+    /**
+     * Handle AJAX request to manually clear site cache
+     *
+     * @since    0.4.0
+     */
+    public function handle_manual_cache_clear() {
+        check_ajax_referer('botdot_wp_manual_clear', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        }
+
+        // Manually trigger cache clearing
+        $cleared = BotDot_WP_Cache_Clearer::clear_site_cache();
+
+        $debug_mode = BotDot_WP_Options::get('debug_mode', false);
+
+        // Check if LiteSpeed re-enable is scheduled
+        $litespeed_scheduled = wp_next_scheduled('botdot_wp_reenable_litespeed');
+        $litespeed_message = '';
+
+        if ($litespeed_scheduled) {
+            $time_remaining = $litespeed_scheduled - time();
+            $minutes = ceil($time_remaining / 60);
+            $litespeed_message = sprintf(
+                __(' LiteSpeed Cache will re-enable in ~%d minutes.', 'botdot-wp'),
+                $minutes
+            );
+        }
+
+        if ($cleared) {
+            if ($debug_mode) {
+                wp_send_json_success(array(
+                    'message' => __('Site cache cleared successfully.', 'botdot-wp') . $litespeed_message . __(' Check debug log for details.', 'botdot-wp')
+                ));
+            } else {
+                wp_send_json_success(array(
+                    'message' => __('Site cache cleared successfully.', 'botdot-wp') . $litespeed_message
+                ));
+            }
+        } else {
+            wp_send_json_success(array(
+                'message' => __('Cache clearing attempted (no caching plugins detected, WordPress built-in cache cleared).', 'botdot-wp') . $litespeed_message
+            ));
+        }
     }
 
     /**

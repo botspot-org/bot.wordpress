@@ -530,6 +530,70 @@ jQuery(document).ready(function($) {
         });
     });
 
+    // Manual cache poll button
+    $('#botdot-wp-manual-poll').on('click', function(e) {
+        e.preventDefault();
+        var button = $(this);
+        var result = $('#botdot-wp-manual-poll-result');
+
+        button.prop('disabled', true).text('<?php _e('Polling...', 'botdot-wp'); ?>');
+        result.html('');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'botdot_wp_manual_cache_poll',
+                nonce: '<?php echo wp_create_nonce('botdot_wp_manual_poll'); ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
+                } else {
+                    result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+                }
+            },
+            error: function() {
+                result.html('<span style="color: red;">✗ <?php _e('Request failed', 'botdot-wp'); ?></span>');
+            },
+            complete: function() {
+                button.prop('disabled', false).text('<?php _e('Trigger Cache Poll Manually', 'botdot-wp'); ?>');
+            }
+        });
+    });
+
+    // Manual cache clear button
+    $('#botdot-wp-manual-clear').on('click', function(e) {
+        e.preventDefault();
+        var button = $(this);
+        var result = $('#botdot-wp-manual-clear-result');
+
+        button.prop('disabled', true).text('<?php _e('Clearing...', 'botdot-wp'); ?>');
+        result.html('');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'botdot_wp_manual_cache_clear',
+                nonce: '<?php echo wp_create_nonce('botdot_wp_manual_clear'); ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
+                } else {
+                    result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+                }
+            },
+            error: function() {
+                result.html('<span style="color: red;">✗ <?php _e('Request failed', 'botdot-wp'); ?></span>');
+            },
+            complete: function() {
+                button.prop('disabled', false).text('<?php _e('Clear Site Cache Now', 'botdot-wp'); ?>');
+            }
+        });
+    });
+
     // Theme detection and related UI logic (if on API tab)
     var detectionContainer = $('#botdot-theme-detection');
     if (detectionContainer.length) {
