@@ -3,7 +3,7 @@
  * Plugin Name: BotSpot WordPress
  * Plugin URI: https://bot.spot
  * Description: Server-side JSON-LD injection from mirror domain for AI discoverability. Fetches and injects JSON-LD from a configurable mirror domain into page headers.
- * Version: 0.6.0
+ * Version: 0.6.5
  * Author: BotSpot Team
  * Author URI: https://bot.spot
  * License: Proprietary
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package BotDot_WP
- * @version 0.6.0
+ * @version 0.6.5
  */
 
 // If this file is called directly, abort.
@@ -33,7 +33,7 @@ if (!defined('ABSPATH')) {
  * Plugin version.
  * Start at version 0.1.0 and use SemVer - https://semver.org
  */
-define('BOTDOT_WP_VERSION', '0.6.0');
+define('BOTDOT_WP_VERSION', '0.6.5');
 
 /**
  * Plugin file path

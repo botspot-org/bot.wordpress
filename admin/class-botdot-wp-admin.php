@@ -170,13 +170,7 @@ class BotDot_WP_Admin {
             'botdot_wp_general_section'
         );
 
-        add_settings_field(
-            'botdot_wp_enabled',
-            __('Enable Plugin', 'botdot-wp'),
-            array($this, 'render_enabled_field'),
-            'botdot-wp',
-            'botdot_wp_general_section'
-        );
+        // Note: botdot_wp_enabled field moved to Pages tab in admin-settings.php
 
         add_settings_field(
             'botdot_wp_fetch_timeout',

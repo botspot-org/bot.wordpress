@@ -113,10 +113,12 @@ if ($active_tab === 'pages') {
                 <input type="hidden" name="botdot_wp_page_injection_status[<?php echo absint($page_id); ?>]" value="<?php echo $enabled ? '1' : '0'; ?>">
             <?php endforeach; ?>
 
+            <!-- Enable JSON-LD from Pages tab -->
+            <input type="hidden" name="botdot_wp_enabled" value="<?php echo BotDot_WP_Options::get('enabled') ? '1' : '0'; ?>">
+
         <?php elseif ($active_tab === 'pages') : ?>
             <!-- Hidden fields to preserve API tab settings when saving from Pages tab -->
             <input type="hidden" name="botdot_wp_mirror_domain" value="<?php echo esc_attr(BotDot_WP_Options::get('mirror_domain')); ?>">
-            <input type="hidden" name="botdot_wp_enabled" value="<?php echo BotDot_WP_Options::get('enabled') ? '1' : '0'; ?>">
             <input type="hidden" name="botdot_wp_fetch_timeout" value="<?php echo esc_attr(BotDot_WP_Options::get('fetch_timeout', 10)); ?>">
             <input type="hidden" name="botdot_wp_debug_mode" value="<?php echo BotDot_WP_Options::get('debug_mode') ? '1' : '0'; ?>">
 
@@ -142,7 +144,19 @@ if ($active_tab === 'pages') {
 
                 <table class="form-table">
                     <tr>
-                        <th scope="row"><?php _e('Enable JSON-LD On', 'botdot-wp'); ?></th>
+                        <th scope="row"><?php _e('Enable JSON-LD', 'botdot-wp'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="botdot_wp_enabled" value="1" <?php checked(BotDot_WP_Options::get('enabled'), true); ?>>
+                                <?php _e('Enable JSON-LD injection globally', 'botdot-wp'); ?>
+                            </label>
+                            <p class="description">
+                                <?php _e('When enabled, JSON-LD structured data will be injected into pages based on the settings below.', 'botdot-wp'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e('Post Types', 'botdot-wp'); ?></th>
                         <td>
                             <?php foreach ($post_types as $post_type) : ?>
                                 <label style="display: block; margin-bottom: 5px;">
@@ -363,6 +377,7 @@ if ($active_tab === 'pages') {
                             </p>
                         </td>
                     </tr>
+
                 </table>
             </div>
 
@@ -433,240 +448,265 @@ if ($active_tab === 'pages') {
 </style>
 
 <script type="text/javascript">
-jQuery(document).ready(function($) {
-    // Ensure ajaxurl is defined
-    if (typeof ajaxurl === 'undefined') {
-        var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
-    }
+(function($) {
+    'use strict';
 
-    // Helper function to update the hidden page injection status field
-    function updatePageInjectionHiddenField(pageId, enabled) {
-        var hiddenField = $('#botdot-page-injection-json');
-        if (!hiddenField.length) {
-            return; // Hidden field only exists on Pages tab
+    console.log('[BotSpot] Admin script loaded');
+
+    $(document).ready(function() {
+        console.log('[BotSpot] Document ready');
+
+        // Ensure ajaxurl is defined
+        var ajaxUrl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '<?php echo admin_url('admin-ajax.php'); ?>';
+        console.log('[BotSpot] AJAX URL:', ajaxUrl);
+
+        // Helper function to update the hidden page injection status field
+        function updatePageInjectionHiddenField(pageId, enabled) {
+            var hiddenField = $('#botdot-page-injection-json');
+            if (!hiddenField.length) {
+                return; // Hidden field only exists on Pages tab
+            }
+
+            try {
+                var currentStatus = JSON.parse(hiddenField.val() || '{}');
+                currentStatus[pageId] = enabled;
+                hiddenField.val(JSON.stringify(currentStatus));
+            } catch (e) {
+                console.error('[BotSpot] Failed to update page injection status:', e);
+            }
         }
 
-        try {
-            var currentStatus = JSON.parse(hiddenField.val() || '{}');
-            currentStatus[pageId] = enabled;
-            hiddenField.val(JSON.stringify(currentStatus));
-        } catch (e) {
-            console.error('Failed to update page injection status:', e);
-        }
-    }
+        // Test connection button
+        var testBtn = $('#botdot-wp-test-connection');
+        var testResult = $('#botdot-wp-test-result');
+        console.log('[BotSpot] Test button found:', testBtn.length > 0);
+        console.log('[BotSpot] Test result span found:', testResult.length > 0);
 
-    // Test connection button
-    $('#botdot-wp-test-connection').on('click', function(e) {
-        e.preventDefault();
-        var button = $(this);
-        var result = $('#botdot-wp-test-result');
-        var domain = $('input[name="botdot_wp_mirror_domain"]').val().trim();
+        testBtn.on('click', function(e) {
+            e.preventDefault();
+            console.log('[BotSpot] Test connection clicked');
 
-        if (!domain) {
-            result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ <?php _e('Please enter a mirror domain first', 'botdot-wp'); ?></span>');
-            return;
-        }
+            var button = $(this);
+            var result = testResult;
+            var domainInput = $('input[name="botdot_wp_mirror_domain"]');
+            var domain = domainInput.val() ? domainInput.val().trim() : '';
 
-        button.prop('disabled', true).text('<?php _e('Testing...', 'botdot-wp'); ?>');
-        result.html('<span style="color: #666;">⏳ <?php _e('Connecting...', 'botdot-wp'); ?></span>');
+            console.log('[BotSpot] Domain input found:', domainInput.length > 0);
+            console.log('[BotSpot] Domain value:', domain);
 
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'botdot_wp_test_connection',
-                nonce: '<?php echo wp_create_nonce('botdot_wp_test_connection'); ?>',
-                domain: domain
-            },
-            success: function(response) {
-                if (response.success) {
-                    result.html('<span style="color: #00a32a; background: #edfaef; padding: 4px 8px; border-radius: 3px;">✓ ' + response.data.message + '</span>');
-                } else {
-                    var message = (response.data && response.data.message) ? response.data.message : '<?php _e('Connection failed', 'botdot-wp'); ?>';
-                    result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ ' + message + '</span>');
+            if (!domain) {
+                result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ <?php _e('Please enter a mirror domain first', 'botdot-wp'); ?></span>');
+                return;
+            }
+
+            // Immediate visual feedback
+            button.prop('disabled', true).text('<?php _e('Testing...', 'botdot-wp'); ?>');
+            result.html('<span style="color: #2271b1; background: #f0f6fc; padding: 4px 8px; border-radius: 3px;">⏳ <?php _e('Connecting...', 'botdot-wp'); ?></span>');
+
+            console.log('[BotSpot] Making AJAX request...');
+
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_test_connection',
+                    nonce: '<?php echo wp_create_nonce('botdot_wp_test_connection'); ?>',
+                    domain: domain
+                },
+                success: function(response) {
+                    console.log('[BotSpot] AJAX success:', response);
+                    if (response.success) {
+                        result.html('<span style="color: #00a32a; background: #edfaef; padding: 4px 8px; border-radius: 3px;">✓ ' + response.data.message + '</span>');
+                    } else {
+                        var message = (response.data && response.data.message) ? response.data.message : '<?php _e('Connection failed', 'botdot-wp'); ?>';
+                        result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ ' + message + '</span>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[BotSpot] AJAX error:', status, error, xhr.responseText);
+                    result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ <?php _e('Request failed', 'botdot-wp'); ?>: ' + (error || status) + '</span>');
+                },
+                complete: function() {
+                    console.log('[BotSpot] AJAX complete');
+                    button.prop('disabled', false).text('<?php _e('Test Connection', 'botdot-wp'); ?>');
                 }
-            },
-            error: function(xhr, status, error) {
-                result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ <?php _e('Request failed', 'botdot-wp'); ?>: ' + (error || status) + '</span>');
-            },
-            complete: function() {
-                button.prop('disabled', false).text('<?php _e('Test Connection', 'botdot-wp'); ?>');
-            }
+            });
         });
-    });
 
-    // Clear errors button
-    $('#botdot-wp-clear-errors').on('click', function(e) {
-        e.preventDefault();
-        var button = $(this);
+        // Clear errors button
+        $('#botdot-wp-clear-errors').on('click', function(e) {
+            e.preventDefault();
+            var button = $(this);
 
-        button.prop('disabled', true);
+            button.prop('disabled', true);
 
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'botdot_wp_clear_errors',
-                nonce: '<?php echo wp_create_nonce('botdot_wp_clear_errors'); ?>'
-            },
-            success: function() {
-                location.reload();
-            },
-            error: function() {
-                alert('<?php _e('Failed to clear errors', 'botdot-wp'); ?>');
-                button.prop('disabled', false);
-            }
-        });
-    });
-
-    // Manual cache poll button
-    $('#botdot-wp-manual-poll').on('click', function(e) {
-        e.preventDefault();
-        var button = $(this);
-        var result = $('#botdot-wp-manual-poll-result');
-
-        button.prop('disabled', true).text('<?php _e('Polling...', 'botdot-wp'); ?>');
-        result.html('');
-
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'botdot_wp_manual_cache_poll',
-                nonce: '<?php echo wp_create_nonce('botdot_wp_manual_poll'); ?>'
-            },
-            success: function(response) {
-                if (response.success) {
-                    result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
-                } else {
-                    result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_clear_errors',
+                    nonce: '<?php echo wp_create_nonce('botdot_wp_clear_errors'); ?>'
+                },
+                success: function() {
+                    location.reload();
+                },
+                error: function() {
+                    alert('<?php _e('Failed to clear errors', 'botdot-wp'); ?>');
+                    button.prop('disabled', false);
                 }
-            },
-            error: function() {
-                result.html('<span style="color: red;">✗ <?php _e('Request failed', 'botdot-wp'); ?></span>');
-            },
-            complete: function() {
-                button.prop('disabled', false).text('<?php _e('Trigger Cache Poll Manually', 'botdot-wp'); ?>');
-            }
+            });
         });
-    });
 
-    // Manual cache clear button
-    $('#botdot-wp-manual-clear').on('click', function(e) {
-        e.preventDefault();
-        var button = $(this);
-        var result = $('#botdot-wp-manual-clear-result');
+        // Manual cache poll button
+        $('#botdot-wp-manual-poll').on('click', function(e) {
+            e.preventDefault();
+            var button = $(this);
+            var result = $('#botdot-wp-manual-poll-result');
 
-        button.prop('disabled', true).text('<?php _e('Clearing...', 'botdot-wp'); ?>');
-        result.html('');
+            button.prop('disabled', true).text('<?php _e('Polling...', 'botdot-wp'); ?>');
+            result.html('');
 
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'botdot_wp_manual_cache_clear',
-                nonce: '<?php echo wp_create_nonce('botdot_wp_manual_clear'); ?>'
-            },
-            success: function(response) {
-                if (response.success) {
-                    result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
-                } else {
-                    result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_manual_cache_poll',
+                    nonce: '<?php echo wp_create_nonce('botdot_wp_manual_poll'); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
+                    } else {
+                        result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+                    }
+                },
+                error: function() {
+                    result.html('<span style="color: red;">✗ <?php _e('Request failed', 'botdot-wp'); ?></span>');
+                },
+                complete: function() {
+                    button.prop('disabled', false).text('<?php _e('Trigger Cache Poll Manually', 'botdot-wp'); ?>');
                 }
-            },
-            error: function() {
-                result.html('<span style="color: red;">✗ <?php _e('Request failed', 'botdot-wp'); ?></span>');
-            },
-            complete: function() {
-                button.prop('disabled', false).text('<?php _e('Clear Site Cache Now', 'botdot-wp'); ?>');
-            }
+            });
         });
-    });
 
-    // Page toggle switches (AJAX)
-    $('.botdot-page-toggle').on('change', function() {
-        var checkbox = $(this);
-        var pageId = checkbox.data('page-id');
-        var enabled = checkbox.is(':checked');
+        // Manual cache clear button
+        $('#botdot-wp-manual-clear').on('click', function(e) {
+            e.preventDefault();
+            var button = $(this);
+            var result = $('#botdot-wp-manual-clear-result');
 
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'botdot_wp_toggle_page_injection',
-                nonce: '<?php echo wp_create_nonce('botdot_wp_toggle_page'); ?>',
-                page_id: pageId,
-                enabled: enabled ? 1 : 0
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Update hidden field to preserve state on form submit
-                    updatePageInjectionHiddenField(pageId, enabled);
-                } else {
+            button.prop('disabled', true).text('<?php _e('Clearing...', 'botdot-wp'); ?>');
+            result.html('');
+
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_manual_cache_clear',
+                    nonce: '<?php echo wp_create_nonce('botdot_wp_manual_clear'); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
+                    } else {
+                        result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+                    }
+                },
+                error: function() {
+                    result.html('<span style="color: red;">✗ <?php _e('Request failed', 'botdot-wp'); ?></span>');
+                },
+                complete: function() {
+                    button.prop('disabled', false).text('<?php _e('Clear Site Cache Now', 'botdot-wp'); ?>');
+                }
+            });
+        });
+
+        // Page toggle switches (AJAX)
+        $('.botdot-page-toggle').on('change', function() {
+            var checkbox = $(this);
+            var pageId = checkbox.data('page-id');
+            var enabled = checkbox.is(':checked');
+
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_toggle_page_injection',
+                    nonce: '<?php echo wp_create_nonce('botdot_wp_toggle_page'); ?>',
+                    page_id: pageId,
+                    enabled: enabled ? 1 : 0
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update hidden field to preserve state on form submit
+                        updatePageInjectionHiddenField(pageId, enabled);
+                    } else {
+                        // Revert on error
+                        checkbox.prop('checked', !enabled);
+                        alert(response.data.message || '<?php _e('Failed to update page status', 'botdot-wp'); ?>');
+                    }
+                },
+                error: function() {
                     // Revert on error
                     checkbox.prop('checked', !enabled);
-                    alert(response.data.message || '<?php _e('Failed to update page status', 'botdot-wp'); ?>');
+                    alert('<?php _e('Request failed', 'botdot-wp'); ?>');
                 }
-            },
-            error: function() {
-                // Revert on error
-                checkbox.prop('checked', !enabled);
-                alert('<?php _e('Request failed', 'botdot-wp'); ?>');
+            });
+        });
+
+        // Select all checkbox
+        $('#cb-select-all-1').on('change', function() {
+            $('.page-checkbox').prop('checked', $(this).is(':checked'));
+        });
+
+        // Bulk actions
+        $('#doaction').on('click', function(e) {
+            e.preventDefault();
+            var action = $('#bulk-action-selector-top').val();
+
+            if (action === '-1') {
+                alert('<?php _e('Please select an action', 'botdot-wp'); ?>');
+                return;
             }
-        });
-    });
 
-    // Select all checkbox
-    $('#cb-select-all-1').on('change', function() {
-        $('.page-checkbox').prop('checked', $(this).is(':checked'));
-    });
+            var selectedPages = [];
+            $('.page-checkbox:checked').each(function() {
+                selectedPages.push($(this).val());
+            });
 
-    // Bulk actions
-    $('#doaction').on('click', function(e) {
-        e.preventDefault();
-        var action = $('#bulk-action-selector-top').val();
+            if (selectedPages.length === 0) {
+                alert('<?php _e('Please select at least one page', 'botdot-wp'); ?>');
+                return;
+            }
 
-        if (action === '-1') {
-            alert('<?php _e('Please select an action', 'botdot-wp'); ?>');
-            return;
-        }
+            var enabled = action === 'enable';
 
-        var selectedPages = [];
-        $('.page-checkbox:checked').each(function() {
-            selectedPages.push($(this).val());
-        });
-
-        if (selectedPages.length === 0) {
-            alert('<?php _e('Please select at least one page', 'botdot-wp'); ?>');
-            return;
-        }
-
-        var enabled = action === 'enable';
-
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'botdot_wp_bulk_update_pages',
-                nonce: '<?php echo wp_create_nonce('botdot_wp_bulk_pages'); ?>',
-                page_ids: selectedPages,
-                enabled: enabled ? 1 : 0
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Update hidden field for all affected pages
-                    selectedPages.forEach(function(pageId) {
-                        updatePageInjectionHiddenField(parseInt(pageId), enabled);
-                    });
-                    location.reload();
-                } else {
-                    alert(response.data.message || '<?php _e('Bulk update failed', 'botdot-wp'); ?>');
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_bulk_update_pages',
+                    nonce: '<?php echo wp_create_nonce('botdot_wp_bulk_pages'); ?>',
+                    page_ids: selectedPages,
+                    enabled: enabled ? 1 : 0
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update hidden field for all affected pages
+                        selectedPages.forEach(function(pageId) {
+                            updatePageInjectionHiddenField(parseInt(pageId), enabled);
+                        });
+                        location.reload();
+                    } else {
+                        alert(response.data.message || '<?php _e('Bulk update failed', 'botdot-wp'); ?>');
+                    }
+                },
+                error: function() {
+                    alert('<?php _e('Request failed', 'botdot-wp'); ?>');
                 }
-            },
-            error: function() {
-                alert('<?php _e('Request failed', 'botdot-wp'); ?>');
-            }
+            });
         });
-    });
-});
+
+    }); // end document.ready
+})(jQuery); // end IIFE
 </script>
