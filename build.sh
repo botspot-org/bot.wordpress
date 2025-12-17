@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# BotDot WP Plugin Build Script
+# BotSpot WP Plugin Build Script
 # Creates a distributable WordPress plugin zip file
 
 set -e
@@ -18,18 +18,22 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Building BotDot WP Plugin v${VERSION}${NC}"
+echo -e "${GREEN}Building BotSpot WP Plugin v${VERSION}${NC}"
 echo "========================================"
 
-# Clean up old build directories
+# Clean up old build directory (keep dist for archive history)
 echo -e "${YELLOW}Cleaning up old build files...${NC}"
 rm -rf "${BUILD_DIR}"
-rm -rf "${DIST_DIR}"
 
 # Create build directories
 echo -e "${YELLOW}Creating build directories...${NC}"
 mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}"
 mkdir -p "${DIST_DIR}"
+
+# Check if this version already exists
+if [ -f "${DIST_DIR}/${ZIP_NAME}" ]; then
+    echo -e "${YELLOW}Warning: ${ZIP_NAME} already exists, will be overwritten${NC}"
+fi
 
 # Copy plugin files
 echo -e "${YELLOW}Copying plugin files...${NC}"

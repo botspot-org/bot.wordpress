@@ -36,7 +36,7 @@ class BotDot_WP_Options {
      */
     private static $defaults = array(
         'mirror_domain' => '',
-        'enabled' => false,
+        'enabled' => true,
         'fetch_timeout' => 10,
         'inject_on_post_types' => array('post', 'page'),
         'exclude_page_ids' => array(),
@@ -49,15 +49,13 @@ class BotDot_WP_Options {
         'appendix_open_default' => false,
         'appendix_on_post_types' => array('post', 'page'),
         'page_injection_status' => array(), // [page_id => bool] map for enabled pages
-        // Theme & Styling settings
-        'theme_classes_enabled' => true,
-        'custom_theme_classes' => array(
-            'wrapper' => '',
-            'details' => '',
-            'summary' => '',
-            'title' => '',
-            'content' => '',
-        ),
+        // Cache busting
+        'css_cache_buster' => 0,  // Unix timestamp for CSS cache invalidation
+        // Smart cache settings
+        'smart_cache_enabled' => true,
+        'smart_cache_check_path' => '/',      // Path to check for changes
+        'content_hash_appendix' => '',        // SHA256 of appendix HTML
+        'content_hash_jsonld' => '',          // SHA256 of JSON-LD
     );
 
     /**
@@ -217,7 +215,6 @@ class BotDot_WP_Options {
             case 'debug_mode':
             case 'appendix_enabled':
             case 'appendix_open_default':
-            case 'theme_classes_enabled':
                 return (bool) $value;
 
             case 'fetch_timeout':
@@ -227,17 +224,6 @@ class BotDot_WP_Options {
             case 'exclude_page_ids':
             case 'appendix_on_post_types':
                 return is_array($value) ? $value : array();
-
-            case 'custom_theme_classes':
-                if (!is_array($value)) {
-                    return self::$defaults['custom_theme_classes'];
-                }
-
-                $defaults = self::$defaults['custom_theme_classes'];
-                $value = array_intersect_key($value, $defaults);
-                $value = array_map('trim', $value);
-
-                return array_merge($defaults, $value);
 
             case 'mirror_domain':
             case 'appendix_title':
@@ -271,7 +257,6 @@ class BotDot_WP_Options {
             case 'debug_mode':
             case 'appendix_enabled':
             case 'appendix_open_default':
-            case 'theme_classes_enabled':
                 return (bool) $value;
 
             case 'fetch_timeout':
@@ -313,21 +298,6 @@ class BotDot_WP_Options {
                         $sanitized[$page_id] = (bool) $enabled;
                     }
                 }
-                return $sanitized;
-
-            case 'custom_theme_classes':
-                if (!is_array($value)) {
-                    return self::$defaults['custom_theme_classes'];
-                }
-
-                $defaults = self::$defaults['custom_theme_classes'];
-                $sanitized = array();
-
-                foreach ($defaults as $key => $default) {
-                    $class_value = isset($value[$key]) ? sanitize_text_field($value[$key]) : '';
-                    $sanitized[$key] = trim($class_value);
-                }
-
                 return $sanitized;
 
             default:

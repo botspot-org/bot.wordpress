@@ -23,6 +23,11 @@ $options = array(
     'botdot_wp_inject_on_post_types',
     'botdot_wp_exclude_page_ids',
     'botdot_wp_debug_mode',
+    'botdot_wp_css_cache_buster',
+    'botdot_wp_smart_cache_enabled',
+    'botdot_wp_smart_cache_check_path',
+    'botdot_wp_content_hash_appendix',
+    'botdot_wp_content_hash_jsonld',
 );
 
 foreach ($options as $option) {

@@ -103,7 +103,6 @@ if ($active_tab === 'pages') {
             <?php endforeach; ?>
 
             <input type="hidden" name="botdot_wp_appendix_enabled" value="<?php echo BotDot_WP_Options::get('appendix_enabled') ? '1' : '0'; ?>">
-            <input type="hidden" name="botdot_wp_appendix_title" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_title', 'AI Appendix')); ?>">
             <input type="hidden" name="botdot_wp_appendix_auto_placement" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_auto_placement', 'above_footer')); ?>">
             <input type="hidden" name="botdot_wp_appendix_open_default" value="<?php echo BotDot_WP_Options::get('appendix_open_default') ? '1' : '0'; ?>">
             <input type="hidden" name="botdot_wp_appendix_position" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_position', 'bottom')); ?>">
@@ -120,14 +119,6 @@ if ($active_tab === 'pages') {
             <input type="hidden" name="botdot_wp_enabled" value="<?php echo BotDot_WP_Options::get('enabled') ? '1' : '0'; ?>">
             <input type="hidden" name="botdot_wp_fetch_timeout" value="<?php echo esc_attr(BotDot_WP_Options::get('fetch_timeout', 10)); ?>">
             <input type="hidden" name="botdot_wp_debug_mode" value="<?php echo BotDot_WP_Options::get('debug_mode') ? '1' : '0'; ?>">
-
-            <!-- Theme settings -->
-            <input type="hidden" name="botdot_wp_theme_classes_enabled" value="<?php echo BotDot_WP_Options::get('theme_classes_enabled', true) ? '1' : '0'; ?>">
-            <?php
-            $custom_theme_classes = BotDot_WP_Options::get('custom_theme_classes', array());
-            foreach ($custom_theme_classes as $key => $value) : ?>
-                <input type="hidden" name="botdot_wp_custom_theme_classes[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>">
-            <?php endforeach; ?>
 
             <!-- Hidden JSON field to sync AJAX page toggle updates -->
             <input type="hidden" name="botdot_wp_page_injection_status_json" value="<?php echo esc_attr(json_encode($injection_status)); ?>" id="botdot-page-injection-json">
@@ -361,16 +352,6 @@ if ($active_tab === 'pages') {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php _e('Appendix Title', 'botdot-wp'); ?></th>
-                        <td>
-                            <input type="text" name="botdot_wp_appendix_title" value="<?php echo esc_attr(BotDot_WP_Options::get('appendix_title', 'AI Appendix')); ?>" class="regular-text">
-                            <p class="description">
-                                <?php _e('The heading text for the appendix section.', 'botdot-wp'); ?>
-                            </p>
-                        </td>
-                    </tr>
-
-                    <tr>
                         <th scope="row"><?php _e('Default State', 'botdot-wp'); ?></th>
                         <td>
                             <label>
@@ -479,26 +460,34 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         var button = $(this);
         var result = $('#botdot-wp-test-result');
+        var domain = $('input[name="botdot_wp_mirror_domain"]').val().trim();
+
+        if (!domain) {
+            result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ <?php _e('Please enter a mirror domain first', 'botdot-wp'); ?></span>');
+            return;
+        }
 
         button.prop('disabled', true).text('<?php _e('Testing...', 'botdot-wp'); ?>');
-        result.html('');
+        result.html('<span style="color: #666;">⏳ <?php _e('Connecting...', 'botdot-wp'); ?></span>');
 
         $.ajax({
             url: ajaxurl,
             type: 'POST',
             data: {
                 action: 'botdot_wp_test_connection',
-                nonce: '<?php echo wp_create_nonce('botdot_wp_test_connection'); ?>'
+                nonce: '<?php echo wp_create_nonce('botdot_wp_test_connection'); ?>',
+                domain: domain
             },
             success: function(response) {
                 if (response.success) {
-                    result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
+                    result.html('<span style="color: #00a32a; background: #edfaef; padding: 4px 8px; border-radius: 3px;">✓ ' + response.data.message + '</span>');
                 } else {
-                    result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+                    var message = (response.data && response.data.message) ? response.data.message : '<?php _e('Connection failed', 'botdot-wp'); ?>';
+                    result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ ' + message + '</span>');
                 }
             },
-            error: function() {
-                result.html('<span style="color: red;">✗ <?php _e('Request failed', 'botdot-wp'); ?></span>');
+            error: function(xhr, status, error) {
+                result.html('<span style="color: #d63638; background: #fcf0f1; padding: 4px 8px; border-radius: 3px;">✗ <?php _e('Request failed', 'botdot-wp'); ?>: ' + (error || status) + '</span>');
             },
             complete: function() {
                 button.prop('disabled', false).text('<?php _e('Test Connection', 'botdot-wp'); ?>');
@@ -593,189 +582,6 @@ jQuery(document).ready(function($) {
             }
         });
     });
-
-    // Theme detection and related UI logic (if on API tab)
-    var detectionContainer = $('#botdot-theme-detection');
-    if (detectionContainer.length) {
-        var classKeys = ['wrapper', 'details', 'summary', 'title', 'content'];
-        var preview = $('#botdot-theme-preview');
-        var defaultClasses = preview.data('default-classes') || {};
-        if (typeof defaultClasses === 'string') {
-            try {
-                defaultClasses = defaultClasses ? JSON.parse(defaultClasses) : {};
-            } catch (err) {
-                defaultClasses = {};
-            }
-        }
-
-        var autoClasses = {};
-        try {
-            autoClasses = JSON.parse($('#botdot-wp-auto-classes').val() || '{}');
-        } catch (err) {
-            autoClasses = {};
-        }
-
-        var autoCheckbox = $('#botdot-wp-theme-classes-enabled');
-        var manualInputs = $('#botdot-theme-class-fields input');
-        var resultEl = $('#botdot-wp-detect-theme-result');
-        var detectButton = $('#botdot-wp-detect-theme');
-        var statusAuto = detectionContainer.find('[data-status-role="auto"]');
-        var statusCustom = detectionContainer.find('[data-status-role="custom"]');
-
-        var messages = {
-            autoOn: detectionContainer.data('status-auto-on') || '',
-            autoOff: detectionContainer.data('status-auto-off') || '',
-            customOn: detectionContainer.data('status-custom-on') || '',
-            customOff: detectionContainer.data('status-custom-off') || '',
-            detectSuccess: detectionContainer.data('detect-success') || '',
-            detectFailure: detectionContainer.data('detect-failure') || '',
-            detectError: detectionContainer.data('detect-error') || ''
-        };
-
-        function getManualClasses() {
-            var values = {};
-            manualInputs.each(function() {
-                var key = $(this).data('class-key');
-                values[key] = $(this).val().trim();
-            });
-            return values;
-        }
-
-        function hasCustomClasses(manual) {
-            for (var key in manual) {
-                if (manual.hasOwnProperty(key) && manual[key]) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function computeEffectiveClasses() {
-            var manual = getManualClasses();
-            var effective = {};
-            var autoEnabled = autoCheckbox.is(':checked');
-
-            classKeys.forEach(function(key) {
-                if (!autoEnabled) {
-                    effective[key] = manual[key] || defaultClasses[key] || '';
-                } else if (manual[key]) {
-                    effective[key] = manual[key];
-                } else {
-                    effective[key] = autoClasses[key] || defaultClasses[key] || '';
-                }
-            });
-
-            return {
-                effective: effective,
-                manual: manual,
-                autoEnabled: autoEnabled
-            };
-        }
-
-        function updateStatus(manual, autoEnabled) {
-            if (statusAuto.length) {
-                statusAuto.text(autoEnabled ? messages.autoOn : messages.autoOff);
-            }
-            if (statusCustom.length) {
-                statusCustom.text(hasCustomClasses(manual) ? messages.customOn : messages.customOff);
-            }
-        }
-
-        function updateClassTable(effective) {
-            classKeys.forEach(function(key) {
-                detectionContainer.find('.botdot-theme-class-value[data-class-key="' + key + '"]').text(effective[key] || '');
-            });
-        }
-
-        function updatePreview(effective) {
-            classKeys.forEach(function(key) {
-                var element = $('#botdot-theme-preview [data-class-key="' + key + '"]');
-                if (!element.length) {
-                    return;
-                }
-                var baseClass = element.data('preview-base') || '';
-                var combined = [];
-
-                if (effective[key]) {
-                    combined = combined.concat(String(effective[key]).split(/\s+/));
-                }
-                if (defaultClasses[key]) {
-                    combined = combined.concat(String(defaultClasses[key]).split(/\s+/));
-                }
-
-                var unique = [];
-                combined.forEach(function(item) {
-                    item = item.trim();
-                    if (item && unique.indexOf(item) === -1) {
-                        unique.push(item);
-                    }
-                });
-
-                var classList = unique.join(' ');
-                var finalClass = $.trim((classList + ' ' + baseClass).replace(/\s+/g, ' '));
-                element.attr('class', finalClass);
-            });
-        }
-
-        function refreshView() {
-            var state = computeEffectiveClasses();
-            updateStatus(state.manual, state.autoEnabled);
-            updateClassTable(state.effective);
-            updatePreview(state.effective);
-        }
-
-        manualInputs.on('input', refreshView);
-        autoCheckbox.on('change', refreshView);
-
-        detectButton.on('click', function(e) {
-            e.preventDefault();
-
-            var button = $(this);
-            var detectNonce = detectionContainer.data('detect-nonce') || '';
-            var originalText = button.data('original-text') || button.text();
-            var detectingText = button.data('detecting-text') || originalText;
-
-            button.data('original-text', originalText);
-            button.prop('disabled', true).text(detectingText);
-            resultEl.removeClass('is-success is-error').text('');
-
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'botdot_wp_detect_theme_classes',
-                    nonce: detectNonce
-                },
-                success: function(response) {
-                    if (response.success && response.data && response.data.classes) {
-                        autoClasses = response.data.classes || {};
-                        detectionContainer.find('#botdot-wp-auto-classes').val(JSON.stringify(autoClasses));
-                        classKeys.forEach(function(key) {
-                            if (response.data.classes.hasOwnProperty(key)) {
-                                $('#botdot-wp-custom-theme-' + key).val(response.data.classes[key]);
-                            }
-                        });
-                        refreshView();
-                        resultEl.addClass('is-success').removeClass('is-error').text(messages.detectSuccess);
-                    } else {
-                        var failMessage = messages.detectFailure;
-                        if (response.data && response.data.message) {
-                            failMessage = response.data.message;
-                        }
-                        resultEl.addClass('is-error').removeClass('is-success').text(failMessage);
-                    }
-                },
-                error: function() {
-                    resultEl.addClass('is-error').removeClass('is-success').text(messages.detectError);
-                },
-                complete: function() {
-                    button.prop('disabled', false).text(originalText);
-                }
-            });
-        });
-
-        refreshView();
-    }
 
     // Page toggle switches (AJAX)
     $('.botdot-page-toggle').on('change', function() {

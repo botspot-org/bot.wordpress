@@ -2,7 +2,7 @@
 
 ## Inheriting Your Theme's FAQ/Accordion Styles
 
-BotDot WP automatically detects popular themes and inherits their FAQ/accordion classes. If you're using a custom theme or want to customize the styling, here are your options:
+BotSpot WP automatically detects popular themes and inherits their FAQ/accordion classes. If you're using a custom theme or want to customize the styling, here are your options:
 
 ### Option 1: Automatic Detection (Built-in)
 
@@ -39,7 +39,7 @@ add_filter('botdot_wp_theme_classes', function($classes, $theme_name, $theme_tem
 
 ### Option 4: Disable Theme Classes
 
-If you prefer the default BotDot styling:
+If you prefer the default BotSpot styling:
 
 ```php
 add_filter('botdot_wp_appendix_args', function($args) {
@@ -95,8 +95,8 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager) {
 
 ## Testing Theme Inheritance
 
-1. Enable Debug Mode in BotDot WP settings
-2. View page source and look for `<!-- BotDot WP Appendix Start -->`
+1. Enable Debug Mode in BotSpot WP settings
+2. View page source and look for `<!-- BotSpot WP Appendix Start -->`
 3. Check the classes applied to the appendix elements
 4. Compare with your theme's FAQ classes
 

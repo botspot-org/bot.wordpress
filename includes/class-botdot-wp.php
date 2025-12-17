@@ -174,7 +174,6 @@ class BotDot_WP {
         // AJAX handlers
         $this->loader->add_action('wp_ajax_botdot_wp_test_connection', $plugin_admin, 'handle_test_connection');
         $this->loader->add_action('wp_ajax_botdot_wp_clear_errors', $plugin_admin, 'handle_clear_errors');
-        $this->loader->add_action('wp_ajax_botdot_wp_detect_theme_classes', $plugin_admin, 'handle_detect_theme_classes');
         $this->loader->add_action('wp_ajax_botdot_wp_toggle_page_injection', $plugin_admin, 'handle_toggle_page_injection');
         $this->loader->add_action('wp_ajax_botdot_wp_bulk_update_pages', $plugin_admin, 'handle_bulk_update_pages');
         $this->loader->add_action('wp_ajax_botdot_wp_manual_cache_poll', $plugin_admin, 'handle_manual_cache_poll');

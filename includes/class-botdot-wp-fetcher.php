@@ -28,6 +28,21 @@ if (!defined('WPINC')) {
 class BotDot_WP_Fetcher {
 
     /**
+     * Clean the domain by removing protocol and trailing slashes
+     *
+     * @since    0.4.0
+     * @access   private
+     * @param    string    $domain    The domain to clean.
+     * @return   string               The cleaned domain.
+     */
+    private static function clean_domain($domain) {
+        $domain = trim($domain);
+        $domain = preg_replace('#^https?://#i', '', $domain);
+        $domain = rtrim($domain, '/');
+        return $domain;
+    }
+
+    /**
      * Determine the protocol (http or https) based on the domain
      *
      * @since    0.2.0
@@ -36,6 +51,8 @@ class BotDot_WP_Fetcher {
      * @return   string               'http' or 'https'.
      */
     private static function get_protocol($domain) {
+        // Clean domain first to ensure accurate matching
+        $domain = self::clean_domain($domain);
         // Use HTTP for localhost and 127.0.0.1 (development)
         if (preg_match('/^(localhost|127\.0\.0\.1)(:\d+)?$/i', $domain)) {
             return 'http';
@@ -61,6 +78,9 @@ class BotDot_WP_Fetcher {
                 __('Mirror domain not configured', 'botdot-wp')
             );
         }
+
+        // Clean the domain (removes https://, trailing slashes, etc.)
+        $mirror_domain = self::clean_domain($mirror_domain);
 
         // Build the full URL
         $url_path = ltrim($url_path, '/');
@@ -212,10 +232,11 @@ class BotDot_WP_Fetcher {
      *
      * @since    0.1.0
      * @param    string    $test_path    Optional. Test path to use. Default '/'.
+     * @param    string    $domain       Optional. Domain to test. If empty, uses saved option.
      * @return   array                   Result array with 'success' and 'message' keys.
      */
-    public static function test_connection($test_path = '/') {
-        $mirror_domain = BotDot_WP_Options::get('mirror_domain');
+    public static function test_connection($test_path = '/', $domain = '') {
+        $mirror_domain = !empty($domain) ? $domain : BotDot_WP_Options::get('mirror_domain');
 
         if (empty($mirror_domain)) {
             return array(
@@ -223,6 +244,9 @@ class BotDot_WP_Fetcher {
                 'message' => __('Mirror domain not configured', 'botdot-wp'),
             );
         }
+
+        // Clean the domain (removes https://, trailing slashes, etc.)
+        $mirror_domain = self::clean_domain($mirror_domain);
 
         $protocol = self::get_protocol($mirror_domain);
         $url = $protocol . '://' . $mirror_domain . $test_path;

@@ -1,10 +1,10 @@
-# BotDot WP
+# BotSpot WP
 
 Server-side JSON-LD injection for WordPress from a configurable mirror domain.
 
 ## Description
 
-BotDot WP is a WordPress plugin that fetches JSON-LD structured data from a mirror domain and injects it into your WordPress pages before they are rendered. This enables AI discoverability by providing structured data that can be queried by AI agents.
+BotSpot WP is a WordPress plugin that fetches JSON-LD structured data from a mirror domain and injects it into your WordPress pages before they are rendered. This enables AI discoverability by providing structured data that can be queried by AI agents.
 
 ## Features
 
@@ -28,7 +28,7 @@ BotDot WP is a WordPress plugin that fetches JSON-LD structured data from a mirr
 
 1. Upload the `botdot-wp` folder to `/wp-content/plugins/`
 2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Go to Settings > BotDot WP to configure the plugin
+3. Go to Settings > BotSpot WP to configure the plugin
 
 ## Configuration
 
@@ -111,11 +111,11 @@ add_filter('botdot_wp_should_inject', function($should_inject) {
 
 ## License
 
-GPL v2 or later
+Proprietary - All rights reserved by BotSpot Team
 
 ## Support
 
-For issues and questions, please use the GitHub issue tracker.
+For issues and questions, please contact BotSpot support.
 
 ## Debugging
 
@@ -201,4 +201,4 @@ This creates a distributable zip file in `dist/botdot-wp-{version}.zip`
 
 ## Credits
 
-Developed by the BotDot Team
+Developed by the BotSpot Team

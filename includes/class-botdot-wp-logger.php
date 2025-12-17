@@ -55,9 +55,9 @@ class BotDot_WP_Logger {
     public static function log_error($message, $context = array()) {
         // Log to WordPress debug log if WP_DEBUG is enabled
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[BotDot WP] ERROR: ' . $message);
+            error_log('[BotSpot WP] ERROR: ' . $message);
             if (!empty($context)) {
-                error_log('[BotDot WP] Context: ' . print_r($context, true));
+                error_log('[BotSpot WP] Context: ' . print_r($context, true));
             }
         }
 
@@ -80,9 +80,9 @@ class BotDot_WP_Logger {
 
         // Log to WordPress debug log if WP_DEBUG is enabled
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[BotDot WP] DEBUG: ' . $message);
+            error_log('[BotSpot WP] DEBUG: ' . $message);
             if (!empty($context)) {
-                error_log('[BotDot WP] Context: ' . print_r($context, true));
+                error_log('[BotSpot WP] Context: ' . print_r($context, true));
             }
         }
     }
@@ -97,9 +97,9 @@ class BotDot_WP_Logger {
     public static function log_warning($message, $context = array()) {
         // Log to WordPress debug log if WP_DEBUG is enabled
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[BotDot WP] WARNING: ' . $message);
+            error_log('[BotSpot WP] WARNING: ' . $message);
             if (!empty($context)) {
-                error_log('[BotDot WP] Context: ' . print_r($context, true));
+                error_log('[BotSpot WP] Context: ' . print_r($context, true));
             }
         }
 

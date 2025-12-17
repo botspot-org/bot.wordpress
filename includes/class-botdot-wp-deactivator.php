@@ -53,7 +53,7 @@ class BotDot_WP_Deactivator {
         }
 
         if (BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('BotDot WP deactivated: Recache polling unscheduled, LiteSpeed Cache re-enabled if it was disabled.');
+            BotDot_WP_Logger::log_debug('BotSpot WP deactivated: Recache polling unscheduled, LiteSpeed Cache re-enabled if it was disabled.');
         }
     }
 }

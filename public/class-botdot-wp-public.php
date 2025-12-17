@@ -85,7 +85,7 @@ class BotDot_WP_Public {
         }
 
         vc_map(array(
-            'name' => __('BotDot Appendix', 'botdot-wp'),
+            'name' => __('BotSpot Appendix', 'botdot-wp'),
             'base' => 'botdot_appendix',
             'description' => __('Insert AI-discoverable appendix content', 'botdot-wp'),
             'category' => __('Content', 'botdot-wp'),
@@ -451,11 +451,15 @@ class BotDot_WP_Public {
             return;
         }
 
+        // Get dynamic CSS version (cache buster timestamp or fall back to plugin version)
+        $cache_buster = BotDot_WP_Options::get('css_cache_buster', 0);
+        $css_version = $cache_buster > 0 ? $this->version . '.' . $cache_buster : $this->version;
+
         wp_enqueue_style(
             $this->plugin_name . '-appendix',
             BOTDOT_WP_PLUGIN_URL . 'public/css/botdot-wp-appendix.css',
             array(),
-            $this->version,
+            $css_version,
             'all'
         );
     }

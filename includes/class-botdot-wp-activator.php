@@ -99,7 +99,7 @@ class BotDot_WP_Activator {
         BotDot_WP_Cache_Clearer::schedule_polling();
 
         if (BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('BotDot WP activated: Recache polling scheduled.');
+            BotDot_WP_Logger::log_debug('BotSpot WP activated: Recache polling scheduled.');
         }
     }
 }

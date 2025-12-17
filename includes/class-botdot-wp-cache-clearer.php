@@ -28,91 +28,131 @@ if (!defined('WPINC')) {
 class BotDot_WP_Cache_Clearer {
 
     /**
-     * Poll the recache trigger endpoint and clear cache if needed
+     * Check for content changes and clear cache if needed
      *
      * This method is called by WP-Cron every 2.5 minutes.
-     * If the recache bit is 1, it clears all WordPress caches.
+     * It fetches content from the mirror domain, computes hashes,
+     * and only clears cache if content has actually changed.
      *
-     * @since    0.3.0
+     * @since    0.5.0
      * @return   void
      */
     public static function poll_recache_trigger() {
-        if (BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('Starting recache poll trigger check.');
+        $debug_mode = BotDot_WP_Options::get('debug_mode');
+
+        if ($debug_mode) {
+            BotDot_WP_Logger::log_debug('Starting smart cache check.');
+        }
+
+        // Check if smart cache is enabled
+        if (!BotDot_WP_Options::get('smart_cache_enabled')) {
+            if ($debug_mode) {
+                BotDot_WP_Logger::log_debug('Smart cache disabled, skipping check.');
+            }
+            return;
         }
 
         $mirror_domain = BotDot_WP_Options::get('mirror_domain');
 
         if (empty($mirror_domain)) {
-            if (BotDot_WP_Options::get('debug_mode')) {
-                BotDot_WP_Logger::log_debug('Skipping recache poll: no mirror domain configured');
+            if ($debug_mode) {
+                BotDot_WP_Logger::log_debug('Skipping smart cache check: no mirror domain configured');
             }
             return;
         }
 
-        // Determine protocol
-        $protocol = self::get_protocol($mirror_domain);
-        $url = $protocol . '://' . $mirror_domain . '/.force-recache-trigger';
+        $check_path = BotDot_WP_Options::get('smart_cache_check_path', '/');
+        $content_changed = false;
+        $changes = array();
 
-        if (BotDot_WP_Options::get('debug_mode')) {
+        if ($debug_mode) {
+            BotDot_WP_Logger::log_debug(sprintf('Checking content at path: %s', $check_path));
+        }
+
+        // Check appendix HTML
+        $appendix = BotDot_WP_Appendix_Fetcher::fetch_appendix($check_path);
+        if (!is_wp_error($appendix)) {
+            $new_hash = hash('sha256', $appendix);
+            $stored_hash = BotDot_WP_Options::get('content_hash_appendix', '');
+
+            if ($debug_mode) {
+                BotDot_WP_Logger::log_debug(sprintf(
+                    'Appendix hash: stored=%s, new=%s',
+                    $stored_hash ? substr($stored_hash, 0, 12) . '...' : '(none)',
+                    substr($new_hash, 0, 12) . '...'
+                ));
+            }
+
+            if ($new_hash !== $stored_hash) {
+                BotDot_WP_Options::set('content_hash_appendix', $new_hash);
+                $content_changed = true;
+                $changes[] = 'appendix';
+            }
+        } else if ($debug_mode) {
             BotDot_WP_Logger::log_debug(sprintf(
-                'Polling recache trigger URL: %s',
-                $url
+                'Failed to fetch appendix: %s',
+                $appendix->get_error_message()
             ));
         }
 
-        // Fetch the recache bit
-        $response = wp_remote_get($url, array(
-            'timeout' => 5,
-            'headers' => array(
-                'Accept' => 'application/json',
-            ),
-        ));
+        // Check JSON-LD
+        $jsonld = BotDot_WP_Fetcher::fetch_json_ld($check_path);
+        if (!is_wp_error($jsonld)) {
+            $new_hash = hash('sha256', json_encode($jsonld));
+            $stored_hash = BotDot_WP_Options::get('content_hash_jsonld', '');
 
-        if (is_wp_error($response)) {
-            if (BotDot_WP_Options::get('debug_mode')) {
+            if ($debug_mode) {
                 BotDot_WP_Logger::log_debug(sprintf(
-                    'Recache poll failed: %s',
-                    $response->get_error_message()
+                    'JSON-LD hash: stored=%s, new=%s',
+                    $stored_hash ? substr($stored_hash, 0, 12) . '...' : '(none)',
+                    substr($new_hash, 0, 12) . '...'
                 ));
             }
-            return;
+
+            if ($new_hash !== $stored_hash) {
+                BotDot_WP_Options::set('content_hash_jsonld', $new_hash);
+                $content_changed = true;
+                $changes[] = 'jsonld';
+            }
+        } else if ($debug_mode) {
+            BotDot_WP_Logger::log_debug(sprintf(
+                'Failed to fetch JSON-LD: %s',
+                $jsonld->get_error_message()
+            ));
         }
 
-        $status_code = wp_remote_retrieve_response_code($response);
-        if ($status_code !== 200) {
-            if (BotDot_WP_Options::get('debug_mode')) {
+        // Only clear cache if content changed
+        if ($content_changed) {
+            if ($debug_mode) {
                 BotDot_WP_Logger::log_debug(sprintf(
-                    'Recache poll returned HTTP %d',
-                    $status_code
+                    'Content changed (%s), clearing caches',
+                    implode(', ', $changes)
                 ));
             }
-            return;
+
+            self::update_css_cache_buster();
+            self::clear_site_cache();
+        } else if ($debug_mode) {
+            BotDot_WP_Logger::log_debug('No content changes detected, skipping cache clear.');
         }
+    }
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+    /**
+     * Update the CSS cache buster timestamp
+     *
+     * This timestamp is used to bust browser/CDN cache for CSS files
+     * when the mirror domain content changes.
+     *
+     * @since    0.4.0
+     * @return   void
+     */
+    public static function update_css_cache_buster() {
+        $timestamp = time();
+        BotDot_WP_Options::set('css_cache_buster', $timestamp);
 
-        if (!isset($data['recache'])) {
-            if (BotDot_WP_Options::get('debug_mode')) {
-                BotDot_WP_Logger::log_debug('Recache poll response missing "recache" field');
-            }
-            return;
-        }
-
-        if ($data['recache'] !== 1) {
-            if (BotDot_WP_Options::get('debug_mode')) {
-                BotDot_WP_Logger::log_debug('Recache bit is 0, no action needed');
-            }
-            return;
-        }
-
-        // Recache bit is 1, clear all caches
         if (BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('Recache bit is 1, clearing all caches');
+            BotDot_WP_Logger::log_debug(sprintf('Updated CSS cache buster to %d', $timestamp));
         }
-
-        self::clear_site_cache();
     }
 
     /**

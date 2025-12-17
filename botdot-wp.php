@@ -1,13 +1,13 @@
 <?php
 /**
- * Plugin Name: BotDot WordPress
- * Plugin URI: https://botdot.ai
+ * Plugin Name: BotSpot WordPress
+ * Plugin URI: https://bot.spot
  * Description: Server-side JSON-LD injection from mirror domain for AI discoverability. Fetches and injects JSON-LD from a configurable mirror domain into page headers.
- * Version: 0.4.0
- * Author: BotDot Team
- * Author URI: https://botdot.ai
- * License: GPL v2 or later
- * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Version: 0.6.0
+ * Author: BotSpot Team
+ * Author URI: https://bot.spot
+ * License: Proprietary
+ * License URI: https://bot.spot/license
  * Text Domain: botdot-wp
  * Domain Path: /languages
  * Requires at least: 5.0
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package BotDot_WP
- * @version 0.4.0
+ * @version 0.6.0
  */
 
 // If this file is called directly, abort.
@@ -33,7 +33,7 @@ if (!defined('ABSPATH')) {
  * Plugin version.
  * Start at version 0.1.0 and use SemVer - https://semver.org
  */
-define('BOTDOT_WP_VERSION', '0.4.0');
+define('BOTDOT_WP_VERSION', '0.6.0');
 
 /**
  * Plugin file path
@@ -84,7 +84,7 @@ function activate_botdot_wp() {
         BotDot_WP_Activator::activate();
     } catch (Exception $e) {
         // Log activation error
-        error_log('BotDot WP Activation Error: ' . $e->getMessage());
+        error_log('BotSpot WP Activation Error: ' . $e->getMessage());
         error_log('Stack trace: ' . $e->getTraceAsString());
 
         // Deactivate the plugin
@@ -92,7 +92,7 @@ function activate_botdot_wp() {
 
         // Show error to user
         wp_die(
-            'BotDot WP could not be activated. Error: ' . esc_html($e->getMessage()) .
+            'BotSpot WP could not be activated. Error: ' . esc_html($e->getMessage()) .
             '<br><br>Check your error log for more details.' .
             '<br><br><a href="' . admin_url('plugins.php') . '">Back to Plugins</a>'
         );
@@ -112,7 +112,7 @@ function deactivate_botdot_wp() {
     try {
         BotDot_WP_Deactivator::deactivate();
     } catch (Exception $e) {
-        error_log('BotDot WP Deactivation Error: ' . $e->getMessage());
+        error_log('BotSpot WP Deactivation Error: ' . $e->getMessage());
     }
 }
 
@@ -131,7 +131,7 @@ function botdot_wp_check_requirements() {
     // Check WordPress version
     if (version_compare(get_bloginfo('version'), BOTDOT_WP_MIN_WP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('BotDot WP requires WordPress %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
+            __('BotSpot WP requires WordPress %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
             BOTDOT_WP_MIN_WP_VERSION,
             get_bloginfo('version')
         );
@@ -140,7 +140,7 @@ function botdot_wp_check_requirements() {
     // Check PHP version
     if (version_compare(PHP_VERSION, BOTDOT_WP_MIN_PHP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('BotDot WP requires PHP %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
+            __('BotSpot WP requires PHP %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
             BOTDOT_WP_MIN_PHP_VERSION,
             PHP_VERSION
         );
@@ -148,18 +148,18 @@ function botdot_wp_check_requirements() {
 
     // Check for required PHP extensions
     if (!extension_loaded('curl')) {
-        $errors[] = __('BotDot WP requires the PHP cURL extension.', BOTDOT_WP_TEXT_DOMAIN);
+        $errors[] = __('BotSpot WP requires the PHP cURL extension.', BOTDOT_WP_TEXT_DOMAIN);
     }
 
     if (!extension_loaded('json')) {
-        $errors[] = __('BotDot WP requires the PHP JSON extension.', BOTDOT_WP_TEXT_DOMAIN);
+        $errors[] = __('BotSpot WP requires the PHP JSON extension.', BOTDOT_WP_TEXT_DOMAIN);
     }
 
     // If there are errors, deactivate plugin and show admin notice
     if (!empty($errors)) {
         add_action('admin_notices', function() use ($errors) {
             echo '<div class="error"><p>';
-            echo '<strong>' . __('BotDot WP Plugin Error:', BOTDOT_WP_TEXT_DOMAIN) . '</strong><br>';
+            echo '<strong>' . __('BotSpot WP Plugin Error:', BOTDOT_WP_TEXT_DOMAIN) . '</strong><br>';
             foreach ($errors as $error) {
                 echo $error . '<br>';
             }
@@ -212,7 +212,7 @@ function botdot_wp_init() {
         $plugin->run();
     } catch (Exception $e) {
         // Log initialization error
-        error_log('BotDot WP Initialization Error: ' . $e->getMessage());
+        error_log('BotSpot WP Initialization Error: ' . $e->getMessage());
         error_log('Stack trace: ' . $e->getTraceAsString());
 
         // Show admin notice
@@ -220,7 +220,7 @@ function botdot_wp_init() {
             ?>
             <div class="notice notice-error">
                 <p>
-                    <strong>BotDot WP Error:</strong>
+                    <strong>BotSpot WP Error:</strong>
                     <?php echo esc_html($e->getMessage()); ?>
                 </p>
                 <p>Check your error log for more details.</p>
@@ -249,7 +249,7 @@ function botdot_wp_activation_notice() {
             <p>
                 <?php
                 printf(
-                    __('BotDot WP plugin activated successfully! <a href="%s">Configure your settings</a> to start injecting JSON-LD.', BOTDOT_WP_TEXT_DOMAIN),
+                    __('BotSpot WP plugin activated successfully! <a href="%s">Configure your settings</a> to start injecting JSON-LD.', BOTDOT_WP_TEXT_DOMAIN),
                     admin_url('options-general.php?page=botdot-wp')
                 );
                 ?>
