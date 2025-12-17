@@ -22,14 +22,15 @@ $selected_post_types = BotDot_WP_Options::get('inject_on_post_types', array('pos
 $injection_status = BotDot_WP_Options::get('page_injection_status', array());
 $post_types = get_post_types(array('public' => true), 'objects');
 
+// Initialize pagination variables with defaults (used in Pages tab)
+$per_page = 20;
+$current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+$search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+$query = null;
+$total_pages = 0;
+
 // For Pages tab: prepare pagination and query
 if ($active_tab === 'pages') {
-
-    // Pagination
-    $per_page = 20;
-    $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-    $search = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
-
     // Query args
     $args = array(
         'post_type' => !empty($selected_post_types) ? $selected_post_types : 'post',
@@ -245,7 +246,7 @@ if ($active_tab === 'pages') {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if ($query->have_posts()) : ?>
+                        <?php if ($query && $query->have_posts()) : ?>
                             <?php while ($query->have_posts()) : $query->the_post(); ?>
                                 <?php
                                 $post_id = get_the_ID();
