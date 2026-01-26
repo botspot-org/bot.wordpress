@@ -37,6 +37,30 @@ class BotDot_WP_Appendix_Renderer {
     private static $theme_classes = null;
 
     /**
+     * Log debug message if debug mode is enabled
+     *
+     * @since    0.6.6
+     * @access   private
+     * @param    string    $message    The message to log.
+     */
+    private static function log_debug($message) {
+        if (BotDot_WP_Options::get('debug_mode')) {
+            BotDot_WP_Logger::log_debug('[AppendixRenderer] ' . $message);
+        }
+    }
+
+    /**
+     * Log error message (always logged)
+     *
+     * @since    0.6.6
+     * @access   private
+     * @param    string    $message    The message to log.
+     */
+    private static function log_error($message) {
+        BotDot_WP_Logger::log_error('[AppendixRenderer] ' . $message);
+    }
+
+    /**
      * Get the default BotDot appendix classes
      *
      * @since    0.3.0
@@ -233,9 +257,16 @@ class BotDot_WP_Appendix_Renderer {
      * @return   string                      The rendered HTML.
      */
     public static function render($appendix_data, $args = array()) {
+        self::log_debug('render() called');
+
         if (empty($appendix_data)) {
+            self::log_error('render() received empty appendix_data');
             return '';
         }
+
+        $data_type = gettype($appendix_data);
+        $data_size = is_string($appendix_data) ? strlen($appendix_data) : count($appendix_data);
+        self::log_debug(sprintf('Rendering appendix data: type=%s, size=%s', $data_type, $data_size));
 
         // Default arguments
         $defaults = array(
@@ -247,6 +278,13 @@ class BotDot_WP_Appendix_Renderer {
 
         $args = wp_parse_args($args, $defaults);
 
+        self::log_debug(sprintf(
+            'Render args: title="%s", open=%s, use_theme_classes=%s',
+            $args['title'],
+            $args['open'] ? 'true' : 'false',
+            $args['use_theme_classes'] ? 'true' : 'false'
+        ));
+
         // Apply filter to allow customization
         $args = apply_filters('botdot_wp_appendix_args', $args, $appendix_data);
 
@@ -254,6 +292,8 @@ class BotDot_WP_Appendix_Renderer {
         $theme_classes = $args['use_theme_classes']
             ? self::get_theme_classes()
             : self::get_default_theme_classes();
+
+        self::log_debug(sprintf('Using theme classes: %s', json_encode($theme_classes)));
 
         // Start output buffering
         ob_start();
@@ -268,8 +308,21 @@ class BotDot_WP_Appendix_Renderer {
 
         $html = ob_get_clean();
 
+        if (empty($html)) {
+            self::log_error('render() produced empty HTML output');
+            return '';
+        }
+
+        self::log_debug(sprintf('render() produced %d bytes of HTML', strlen($html)));
+
         // Apply filter to allow HTML customization
-        return apply_filters('botdot_wp_appendix_html', $html, $appendix_data, $args);
+        $filtered_html = apply_filters('botdot_wp_appendix_html', $html, $appendix_data, $args);
+
+        if ($filtered_html !== $html) {
+            self::log_debug(sprintf('HTML modified by botdot_wp_appendix_html filter: %d -> %d bytes', strlen($html), strlen($filtered_html)));
+        }
+
+        return $filtered_html;
     }
 
     /**
@@ -286,28 +339,36 @@ class BotDot_WP_Appendix_Renderer {
 
         // If data is a string, treat it as HTML and output directly
         if (is_string($data)) {
+            self::log_debug(sprintf('render_content: Outputting raw HTML string (%d bytes)', strlen($data)));
             echo $data;
         }
         // Check if data has specific structure (JSON-LD)
         elseif (isset($data['@context']) && isset($data['@type'])) {
+            self::log_debug(sprintf('render_content: Rendering single JSON-LD object (type: %s)', $data['@type']));
             // Render JSON-LD structured data
             echo self::render_json_ld($data);
         } elseif (is_array($data) && isset($data[0]) && isset($data[0]['@context'])) {
+            self::log_debug(sprintf('render_content: Rendering array of %d JSON-LD objects', count($data)));
             // Array of JSON-LD objects
             foreach ($data as $item) {
                 echo self::render_json_ld($item);
             }
         } else {
+            self::log_debug('render_content: Rendering generic data');
             // Generic data rendering
             echo self::render_generic($data);
         }
 
         // Show metadata if enabled (only for array data)
         if (is_array($data) && $args['show_metadata'] && isset($data['_timestamp'])) {
+            self::log_debug('render_content: Appending metadata');
             echo self::render_metadata($data);
         }
 
-        return ob_get_clean();
+        $content = ob_get_clean();
+        self::log_debug(sprintf('render_content: Produced %d bytes', strlen($content)));
+
+        return $content;
     }
 
     /**

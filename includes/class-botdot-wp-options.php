@@ -42,7 +42,7 @@ class BotDot_WP_Options {
         'exclude_page_ids' => array(),
         'debug_mode' => false,
         // Appendix settings
-        'appendix_enabled' => false,
+        'appendix_enabled' => true,
         'appendix_title' => 'AI Appendix',
         'appendix_position' => 'bottom',
         'appendix_auto_placement' => 'above_footer',

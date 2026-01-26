@@ -48,17 +48,18 @@ class BotDot_WP_Logger {
     /**
      * Log an error message
      *
+     * Errors are ALWAYS logged to PHP error_log (regardless of WP_DEBUG)
+     * to ensure production issues are visible.
+     *
      * @since    0.1.0
      * @param    string    $message    The error message.
      * @param    array     $context    Optional. Additional context data.
      */
     public static function log_error($message, $context = array()) {
-        // Log to WordPress debug log if WP_DEBUG is enabled
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[BotSpot WP] ERROR: ' . $message);
-            if (!empty($context)) {
-                error_log('[BotSpot WP] Context: ' . print_r($context, true));
-            }
+        // ALWAYS log errors to PHP error_log - errors should never be silent
+        error_log('[BotSpot WP] ERROR: ' . $message);
+        if (!empty($context)) {
+            error_log('[BotSpot WP] Context: ' . print_r($context, true));
         }
 
         // Store in transient for admin display
@@ -90,17 +91,18 @@ class BotDot_WP_Logger {
     /**
      * Log a warning message
      *
+     * Warnings are ALWAYS logged to PHP error_log (regardless of WP_DEBUG)
+     * to ensure production issues are visible.
+     *
      * @since    0.1.0
      * @param    string    $message    The warning message.
      * @param    array     $context    Optional. Additional context data.
      */
     public static function log_warning($message, $context = array()) {
-        // Log to WordPress debug log if WP_DEBUG is enabled
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[BotSpot WP] WARNING: ' . $message);
-            if (!empty($context)) {
-                error_log('[BotSpot WP] Context: ' . print_r($context, true));
-            }
+        // ALWAYS log warnings to PHP error_log - warnings should never be silent
+        error_log('[BotSpot WP] WARNING: ' . $message);
+        if (!empty($context)) {
+            error_log('[BotSpot WP] Context: ' . print_r($context, true));
         }
 
         // Store in transient for admin display
