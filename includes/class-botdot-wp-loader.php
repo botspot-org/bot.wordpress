@@ -2,7 +2,7 @@
 /**
  * Register all actions and filters for the plugin
  *
- * @link       https://botdot.ai
+ * @link       https://bot.spot
  * @since      0.1.0
  *
  * @package    BotDot_WP

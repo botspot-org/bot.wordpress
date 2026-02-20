@@ -5,7 +5,7 @@
  * A class definition that includes attributes and functions used across both the
  * public-facing side of the site and the admin area.
  *
- * @link       https://botdot.ai
+ * @link       https://bot.spot
  * @since      0.1.0
  *
  * @package    BotDot_WP
@@ -23,9 +23,6 @@ if (!defined('WPINC')) {
  * This is used to define internationalization, admin-specific hooks, and
  * public-facing site hooks.
  *
- * Also maintains the unique identifier of this plugin as well as the current
- * version of the plugin.
- *
  * @since      0.1.0
  * @package    BotDot_WP
  * @subpackage BotDot_WP/includes
@@ -34,12 +31,11 @@ if (!defined('WPINC')) {
 class BotDot_WP {
 
     /**
-     * The loader that's responsible for maintaining and registering all hooks that power
-     * the plugin.
+     * The loader that's responsible for maintaining and registering all hooks.
      *
      * @since    0.1.0
      * @access   protected
-     * @var      BotDot_WP_Loader    $loader    Maintains and registers all hooks for the plugin.
+     * @var      BotDot_WP_Loader    $loader
      */
     protected $loader;
 
@@ -48,7 +44,7 @@ class BotDot_WP {
      *
      * @since    0.1.0
      * @access   protected
-     * @var      string    $plugin_name    The string used to uniquely identify this plugin.
+     * @var      string    $plugin_name
      */
     protected $plugin_name;
 
@@ -57,16 +53,12 @@ class BotDot_WP {
      *
      * @since    0.1.0
      * @access   protected
-     * @var      string    $version    The current version of the plugin.
+     * @var      string    $version
      */
     protected $version;
 
     /**
      * Define the core functionality of the plugin.
-     *
-     * Set the plugin name and the plugin version that can be used throughout the plugin.
-     * Load the dependencies, define the locale, and set the hooks for the admin area and
-     * the public-facing side of the site.
      *
      * @since    0.1.0
      */
@@ -74,95 +66,71 @@ class BotDot_WP {
         if (defined('BOTDOT_WP_VERSION')) {
             $this->version = BOTDOT_WP_VERSION;
         } else {
-            $this->version = '0.1.0';
+            $this->version = '1.0.0';
         }
         $this->plugin_name = 'botdot-wp';
 
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
-        $this->define_cache_hooks();
+        $this->define_sync_hooks();
     }
 
     /**
      * Load the required dependencies for this plugin.
      *
-     * Include the following files that make up the plugin:
-     *
-     * - BotDot_WP_Loader. Orchestrates the hooks of the plugin.
-     * - BotDot_WP_Options. Defines options management.
-     * - BotDot_WP_Fetcher. Handles HTTP requests to mirror domain.
-     * - BotDot_WP_Injector. Handles JSON-LD injection.
-     * - BotDot_WP_Logger. Handles error logging.
-     * - BotDot_WP_Admin. Defines all hooks for the admin area.
-     *
-     * Create an instance of the loader which will be used to register the hooks
-     * with WordPress.
-     *
-     * @since    0.1.0
+     * @since    1.0.0
      * @access   private
      */
     private function load_dependencies() {
 
         /**
-         * The class responsible for orchestrating the actions and filters of the
-         * core plugin.
+         * The class responsible for orchestrating the actions and filters.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-loader.php';
 
         /**
-         * The class responsible for options management
+         * The class responsible for options management.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-options.php';
 
         /**
-         * The class responsible for HTTP fetching from mirror domain
-         */
-        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-fetcher.php';
-
-        /**
-         * The class responsible for JSON-LD injection
-         */
-        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-injector.php';
-
-        /**
-         * The class responsible for logging
+         * The class responsible for logging.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-logger.php';
 
         /**
-         * The class responsible for appendix fetching
+         * The class responsible for content sync (write path).
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-appendix-fetcher.php';
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-sync.php';
 
         /**
-         * The class responsible for appendix rendering
+         * The class responsible for content fetching (read path).
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-appendix-renderer.php';
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-content-fetcher.php';
 
         /**
-         * The class responsible for defining all actions that occur in the admin area.
+         * The class responsible for content injection (JSON-LD + appendix).
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-content-injector.php';
+
+        /**
+         * The class responsible for defining all actions in the admin area.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . 'admin/class-botdot-wp-admin.php';
 
         /**
-         * The class responsible for public-facing functionality
+         * The class responsible for public-facing functionality.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . 'public/class-botdot-wp-public.php';
-
-        /**
-         * The class responsible for cache clearing and polling
-         */
-        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-cache-clearer.php';
 
         $this->loader = new BotDot_WP_Loader();
     }
 
     /**
-     * Register all of the hooks related to the admin area functionality
-     * of the plugin.
+     * Register all of the hooks related to the admin area functionality.
      *
-     * @since    0.1.0
+     * @since    1.0.0
      * @access   private
      */
     private function define_admin_hooks() {
@@ -176,31 +144,52 @@ class BotDot_WP {
         $this->loader->add_action('wp_ajax_botdot_wp_clear_errors', $plugin_admin, 'handle_clear_errors');
         $this->loader->add_action('wp_ajax_botdot_wp_toggle_page_injection', $plugin_admin, 'handle_toggle_page_injection');
         $this->loader->add_action('wp_ajax_botdot_wp_bulk_update_pages', $plugin_admin, 'handle_bulk_update_pages');
-        $this->loader->add_action('wp_ajax_botdot_wp_manual_cache_poll', $plugin_admin, 'handle_manual_cache_poll');
-        $this->loader->add_action('wp_ajax_botdot_wp_manual_cache_clear', $plugin_admin, 'handle_manual_cache_clear');
+        $this->loader->add_action('wp_ajax_botdot_wp_manual_sync', $plugin_admin, 'handle_manual_sync');
+        $this->loader->add_action('wp_ajax_botdot_wp_bulk_sync', $plugin_admin, 'handle_bulk_sync');
+        $this->loader->add_action('wp_ajax_botdot_wp_sync_status', $plugin_admin, 'handle_sync_status');
 
         // Admin notices for errors
         $this->loader->add_action('admin_notices', $plugin_admin, 'display_admin_notices');
+
+        // Post editor meta box
+        $this->loader->add_action('add_meta_boxes', $plugin_admin, 'add_sync_meta_box');
+
+        // Post list columns
+        $this->loader->add_filter('manage_posts_columns', $plugin_admin, 'add_sync_column');
+        $this->loader->add_action('manage_posts_custom_column', $plugin_admin, 'render_sync_column', 10, 2);
+        $this->loader->add_filter('manage_pages_columns', $plugin_admin, 'add_sync_column');
+        $this->loader->add_action('manage_pages_custom_column', $plugin_admin, 'render_sync_column', 10, 2);
+
+        // Bulk actions
+        $this->loader->add_filter('bulk_actions-edit-post', $plugin_admin, 'add_bulk_sync_action');
+        $this->loader->add_filter('bulk_actions-edit-page', $plugin_admin, 'add_bulk_sync_action');
+        $this->loader->add_filter('handle_bulk_actions-edit-post', $plugin_admin, 'handle_bulk_sync_action', 10, 3);
+        $this->loader->add_filter('handle_bulk_actions-edit-page', $plugin_admin, 'handle_bulk_sync_action', 10, 3);
     }
 
     /**
-     * Register all of the hooks related to the public-facing functionality
-     * of the plugin.
+     * Register all of the hooks related to the public-facing functionality.
      *
-     * @since    0.1.0
+     * @since    1.0.0
      * @access   private
      */
     private function define_public_hooks() {
-        $injector = new BotDot_WP_Injector($this->get_plugin_name(), $this->get_version());
+        $content_injector = new BotDot_WP_Content_Injector($this->get_plugin_name(), $this->get_version());
         $public = new BotDot_WP_Public($this->get_plugin_name(), $this->get_version());
 
-        // Hook into wp_head at priority 1 for early JSON-LD injection
-        $this->loader->add_action('wp_head', $injector, 'inject_json_ld', 1);
+        // JSON-LD injection via wp_head (priority 1)
+        $this->loader->add_action('wp_head', $content_injector, 'inject_jsonld', 1);
 
-        // Register appendix shortcode
+        // Appendix injection via the_content (priority 20)
+        $this->loader->add_filter('the_content', $content_injector, 'inject_appendix_content', 20);
+
+        // Above-footer placement (priority 5)
+        $this->loader->add_action('wp_footer', $content_injector, 'inject_above_footer', 5);
+
+        // Register shortcode
         $this->loader->add_action('init', $public, 'register_shortcode');
 
-        // Register WPBakery element (late priority to ensure WPBakery is loaded)
+        // Register WPBakery element
         $this->loader->add_action('vc_before_init', $public, 'register_wpbakery_element');
 
         // Register Gutenberg block
@@ -209,35 +198,23 @@ class BotDot_WP {
         // Enqueue Gutenberg block assets
         $this->loader->add_action('enqueue_block_editor_assets', $public, 'enqueue_gutenberg_assets');
 
-        // Add TinyMCE button for Classic Editor
+        // TinyMCE button for Classic Editor
         $this->loader->add_action('admin_init', $public, 'add_tinymce_button');
-
-        // Filter content to add appendix (for bottom placement)
-        $this->loader->add_filter('the_content', $public, 'filter_content', 20);
-
-        // Hook for above-footer placement (priority 5 to run before most footer content)
-        $this->loader->add_action('wp_footer', $public, 'inject_above_footer', 5);
 
         // Enqueue appendix styles
         $this->loader->add_action('wp_enqueue_scripts', $public, 'enqueue_styles');
     }
 
     /**
-     * Register all of the hooks related to cache clearing functionality
-     * of the plugin.
+     * Register all of the hooks related to content sync functionality.
      *
-     * @since    0.3.0
+     * @since    1.0.0
      * @access   private
      */
-    private function define_cache_hooks() {
-        // Add custom cron schedule
-        $this->loader->add_filter('cron_schedules', 'BotDot_WP_Cache_Clearer', 'add_cron_schedule');
-
-        // Register cron hook for polling recache trigger
-        $this->loader->add_action('botdot_wp_poll_recache', 'BotDot_WP_Cache_Clearer', 'poll_recache_trigger');
-
-        // Register cron hook for re-enabling LiteSpeed Cache
-        $this->loader->add_action('botdot_wp_reenable_litespeed', 'BotDot_WP_Cache_Clearer', 'reenable_litespeed_cache');
+    private function define_sync_hooks() {
+        $this->loader->add_action('save_post', 'BotDot_WP_Sync', 'on_save_post', 10, 3);
+        $this->loader->add_action('transition_post_status', 'BotDot_WP_Sync', 'on_status_change', 10, 3);
+        $this->loader->add_action('before_delete_post', 'BotDot_WP_Sync', 'on_delete_post');
     }
 
     /**
@@ -250,21 +227,20 @@ class BotDot_WP {
     }
 
     /**
-     * The name of the plugin used to uniquely identify it within the context of
-     * WordPress and to define internationalization functionality.
+     * The name of the plugin.
      *
      * @since     0.1.0
-     * @return    string    The name of the plugin.
+     * @return    string
      */
     public function get_plugin_name() {
         return $this->plugin_name;
     }
 
     /**
-     * The reference to the class that orchestrates the hooks with the plugin.
+     * The reference to the loader.
      *
      * @since     0.1.0
-     * @return    BotDot_WP_Loader    Orchestrates the hooks of the plugin.
+     * @return    BotDot_WP_Loader
      */
     public function get_loader() {
         return $this->loader;
@@ -274,7 +250,7 @@ class BotDot_WP {
      * Retrieve the version number of the plugin.
      *
      * @since     0.1.0
-     * @return    string    The version number of the plugin.
+     * @return    string
      */
     public function get_version() {
         return $this->version;

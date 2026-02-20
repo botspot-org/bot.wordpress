@@ -2,7 +2,7 @@
 /**
  * Fired when the plugin is uninstalled.
  *
- * @link       https://botdot.ai
+ * @link       https://bot.spot
  * @since      0.1.0
  *
  * @package    BotDot_WP
@@ -17,17 +17,26 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
  * Delete all plugin options
  */
 $options = array(
-    'botdot_wp_mirror_domain',
-    'botdot_wp_enabled',
-    'botdot_wp_fetch_timeout',
+    // Connection
+    'botdot_wp_locus_api_url',
+    'botdot_wp_connector_url',
+    'botdot_wp_api_key',
+    'botdot_wp_botspot_key',
+    'botdot_wp_webhook_secret',
+    'botdot_wp_connection_id',
+    // Sync
+    'botdot_wp_auto_sync_enabled',
+    'botdot_wp_sync_sensitivity',
+    'botdot_wp_sync_post_types',
+    // Display
+    'botdot_wp_injection_enabled',
+    'botdot_wp_injection_position',
     'botdot_wp_inject_on_post_types',
-    'botdot_wp_exclude_page_ids',
+    'botdot_wp_page_injection_status',
+    // Cache
+    'botdot_wp_cache_ttl',
+    // Debug
     'botdot_wp_debug_mode',
-    'botdot_wp_css_cache_buster',
-    'botdot_wp_smart_cache_enabled',
-    'botdot_wp_smart_cache_check_path',
-    'botdot_wp_content_hash_appendix',
-    'botdot_wp_content_hash_jsonld',
 );
 
 foreach ($options as $option) {
@@ -39,3 +48,17 @@ foreach ($options as $option) {
  */
 delete_transient('botdot_wp_recent_errors');
 delete_transient('botdot_wp_activation_notice');
+
+// Clear all botdot_content_ transients
+global $wpdb;
+$wpdb->query(
+    "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_botdot_content_%' OR option_name LIKE '_transient_timeout_botdot_content_%'"
+);
+
+/**
+ * Delete all post meta
+ */
+$wpdb->delete($wpdb->postmeta, array('meta_key' => '_botdot_sync_hash'));
+$wpdb->delete($wpdb->postmeta, array('meta_key' => '_botdot_last_synced_at'));
+$wpdb->delete($wpdb->postmeta, array('meta_key' => '_botdot_sync_status'));
+$wpdb->delete($wpdb->postmeta, array('meta_key' => '_botdot_sync_word_count'));

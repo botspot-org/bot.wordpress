@@ -2,7 +2,7 @@
 /**
  * Options management class for the BotDot WP plugin
  *
- * @link       https://botdot.ai
+ * @link       https://bot.spot
  * @since      0.1.0
  *
  * @package    BotDot_WP
@@ -30,32 +30,35 @@ class BotDot_WP_Options {
     /**
      * Default plugin options
      *
-     * @since    0.1.0
+     * @since    1.0.0
      * @access   private
      * @var      array    $defaults    Default option values.
      */
     private static $defaults = array(
-        'mirror_domain' => '',
-        'enabled' => true,
-        'fetch_timeout' => 10,
+        // Connection
+        'locus_api_url'        => '',
+        'connector_url'        => '',
+        'api_key'              => '',
+        'botspot_key'          => '',
+        'webhook_secret'       => '',
+        'connection_id'        => '',
+
+        // Sync
+        'auto_sync_enabled'    => true,
+        'sync_sensitivity'     => 'medium',
+        'sync_post_types'      => array('post', 'page'),
+
+        // Display
+        'injection_enabled'    => true,
+        'injection_position'   => 'bottom',
         'inject_on_post_types' => array('post', 'page'),
-        'exclude_page_ids' => array(),
-        'debug_mode' => false,
-        // Appendix settings
-        'appendix_enabled' => true,
-        'appendix_title' => 'AI Appendix',
-        'appendix_position' => 'bottom',
-        'appendix_auto_placement' => 'above_footer',
-        'appendix_open_default' => false,
-        'appendix_on_post_types' => array('post', 'page'),
-        'page_injection_status' => array(), // [page_id => bool] map for enabled pages
-        // Cache busting
-        'css_cache_buster' => 0,  // Unix timestamp for CSS cache invalidation
-        // Smart cache settings
-        'smart_cache_enabled' => true,
-        'smart_cache_check_path' => '/',      // Path to check for changes
-        'content_hash_appendix' => '',        // SHA256 of appendix HTML
-        'content_hash_jsonld' => '',          // SHA256 of JSON-LD
+        'page_injection_status' => array(),
+
+        // Cache
+        'cache_ttl'            => 3600,
+
+        // Debug
+        'debug_mode'           => false,
     );
 
     /**
@@ -67,14 +70,12 @@ class BotDot_WP_Options {
      * @return   mixed                     The option value.
      */
     public static function get($option_name, $default = null) {
-        // Use provided default, or fall back to class default, or null
         if ($default === null) {
             $default = isset(self::$defaults[$option_name]) ? self::$defaults[$option_name] : null;
         }
 
         $value = get_option('botdot_wp_' . $option_name, $default);
 
-        // Type casting for specific options
         return self::cast_option_value($option_name, $value);
     }
 
@@ -87,7 +88,6 @@ class BotDot_WP_Options {
      * @return   bool                      True if the value was updated, false otherwise.
      */
     public static function set($option_name, $value) {
-        // Validate and sanitize value
         $value = self::sanitize_option_value($option_name, $value);
 
         return update_option('botdot_wp_' . $option_name, $value);
@@ -203,7 +203,7 @@ class BotDot_WP_Options {
     /**
      * Cast option value to appropriate type
      *
-     * @since    0.1.0
+     * @since    1.0.0
      * @access   private
      * @param    string    $option_name    The option name.
      * @param    mixed     $value          The option value.
@@ -211,24 +211,30 @@ class BotDot_WP_Options {
      */
     private static function cast_option_value($option_name, $value) {
         switch ($option_name) {
-            case 'enabled':
+            case 'auto_sync_enabled':
+            case 'injection_enabled':
             case 'debug_mode':
-            case 'appendix_enabled':
-            case 'appendix_open_default':
                 return (bool) $value;
 
-            case 'fetch_timeout':
+            case 'cache_ttl':
                 return (int) $value;
 
+            case 'sync_post_types':
             case 'inject_on_post_types':
-            case 'exclude_page_ids':
-            case 'appendix_on_post_types':
                 return is_array($value) ? $value : array();
 
-            case 'mirror_domain':
-            case 'appendix_title':
-            case 'appendix_position':
-                return trim($value);
+            case 'page_injection_status':
+                return is_array($value) ? $value : array();
+
+            case 'locus_api_url':
+            case 'connector_url':
+            case 'api_key':
+            case 'botspot_key':
+            case 'webhook_secret':
+            case 'connection_id':
+            case 'sync_sensitivity':
+            case 'injection_position':
+                return is_string($value) ? trim($value) : '';
 
             default:
                 return $value;
@@ -238,7 +244,7 @@ class BotDot_WP_Options {
     /**
      * Sanitize option value before saving
      *
-     * @since    0.1.0
+     * @since    1.0.0
      * @access   public
      * @param    string    $option_name    The option name.
      * @param    mixed     $value          The option value.
@@ -246,43 +252,35 @@ class BotDot_WP_Options {
      */
     public static function sanitize_option_value($option_name, $value) {
         switch ($option_name) {
-            case 'mirror_domain':
-                // Remove http/https and trailing slash
+            case 'locus_api_url':
+            case 'connector_url':
                 $value = trim($value);
-                $value = preg_replace('#^https?://#', '', $value);
                 $value = rtrim($value, '/');
-                return sanitize_text_field($value);
+                return esc_url_raw($value);
 
-            case 'enabled':
+            case 'api_key':
+            case 'botspot_key':
+            case 'webhook_secret':
+            case 'connection_id':
+                return sanitize_text_field(trim($value));
+
+            case 'auto_sync_enabled':
+            case 'injection_enabled':
             case 'debug_mode':
-            case 'appendix_enabled':
-            case 'appendix_open_default':
                 return (bool) $value;
 
-            case 'fetch_timeout':
-                return max(1, min(60, (int) $value)); // Between 1 and 60 seconds
+            case 'sync_sensitivity':
+                $allowed = array('high', 'medium', 'low');
+                return in_array($value, $allowed) ? $value : 'medium';
 
-            case 'appendix_title':
-                return sanitize_text_field($value);
+            case 'injection_position':
+                $allowed = array('bottom', 'above_footer', 'shortcode');
+                return in_array($value, $allowed) ? $value : 'bottom';
 
-            case 'appendix_position':
-                $allowed_positions = array('bottom', 'shortcode');
-                return in_array($value, $allowed_positions) ? $value : 'bottom';
-
-            case 'appendix_auto_placement':
-                $allowed_placements = array('above_footer', 'bottom');
-                return in_array($value, $allowed_placements) ? $value : 'above_footer';
-
+            case 'sync_post_types':
             case 'inject_on_post_types':
-            case 'appendix_on_post_types':
                 if (is_array($value)) {
                     return array_map('sanitize_text_field', $value);
-                }
-                return array();
-
-            case 'exclude_page_ids':
-                if (is_array($value)) {
-                    return array_map('absint', $value);
                 }
                 return array();
 
@@ -290,7 +288,6 @@ class BotDot_WP_Options {
                 if (!is_array($value)) {
                     return array();
                 }
-                // Ensure all keys are integers (page IDs) and values are booleans
                 $sanitized = array();
                 foreach ($value as $page_id => $enabled) {
                     $page_id = absint($page_id);
@@ -299,6 +296,9 @@ class BotDot_WP_Options {
                     }
                 }
                 return $sanitized;
+
+            case 'cache_ttl':
+                return max(60, min(86400, (int) $value));
 
             default:
                 if (is_string($value)) {
@@ -322,29 +322,44 @@ class BotDot_WP_Options {
     /**
      * Validate option value
      *
-     * @since    0.1.0
+     * @since    1.0.0
      * @param    string    $option_name    The option name.
      * @param    mixed     $value          The option value.
      * @return   bool|WP_Error             True if valid, WP_Error if invalid.
      */
     public static function validate($option_name, $value) {
         switch ($option_name) {
-            case 'mirror_domain':
+            case 'locus_api_url':
                 if (empty($value)) {
-                    return new WP_Error('empty_mirror_domain', __('Mirror domain cannot be empty', 'botdot-wp'));
+                    return new WP_Error('empty_locus_api_url', __('Locus API URL cannot be empty', 'botdot-wp'));
                 }
-                // Basic domain validation (allows optional port like localhost:5000)
-                if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9-_.]+[a-zA-Z0-9](:\d+)?$/', $value)) {
-                    return new WP_Error('invalid_mirror_domain', __('Invalid mirror domain format', 'botdot-wp'));
-                }
-                break;
-
-            case 'fetch_timeout':
-                if ($value < 1 || $value > 60) {
-                    return new WP_Error('invalid_timeout', __('Timeout must be between 1 and 60 seconds', 'botdot-wp'));
+                if (!filter_var($value, FILTER_VALIDATE_URL)) {
+                    return new WP_Error('invalid_locus_api_url', __('Invalid Locus API URL format', 'botdot-wp'));
                 }
                 break;
 
+            case 'connector_url':
+                if (empty($value)) {
+                    return new WP_Error('empty_connector_url', __('Connector URL cannot be empty', 'botdot-wp'));
+                }
+                if (!filter_var($value, FILTER_VALIDATE_URL)) {
+                    return new WP_Error('invalid_connector_url', __('Invalid Connector URL format', 'botdot-wp'));
+                }
+                break;
+
+            case 'api_key':
+                if (empty($value)) {
+                    return new WP_Error('empty_api_key', __('API key cannot be empty', 'botdot-wp'));
+                }
+                break;
+
+            case 'cache_ttl':
+                if ($value < 60 || $value > 86400) {
+                    return new WP_Error('invalid_cache_ttl', __('Cache TTL must be between 60 and 86400 seconds', 'botdot-wp'));
+                }
+                break;
+
+            case 'sync_post_types':
             case 'inject_on_post_types':
                 if (!is_array($value) || empty($value)) {
                     return new WP_Error('invalid_post_types', __('At least one post type must be selected', 'botdot-wp'));

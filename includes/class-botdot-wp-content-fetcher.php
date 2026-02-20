@@ -1,0 +1,284 @@
+<?php
+/**
+ * Unified content fetcher for the BotDot WP plugin
+ *
+ * Fetches rendered appendix HTML and JSON-LD from locus-core's
+ * /appendix/render endpoint with transient caching.
+ *
+ * @link       https://bot.spot
+ * @since      1.0.0
+ *
+ * @package    BotDot_WP
+ * @subpackage BotDot_WP/includes
+ */
+
+// If this file is called directly, abort.
+if (!defined('WPINC')) {
+    die;
+}
+
+/**
+ * Unified content fetcher for locus-core appendix rendering.
+ *
+ * Replaces the old BotDot_WP_Fetcher and BotDot_WP_Appendix_Fetcher
+ * with a single fetcher that returns both HTML and JSON-LD.
+ *
+ * @since      1.0.0
+ * @package    BotDot_WP
+ * @subpackage BotDot_WP/includes
+ * @author     BotDot Team
+ */
+class BotDot_WP_Content_Fetcher {
+
+    /**
+     * Fetch appendix content for a given URL path
+     *
+     * Returns cached data if fresh, otherwise fetches from locus-core.
+     *
+     * @since    1.0.0
+     * @param    string    $url_path    The URL path to fetch content for.
+     * @return   array|null             Array with 'html', 'jsonld', 'content_hash' keys, or null on failure.
+     */
+    public static function fetch($url_path) {
+        $locus_api_url = BotDot_WP_Options::get('locus_api_url');
+        $botspot_key = BotDot_WP_Options::get('botspot_key');
+
+        if (empty($locus_api_url) || empty($botspot_key)) {
+            self::log_debug('Cannot fetch: locus_api_url or botspot_key not configured');
+            return null;
+        }
+
+        $cache_key = 'botdot_content_' . md5($url_path);
+
+        // Check transient cache
+        $cached = get_transient($cache_key);
+        if ($cached !== false && is_array($cached)) {
+            self::log_debug(sprintf('Cache hit for path: %s', $url_path));
+
+            // Validate cache freshness via /appendix/check
+            $check_result = self::check_freshness($url_path, $cached);
+            if ($check_result === true) {
+                self::log_debug('Cache is fresh, returning cached data');
+                return $cached;
+            }
+
+            self::log_debug('Cache is stale, fetching fresh content');
+        }
+
+        // Fetch from locus-core
+        $endpoint = rtrim($locus_api_url, '/') . '/api/v1/appendix/render';
+        $endpoint = add_query_arg('path', $url_path, $endpoint);
+
+        self::log_debug(sprintf('Fetching from: %s', $endpoint));
+
+        $response = wp_remote_get($endpoint, array(
+            'headers' => array(
+                'X-Botspot-Key' => $botspot_key,
+                'Accept' => 'application/json',
+            ),
+            'timeout' => 15,
+        ));
+
+        if (is_wp_error($response)) {
+            self::log_error(sprintf(
+                'Fetch failed for path %s: %s',
+                $url_path,
+                $response->get_error_message()
+            ));
+            // Return stale cache if available
+            if ($cached !== false && is_array($cached)) {
+                self::log_debug('Returning stale cached data after fetch failure');
+                return $cached;
+            }
+            return null;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+
+        if ($status_code !== 200) {
+            self::log_error(sprintf('Fetch returned HTTP %d for path %s', $status_code, $url_path));
+            if ($cached !== false && is_array($cached)) {
+                return $cached;
+            }
+            return null;
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if (!is_array($body)) {
+            self::log_error('Fetch returned invalid JSON');
+            return null;
+        }
+
+        $data = array(
+            'html' => isset($body['html']) ? $body['html'] : null,
+            'jsonld' => isset($body['jsonld']) ? $body['jsonld'] : null,
+            'content_hash' => isset($body['content_hash']) ? $body['content_hash'] : null,
+        );
+
+        // Cache with configured TTL
+        $ttl = isset($body['cache_ttl']) ? (int) $body['cache_ttl'] : BotDot_WP_Options::get('cache_ttl', 3600);
+        set_transient($cache_key, $data, $ttl);
+
+        self::log_debug(sprintf(
+            'Fetched and cached content for path %s (TTL: %ds, html: %s, jsonld: %s)',
+            $url_path,
+            $ttl,
+            $data['html'] !== null ? strlen($data['html']) . ' bytes' : 'null',
+            $data['jsonld'] !== null ? 'present' : 'null'
+        ));
+
+        return $data;
+    }
+
+    /**
+     * Check cache freshness via /appendix/check endpoint
+     *
+     * @since    1.0.0
+     * @param    string    $url_path    The URL path.
+     * @param    array     $cached      The cached data with content_hash.
+     * @return   bool                   True if cache is fresh, false if stale.
+     */
+    private static function check_freshness($url_path, $cached) {
+        if (empty($cached['content_hash'])) {
+            return false;
+        }
+
+        $locus_api_url = BotDot_WP_Options::get('locus_api_url');
+        $botspot_key = BotDot_WP_Options::get('botspot_key');
+
+        $endpoint = rtrim($locus_api_url, '/') . '/api/v1/appendix/check';
+        $endpoint = add_query_arg('path', $url_path, $endpoint);
+
+        $response = wp_remote_get($endpoint, array(
+            'headers' => array(
+                'X-Botspot-Key' => $botspot_key,
+                'Accept' => 'application/json',
+            ),
+            'timeout' => 5,
+        ));
+
+        if (is_wp_error($response)) {
+            self::log_debug('Freshness check failed, treating cache as stale');
+            return false;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code !== 200) {
+            return false;
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($body) || !isset($body['content_hash'])) {
+            return false;
+        }
+
+        return $body['content_hash'] === $cached['content_hash'];
+    }
+
+    /**
+     * Test connection to locus-core
+     *
+     * @since    1.0.0
+     * @return   array    Result with 'success' and 'message' keys.
+     */
+    public static function test_connection() {
+        $locus_api_url = BotDot_WP_Options::get('locus_api_url');
+        $botspot_key = BotDot_WP_Options::get('botspot_key');
+
+        if (empty($locus_api_url)) {
+            return array(
+                'success' => false,
+                'message' => __('Locus API URL is not configured', 'botdot-wp'),
+            );
+        }
+
+        if (empty($botspot_key)) {
+            return array(
+                'success' => false,
+                'message' => __('Botspot Key is not configured', 'botdot-wp'),
+            );
+        }
+
+        $endpoint = rtrim($locus_api_url, '/') . '/api/v1/appendix/config';
+
+        $response = wp_remote_get($endpoint, array(
+            'headers' => array(
+                'X-Botspot-Key' => $botspot_key,
+                'Accept' => 'application/json',
+            ),
+            'timeout' => 10,
+        ));
+
+        if (is_wp_error($response)) {
+            return array(
+                'success' => false,
+                'message' => sprintf(__('Connection failed: %s', 'botdot-wp'), $response->get_error_message()),
+            );
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+
+        if ($status_code === 200) {
+            return array(
+                'success' => true,
+                'message' => __('Connected to locus-core successfully', 'botdot-wp'),
+            );
+        }
+
+        if ($status_code === 401 || $status_code === 403) {
+            return array(
+                'success' => false,
+                'message' => __('Authentication failed. Check your Botspot Key.', 'botdot-wp'),
+            );
+        }
+
+        return array(
+            'success' => false,
+            'message' => sprintf(__('Connection returned HTTP %d', 'botdot-wp'), $status_code),
+        );
+    }
+
+    /**
+     * Clear cached content
+     *
+     * @since    1.0.0
+     * @param    string|null    $path    Optional specific path to clear. Null clears all.
+     */
+    public static function clear_cache($path = null) {
+        if ($path !== null) {
+            delete_transient('botdot_content_' . md5($path));
+            self::log_debug(sprintf('Cleared cache for path: %s', $path));
+            return;
+        }
+
+        // Clear all botdot_content_ transients
+        global $wpdb;
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_botdot_content_%' OR option_name LIKE '_transient_timeout_botdot_content_%'"
+        );
+        self::log_debug('Cleared all content caches');
+    }
+
+    /**
+     * Log debug message
+     *
+     * @since    1.0.0
+     * @param    string    $message    The message to log.
+     */
+    private static function log_debug($message) {
+        if (BotDot_WP_Options::get('debug_mode')) {
+            BotDot_WP_Logger::log_debug('[ContentFetcher] ' . $message);
+        }
+    }
+
+    /**
+     * Log error message
+     *
+     * @since    1.0.0
+     * @param    string    $message    The message to log.
+     */
+    private static function log_error($message) {
+        BotDot_WP_Logger::log_error('[ContentFetcher] ' . $message);
+    }
+}
