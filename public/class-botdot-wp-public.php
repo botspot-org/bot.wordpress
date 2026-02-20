@@ -10,8 +10,8 @@
  */
 
 // If this file is called directly, abort.
-if (!defined('WPINC')) {
-    die;
+if (!defined("WPINC")) {
+    die();
 }
 
 /**
@@ -24,8 +24,8 @@ if (!defined('WPINC')) {
  * @subpackage BotDot_WP/public
  * @author     BotDot Team
  */
-class BotDot_WP_Public {
-
+class BotDot_WP_Public
+{
     /**
      * The plugin name.
      *
@@ -57,12 +57,15 @@ class BotDot_WP_Public {
      * Initialize the class and set its properties.
      *
      * @since    0.2.0
-     * @param    string    $plugin_name    The name of this plugin.
-     * @param    string    $version        The version of this plugin.
+     * @param    string                          $plugin_name        The name of this plugin.
+     * @param    string                          $version            The version of this plugin.
+     * @param    BotDot_WP_Content_Injector|null $content_injector   Optional shared content injector instance.
      */
-    public function __construct($plugin_name, $version) {
+    public function __construct($plugin_name, $version, $content_injector = null)
+    {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
+        $this->content_injector = $content_injector;
     }
 
     /**
@@ -71,7 +74,8 @@ class BotDot_WP_Public {
      * @since    1.0.0
      * @return   BotDot_WP_Content_Injector
      */
-    private function get_content_injector() {
+    private function get_content_injector()
+    {
         if ($this->content_injector === null) {
             $this->content_injector = new BotDot_WP_Content_Injector($this->plugin_name, $this->version);
         }
@@ -83,8 +87,9 @@ class BotDot_WP_Public {
      *
      * @since    0.2.0
      */
-    public function register_shortcode() {
-        add_shortcode('botdot_appendix', array($this, 'render_appendix_shortcode'));
+    public function register_shortcode()
+    {
+        add_shortcode("botdot_appendix", [$this, "render_appendix_shortcode"]);
     }
 
     /**
@@ -92,19 +97,20 @@ class BotDot_WP_Public {
      *
      * @since    0.2.0
      */
-    public function register_wpbakery_element() {
-        if (!function_exists('vc_map')) {
+    public function register_wpbakery_element()
+    {
+        if (!function_exists("vc_map")) {
             return;
         }
 
-        vc_map(array(
-            'name' => __('BotSpot Appendix', 'botdot-wp'),
-            'base' => 'botdot_appendix',
-            'description' => __('Insert AI-discoverable appendix content', 'botdot-wp'),
-            'category' => __('Content', 'botdot-wp'),
-            'icon' => 'icon-wpb-botdot',
-            'params' => array(),
-        ));
+        vc_map([
+            "name" => __("BotSpot Appendix", "botdot-wp"),
+            "base" => "botdot_appendix",
+            "description" => __("Insert AI-discoverable appendix content", "botdot-wp"),
+            "category" => __("Content", "botdot-wp"),
+            "icon" => "icon-wpb-botdot",
+            "params" => [],
+        ]);
     }
 
     /**
@@ -112,17 +118,18 @@ class BotDot_WP_Public {
      *
      * @since    0.2.0
      */
-    public function add_tinymce_button() {
-        if (!current_user_can('edit_posts') && !current_user_can('edit_pages')) {
+    public function add_tinymce_button()
+    {
+        if (!current_user_can("edit_posts") && !current_user_can("edit_pages")) {
             return;
         }
 
-        if (get_user_option('rich_editing') !== 'true') {
+        if (get_user_option("rich_editing") !== "true") {
             return;
         }
 
-        add_filter('mce_buttons', array($this, 'register_tinymce_button'));
-        add_filter('mce_external_plugins', array($this, 'register_tinymce_plugin'));
+        add_filter("mce_buttons", [$this, "register_tinymce_button"]);
+        add_filter("mce_external_plugins", [$this, "register_tinymce_plugin"]);
     }
 
     /**
@@ -132,8 +139,9 @@ class BotDot_WP_Public {
      * @param    array    $buttons    Existing buttons.
      * @return   array
      */
-    public function register_tinymce_button($buttons) {
-        array_push($buttons, 'botdot_appendix');
+    public function register_tinymce_button($buttons)
+    {
+        array_push($buttons, "botdot_appendix");
         return $buttons;
     }
 
@@ -144,8 +152,9 @@ class BotDot_WP_Public {
      * @param    array    $plugins    Existing plugins.
      * @return   array
      */
-    public function register_tinymce_plugin($plugins) {
-        $plugins['botdot_appendix'] = BOTDOT_WP_PLUGIN_URL . 'public/js/botdot-wp-tinymce.js';
+    public function register_tinymce_plugin($plugins)
+    {
+        $plugins["botdot_appendix"] = BOTDOT_WP_PLUGIN_URL . "public/js/botdot-wp-tinymce.js";
         return $plugins;
     }
 
@@ -154,15 +163,16 @@ class BotDot_WP_Public {
      *
      * @since    0.2.0
      */
-    public function register_gutenberg_block() {
-        if (!function_exists('register_block_type')) {
+    public function register_gutenberg_block()
+    {
+        if (!function_exists("register_block_type")) {
             return;
         }
 
-        register_block_type('botdot-wp/appendix', array(
-            'render_callback' => array($this, 'render_appendix_shortcode'),
-            'attributes' => array(),
-        ));
+        register_block_type("botdot-wp/appendix", [
+            "render_callback" => [$this, "render_appendix_shortcode"],
+            "attributes" => [],
+        ]);
     }
 
     /**
@@ -170,22 +180,23 @@ class BotDot_WP_Public {
      *
      * @since    0.2.0
      */
-    public function enqueue_gutenberg_assets() {
-        if (!function_exists('register_block_type')) {
+    public function enqueue_gutenberg_assets()
+    {
+        if (!function_exists("register_block_type")) {
             return;
         }
 
         wp_enqueue_script(
-            $this->plugin_name . '-gutenberg',
-            BOTDOT_WP_PLUGIN_URL . 'public/js/botdot-wp-gutenberg.js',
-            array('wp-blocks', 'wp-element', 'wp-editor', 'wp-components'),
+            $this->plugin_name . "-gutenberg",
+            BOTDOT_WP_PLUGIN_URL . "public/js/botdot-wp-gutenberg.js",
+            ["wp-blocks", "wp-element", "wp-editor", "wp-components"],
             $this->version,
-            true
+            true,
         );
 
-        wp_localize_script($this->plugin_name . '-gutenberg', 'botdotWP', array(
-            'pluginName' => 'BotSpot Appendix',
-        ));
+        wp_localize_script($this->plugin_name . "-gutenberg", "botdotWP", [
+            "pluginName" => "BotSpot Appendix",
+        ]);
     }
 
     /**
@@ -197,7 +208,8 @@ class BotDot_WP_Public {
      * @param    array     $atts    Shortcode attributes.
      * @return   string             Rendered appendix HTML.
      */
-    public function render_appendix_shortcode($atts) {
+    public function render_appendix_shortcode($atts)
+    {
         return $this->get_content_injector()->render_shortcode($atts);
     }
 
@@ -206,17 +218,18 @@ class BotDot_WP_Public {
      *
      * @since    0.2.0
      */
-    public function enqueue_styles() {
-        if (!BotDot_WP_Options::get('injection_enabled')) {
+    public function enqueue_styles()
+    {
+        if (!BotDot_WP_Options::get("injection_enabled")) {
             return;
         }
 
         wp_enqueue_style(
-            $this->plugin_name . '-appendix',
-            BOTDOT_WP_PLUGIN_URL . 'public/css/botdot-wp-appendix.css',
-            array(),
+            $this->plugin_name . "-appendix",
+            BOTDOT_WP_PLUGIN_URL . "public/css/botdot-wp-appendix.css",
+            [],
             $this->version,
-            'all'
+            "all",
         );
     }
 }

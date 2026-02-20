@@ -13,8 +13,8 @@
  */
 
 // If this file is called directly, abort.
-if (!defined('WPINC')) {
-    die;
+if (!defined("WPINC")) {
+    die();
 }
 
 /**
@@ -28,7 +28,16 @@ if (!defined('WPINC')) {
  * @subpackage BotDot_WP/includes
  * @author     BotDot Team
  */
-class BotDot_WP_Content_Fetcher {
+class BotDot_WP_Content_Fetcher
+{
+    /**
+     * Per-request cache to avoid duplicate HTTP calls within a single page load.
+     *
+     * @since    1.0.1
+     * @access   private
+     * @var      array
+     */
+    private static $request_cache = [];
 
     /**
      * Fetch appendix content for a given URL path
@@ -39,95 +48,106 @@ class BotDot_WP_Content_Fetcher {
      * @param    string    $url_path    The URL path to fetch content for.
      * @return   array|null             Array with 'html', 'jsonld', 'content_hash' keys, or null on failure.
      */
-    public static function fetch($url_path) {
-        $locus_api_url = BotDot_WP_Options::get('locus_api_url');
-        $botspot_key = BotDot_WP_Options::get('botspot_key');
+    public static function fetch($url_path)
+    {
+        // Check per-request cache first
+        if (isset(self::$request_cache[$url_path])) {
+            return self::$request_cache[$url_path];
+        }
+
+        $locus_api_url = BotDot_WP_Options::get("locus_api_url");
+        $botspot_key = BotDot_WP_Options::get("botspot_key");
 
         if (empty($locus_api_url) || empty($botspot_key)) {
-            self::log_debug('Cannot fetch: locus_api_url or botspot_key not configured');
+            self::log_debug("Cannot fetch: locus_api_url or botspot_key not configured");
             return null;
         }
 
-        $cache_key = 'botdot_content_' . md5($url_path);
+        $cache_key = "botdot_content_" . md5($url_path);
 
         // Check transient cache
         $cached = get_transient($cache_key);
         if ($cached !== false && is_array($cached)) {
-            self::log_debug(sprintf('Cache hit for path: %s', $url_path));
+            self::log_debug(sprintf("Cache hit for path: %s", $url_path));
 
             // Validate cache freshness via /appendix/check
             $check_result = self::check_freshness($url_path, $cached);
             if ($check_result === true) {
-                self::log_debug('Cache is fresh, returning cached data');
+                self::log_debug("Cache is fresh, returning cached data");
+                self::$request_cache[$url_path] = $cached;
                 return $cached;
             }
 
-            self::log_debug('Cache is stale, fetching fresh content');
+            self::log_debug("Cache is stale, fetching fresh content");
         }
 
         // Fetch from locus-core
-        $endpoint = rtrim($locus_api_url, '/') . '/api/v1/appendix/render';
-        $endpoint = add_query_arg('path', $url_path, $endpoint);
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/render";
+        $endpoint = add_query_arg("path", $url_path, $endpoint);
 
-        self::log_debug(sprintf('Fetching from: %s', $endpoint));
+        self::log_debug(sprintf("Fetching from: %s", $endpoint));
 
-        $response = wp_remote_get($endpoint, array(
-            'headers' => array(
-                'X-Botspot-Key' => $botspot_key,
-                'Accept' => 'application/json',
-            ),
-            'timeout' => 15,
-        ));
+        $response = wp_remote_get($endpoint, [
+            "headers" => [
+                "X-Botspot-Key" => $botspot_key,
+                "Accept" => "application/json",
+            ],
+            "timeout" => 15,
+        ]);
 
         if (is_wp_error($response)) {
-            self::log_error(sprintf(
-                'Fetch failed for path %s: %s',
-                $url_path,
-                $response->get_error_message()
-            ));
+            self::log_error(sprintf("Fetch failed for path %s: %s", $url_path, $response->get_error_message()));
             // Return stale cache if available
             if ($cached !== false && is_array($cached)) {
-                self::log_debug('Returning stale cached data after fetch failure');
+                self::log_debug("Returning stale cached data after fetch failure");
+                self::$request_cache[$url_path] = $cached;
                 return $cached;
             }
+            self::$request_cache[$url_path] = null;
             return null;
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
 
         if ($status_code !== 200) {
-            self::log_error(sprintf('Fetch returned HTTP %d for path %s', $status_code, $url_path));
+            self::log_error(sprintf("Fetch returned HTTP %d for path %s", $status_code, $url_path));
             if ($cached !== false && is_array($cached)) {
+                self::$request_cache[$url_path] = $cached;
                 return $cached;
             }
+            self::$request_cache[$url_path] = null;
             return null;
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
         if (!is_array($body)) {
-            self::log_error('Fetch returned invalid JSON');
+            self::log_error("Fetch returned invalid JSON");
+            self::$request_cache[$url_path] = null;
             return null;
         }
 
-        $data = array(
-            'html' => isset($body['html']) ? $body['html'] : null,
-            'jsonld' => isset($body['jsonld']) ? $body['jsonld'] : null,
-            'content_hash' => isset($body['content_hash']) ? $body['content_hash'] : null,
-        );
+        $data = [
+            "html" => isset($body["html"]) ? $body["html"] : null,
+            "jsonld" => isset($body["jsonld"]) ? $body["jsonld"] : null,
+            "content_hash" => isset($body["content_hash"]) ? $body["content_hash"] : null,
+        ];
 
         // Cache with configured TTL
-        $ttl = isset($body['cache_ttl']) ? (int) $body['cache_ttl'] : BotDot_WP_Options::get('cache_ttl', 3600);
+        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotDot_WP_Options::get("cache_ttl", 3600);
         set_transient($cache_key, $data, $ttl);
 
-        self::log_debug(sprintf(
-            'Fetched and cached content for path %s (TTL: %ds, html: %s, jsonld: %s)',
-            $url_path,
-            $ttl,
-            $data['html'] !== null ? strlen($data['html']) . ' bytes' : 'null',
-            $data['jsonld'] !== null ? 'present' : 'null'
-        ));
+        self::log_debug(
+            sprintf(
+                "Fetched and cached content for path %s (TTL: %ds, html: %s, jsonld: %s)",
+                $url_path,
+                $ttl,
+                $data["html"] !== null ? strlen($data["html"]) . " bytes" : "null",
+                $data["jsonld"] !== null ? "present" : "null",
+            ),
+        );
 
+        self::$request_cache[$url_path] = $data;
         return $data;
     }
 
@@ -139,41 +159,42 @@ class BotDot_WP_Content_Fetcher {
      * @param    array     $cached      The cached data with content_hash.
      * @return   bool                   True if cache is fresh, false if stale.
      */
-    private static function check_freshness($url_path, $cached) {
-        if (empty($cached['content_hash'])) {
+    private static function check_freshness($url_path, $cached)
+    {
+        if (empty($cached["content_hash"])) {
             return false;
         }
 
-        $locus_api_url = BotDot_WP_Options::get('locus_api_url');
-        $botspot_key = BotDot_WP_Options::get('botspot_key');
+        $locus_api_url = BotDot_WP_Options::get("locus_api_url");
+        $botspot_key = BotDot_WP_Options::get("botspot_key");
 
-        $endpoint = rtrim($locus_api_url, '/') . '/api/v1/appendix/check';
-        $endpoint = add_query_arg('path', $url_path, $endpoint);
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/check";
+        $endpoint = add_query_arg("path", $url_path, $endpoint);
 
-        $response = wp_remote_get($endpoint, array(
-            'headers' => array(
-                'X-Botspot-Key' => $botspot_key,
-                'Accept' => 'application/json',
-            ),
-            'timeout' => 5,
-        ));
+        $response = wp_remote_get($endpoint, [
+            "headers" => [
+                "X-Botspot-Key" => $botspot_key,
+                "Accept" => "application/json",
+            ],
+            "timeout" => 5,
+        ]);
 
         if (is_wp_error($response)) {
-            self::log_debug('Freshness check failed, treating cache as stale');
-            return false;
+            self::log_debug("Freshness check failed, treating cache as fresh");
+            return true;
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
         if ($status_code !== 200) {
-            return false;
+            return true;
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
-        if (!is_array($body) || !isset($body['content_hash'])) {
-            return false;
+        if (!is_array($body) || !isset($body["content_hash"])) {
+            return true;
         }
 
-        return $body['content_hash'] === $cached['content_hash'];
+        return $body["content_hash"] === $cached["content_hash"];
     }
 
     /**
@@ -182,61 +203,62 @@ class BotDot_WP_Content_Fetcher {
      * @since    1.0.0
      * @return   array    Result with 'success' and 'message' keys.
      */
-    public static function test_connection() {
-        $locus_api_url = BotDot_WP_Options::get('locus_api_url');
-        $botspot_key = BotDot_WP_Options::get('botspot_key');
+    public static function test_connection()
+    {
+        $locus_api_url = BotDot_WP_Options::get("locus_api_url");
+        $botspot_key = BotDot_WP_Options::get("botspot_key");
 
         if (empty($locus_api_url)) {
-            return array(
-                'success' => false,
-                'message' => __('Locus API URL is not configured', 'botdot-wp'),
-            );
+            return [
+                "success" => false,
+                "message" => __("Locus API URL is not configured", "botdot-wp"),
+            ];
         }
 
         if (empty($botspot_key)) {
-            return array(
-                'success' => false,
-                'message' => __('Botspot Key is not configured', 'botdot-wp'),
-            );
+            return [
+                "success" => false,
+                "message" => __("Botspot Key is not configured", "botdot-wp"),
+            ];
         }
 
-        $endpoint = rtrim($locus_api_url, '/') . '/api/v1/appendix/config';
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/config";
 
-        $response = wp_remote_get($endpoint, array(
-            'headers' => array(
-                'X-Botspot-Key' => $botspot_key,
-                'Accept' => 'application/json',
-            ),
-            'timeout' => 10,
-        ));
+        $response = wp_remote_get($endpoint, [
+            "headers" => [
+                "X-Botspot-Key" => $botspot_key,
+                "Accept" => "application/json",
+            ],
+            "timeout" => 10,
+        ]);
 
         if (is_wp_error($response)) {
-            return array(
-                'success' => false,
-                'message' => sprintf(__('Connection failed: %s', 'botdot-wp'), $response->get_error_message()),
-            );
+            return [
+                "success" => false,
+                "message" => sprintf(__("Connection failed: %s", "botdot-wp"), $response->get_error_message()),
+            ];
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
 
         if ($status_code === 200) {
-            return array(
-                'success' => true,
-                'message' => __('Connected to locus-core successfully', 'botdot-wp'),
-            );
+            return [
+                "success" => true,
+                "message" => __("Connected to locus-core successfully", "botdot-wp"),
+            ];
         }
 
         if ($status_code === 401 || $status_code === 403) {
-            return array(
-                'success' => false,
-                'message' => __('Authentication failed. Check your Botspot Key.', 'botdot-wp'),
-            );
+            return [
+                "success" => false,
+                "message" => __("Authentication failed. Check your Botspot Key.", "botdot-wp"),
+            ];
         }
 
-        return array(
-            'success' => false,
-            'message' => sprintf(__('Connection returned HTTP %d', 'botdot-wp'), $status_code),
-        );
+        return [
+            "success" => false,
+            "message" => sprintf(__("Connection returned HTTP %d", "botdot-wp"), $status_code),
+        ];
     }
 
     /**
@@ -245,19 +267,24 @@ class BotDot_WP_Content_Fetcher {
      * @since    1.0.0
      * @param    string|null    $path    Optional specific path to clear. Null clears all.
      */
-    public static function clear_cache($path = null) {
+    public static function clear_cache($path = null)
+    {
         if ($path !== null) {
-            delete_transient('botdot_content_' . md5($path));
-            self::log_debug(sprintf('Cleared cache for path: %s', $path));
+            delete_transient("botdot_content_" . md5($path));
+            self::log_debug(sprintf("Cleared cache for path: %s", $path));
             return;
         }
 
         // Clear all botdot_content_ transients
         global $wpdb;
         $wpdb->query(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_botdot_content_%' OR option_name LIKE '_transient_timeout_botdot_content_%'"
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+                $wpdb->esc_like("_transient_botdot_content_") . "%",
+                $wpdb->esc_like("_transient_timeout_botdot_content_") . "%",
+            ),
         );
-        self::log_debug('Cleared all content caches');
+        self::log_debug("Cleared all content caches");
     }
 
     /**
@@ -266,9 +293,10 @@ class BotDot_WP_Content_Fetcher {
      * @since    1.0.0
      * @param    string    $message    The message to log.
      */
-    private static function log_debug($message) {
-        if (BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('[ContentFetcher] ' . $message);
+    private static function log_debug($message)
+    {
+        if (BotDot_WP_Options::get("debug_mode")) {
+            BotDot_WP_Logger::log_debug("[ContentFetcher] " . $message);
         }
     }
 
@@ -278,7 +306,8 @@ class BotDot_WP_Content_Fetcher {
      * @since    1.0.0
      * @param    string    $message    The message to log.
      */
-    private static function log_error($message) {
-        BotDot_WP_Logger::log_error('[ContentFetcher] ' . $message);
+    private static function log_error($message)
+    {
+        BotDot_WP_Logger::log_error("[ContentFetcher] " . $message);
     }
 }

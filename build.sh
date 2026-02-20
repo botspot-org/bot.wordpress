@@ -45,10 +45,6 @@ cp botdot-wp.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
 cp README.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
 cp THEME-INTEGRATION.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
-# Copy debug and utility scripts
-cp ./testing/debug-check.sh "${BUILD_DIR}/${PLUGIN_SLUG}/"
-chmod +x "${BUILD_DIR}/${PLUGIN_SLUG}/debug-check.sh"
-
 # Copy uninstall script
 cp uninstall.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
 

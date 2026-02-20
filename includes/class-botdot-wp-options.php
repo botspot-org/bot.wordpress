@@ -10,8 +10,8 @@
  */
 
 // If this file is called directly, abort.
-if (!defined('WPINC')) {
-    die;
+if (!defined("WPINC")) {
+    die();
 }
 
 /**
@@ -25,8 +25,8 @@ if (!defined('WPINC')) {
  * @subpackage BotDot_WP/includes
  * @author     BotDot Team
  */
-class BotDot_WP_Options {
-
+class BotDot_WP_Options
+{
     /**
      * Default plugin options
      *
@@ -34,32 +34,31 @@ class BotDot_WP_Options {
      * @access   private
      * @var      array    $defaults    Default option values.
      */
-    private static $defaults = array(
+    private static $defaults = [
         // Connection
-        'locus_api_url'        => '',
-        'connector_url'        => '',
-        'api_key'              => '',
-        'botspot_key'          => '',
-        'webhook_secret'       => '',
-        'connection_id'        => '',
+        "locus_api_url" => "",
+        "connector_url" => "",
+        "api_key" => "",
+        "botspot_key" => "",
+        "webhook_secret" => "",
+        "connection_id" => "",
 
         // Sync
-        'auto_sync_enabled'    => true,
-        'sync_sensitivity'     => 'medium',
-        'sync_post_types'      => array('post', 'page'),
+        "auto_sync_enabled" => true,
+        "sync_sensitivity" => "medium",
+        "sync_post_types" => ["post", "page"],
 
         // Display
-        'injection_enabled'    => true,
-        'injection_position'   => 'bottom',
-        'inject_on_post_types' => array('post', 'page'),
-        'page_injection_status' => array(),
+        "injection_enabled" => true,
+        "injection_position" => "bottom",
+        "inject_on_post_types" => ["post", "page"],
 
         // Cache
-        'cache_ttl'            => 3600,
+        "cache_ttl" => 3600,
 
         // Debug
-        'debug_mode'           => false,
-    );
+        "debug_mode" => false,
+    ];
 
     /**
      * Get plugin option with default fallback
@@ -69,12 +68,13 @@ class BotDot_WP_Options {
      * @param    mixed     $default        Optional. Default value if option doesn't exist.
      * @return   mixed                     The option value.
      */
-    public static function get($option_name, $default = null) {
+    public static function get($option_name, $default = null)
+    {
         if ($default === null) {
             $default = isset(self::$defaults[$option_name]) ? self::$defaults[$option_name] : null;
         }
 
-        $value = get_option('botdot_wp_' . $option_name, $default);
+        $value = get_option("botdot_wp_" . $option_name, $default);
 
         return self::cast_option_value($option_name, $value);
     }
@@ -87,10 +87,11 @@ class BotDot_WP_Options {
      * @param    mixed     $value          The option value.
      * @return   bool                      True if the value was updated, false otherwise.
      */
-    public static function set($option_name, $value) {
+    public static function set($option_name, $value)
+    {
         $value = self::sanitize_option_value($option_name, $value);
 
-        return update_option('botdot_wp_' . $option_name, $value);
+        return update_option("botdot_wp_" . $option_name, $value);
     }
 
     /**
@@ -100,8 +101,9 @@ class BotDot_WP_Options {
      * @param    string    $option_name    The option name (without botdot_wp_ prefix).
      * @return   bool                      True if the option was deleted, false otherwise.
      */
-    public static function delete($option_name) {
-        return delete_option('botdot_wp_' . $option_name);
+    public static function delete($option_name)
+    {
+        return delete_option("botdot_wp_" . $option_name);
     }
 
     /**
@@ -111,8 +113,9 @@ class BotDot_WP_Options {
      * @param    array     $option_names    Array of option names (without botdot_wp_ prefix).
      * @return   array                      Associative array of option values.
      */
-    public static function get_multiple($option_names) {
-        $options = array();
+    public static function get_multiple($option_names)
+    {
+        $options = [];
 
         foreach ($option_names as $option_name) {
             $options[$option_name] = self::get($option_name);
@@ -128,7 +131,8 @@ class BotDot_WP_Options {
      * @param    array     $options    Associative array of option_name => value pairs.
      * @return   bool                  True if all options were updated successfully.
      */
-    public static function set_multiple($options) {
+    public static function set_multiple($options)
+    {
         $success = true;
 
         foreach ($options as $option_name => $value) {
@@ -147,8 +151,9 @@ class BotDot_WP_Options {
      * @param    string    $option_name    The option name (without botdot_wp_ prefix).
      * @return   bool                      True if option exists, false otherwise.
      */
-    public static function exists($option_name) {
-        return get_option('botdot_wp_' . $option_name) !== false;
+    public static function exists($option_name)
+    {
+        return get_option("botdot_wp_" . $option_name) !== false;
     }
 
     /**
@@ -157,8 +162,9 @@ class BotDot_WP_Options {
      * @since    0.1.0
      * @return   array    All plugin options with their current values.
      */
-    public static function get_all() {
-        $options = array();
+    public static function get_all()
+    {
+        $options = [];
 
         foreach (array_keys(self::$defaults) as $option_name) {
             $options[$option_name] = self::get($option_name);
@@ -174,7 +180,8 @@ class BotDot_WP_Options {
      * @param    string    $option_name    The option name (without botdot_wp_ prefix).
      * @return   bool                      True if option was reset successfully.
      */
-    public static function reset_to_default($option_name) {
+    public static function reset_to_default($option_name)
+    {
         if (isset(self::$defaults[$option_name])) {
             return self::set($option_name, self::$defaults[$option_name]);
         }
@@ -188,7 +195,8 @@ class BotDot_WP_Options {
      * @since    0.1.0
      * @return   bool    True if all options were reset successfully.
      */
-    public static function reset_all_to_defaults() {
+    public static function reset_all_to_defaults()
+    {
         $success = true;
 
         foreach (self::$defaults as $option_name => $default_value) {
@@ -209,32 +217,30 @@ class BotDot_WP_Options {
      * @param    mixed     $value          The option value.
      * @return   mixed                     The cast value.
      */
-    private static function cast_option_value($option_name, $value) {
+    private static function cast_option_value($option_name, $value)
+    {
         switch ($option_name) {
-            case 'auto_sync_enabled':
-            case 'injection_enabled':
-            case 'debug_mode':
+            case "auto_sync_enabled":
+            case "injection_enabled":
+            case "debug_mode":
                 return (bool) $value;
 
-            case 'cache_ttl':
+            case "cache_ttl":
                 return (int) $value;
 
-            case 'sync_post_types':
-            case 'inject_on_post_types':
-                return is_array($value) ? $value : array();
+            case "sync_post_types":
+            case "inject_on_post_types":
+                return is_array($value) ? $value : [];
 
-            case 'page_injection_status':
-                return is_array($value) ? $value : array();
-
-            case 'locus_api_url':
-            case 'connector_url':
-            case 'api_key':
-            case 'botspot_key':
-            case 'webhook_secret':
-            case 'connection_id':
-            case 'sync_sensitivity':
-            case 'injection_position':
-                return is_string($value) ? trim($value) : '';
+            case "locus_api_url":
+            case "connector_url":
+            case "api_key":
+            case "botspot_key":
+            case "webhook_secret":
+            case "connection_id":
+            case "sync_sensitivity":
+            case "injection_position":
+                return is_string($value) ? trim($value) : "";
 
             default:
                 return $value;
@@ -250,54 +256,42 @@ class BotDot_WP_Options {
      * @param    mixed     $value          The option value.
      * @return   mixed                     The sanitized value.
      */
-    public static function sanitize_option_value($option_name, $value) {
+    public static function sanitize_option_value($option_name, $value)
+    {
         switch ($option_name) {
-            case 'locus_api_url':
-            case 'connector_url':
+            case "locus_api_url":
+            case "connector_url":
                 $value = trim($value);
-                $value = rtrim($value, '/');
+                $value = rtrim($value, "/");
                 return esc_url_raw($value);
 
-            case 'api_key':
-            case 'botspot_key':
-            case 'webhook_secret':
-            case 'connection_id':
+            case "api_key":
+            case "botspot_key":
+            case "webhook_secret":
+            case "connection_id":
                 return sanitize_text_field(trim($value));
 
-            case 'auto_sync_enabled':
-            case 'injection_enabled':
-            case 'debug_mode':
+            case "auto_sync_enabled":
+            case "injection_enabled":
+            case "debug_mode":
                 return (bool) $value;
 
-            case 'sync_sensitivity':
-                $allowed = array('high', 'medium', 'low');
-                return in_array($value, $allowed) ? $value : 'medium';
+            case "sync_sensitivity":
+                $allowed = ["high", "medium", "low"];
+                return in_array($value, $allowed) ? $value : "medium";
 
-            case 'injection_position':
-                $allowed = array('bottom', 'above_footer', 'shortcode');
-                return in_array($value, $allowed) ? $value : 'bottom';
+            case "injection_position":
+                $allowed = ["bottom", "above_footer", "shortcode"];
+                return in_array($value, $allowed) ? $value : "bottom";
 
-            case 'sync_post_types':
-            case 'inject_on_post_types':
+            case "sync_post_types":
+            case "inject_on_post_types":
                 if (is_array($value)) {
-                    return array_map('sanitize_text_field', $value);
+                    return array_map("sanitize_text_field", $value);
                 }
-                return array();
+                return [];
 
-            case 'page_injection_status':
-                if (!is_array($value)) {
-                    return array();
-                }
-                $sanitized = array();
-                foreach ($value as $page_id => $enabled) {
-                    $page_id = absint($page_id);
-                    if ($page_id > 0) {
-                        $sanitized[$page_id] = (bool) $enabled;
-                    }
-                }
-                return $sanitized;
-
-            case 'cache_ttl':
+            case "cache_ttl":
                 return max(60, min(86400, (int) $value));
 
             default:
@@ -315,7 +309,8 @@ class BotDot_WP_Options {
      * @param    string    $option_name    The option name (without botdot_wp_ prefix).
      * @return   mixed                     The default value, or null if not found.
      */
-    public static function get_default($option_name) {
+    public static function get_default($option_name)
+    {
         return isset(self::$defaults[$option_name]) ? self::$defaults[$option_name] : null;
     }
 
@@ -327,42 +322,61 @@ class BotDot_WP_Options {
      * @param    mixed     $value          The option value.
      * @return   bool|WP_Error             True if valid, WP_Error if invalid.
      */
-    public static function validate($option_name, $value) {
+    public static function validate($option_name, $value)
+    {
         switch ($option_name) {
-            case 'locus_api_url':
+            case "locus_api_url":
                 if (empty($value)) {
-                    return new WP_Error('empty_locus_api_url', __('Locus API URL cannot be empty', 'botdot-wp'));
+                    return new WP_Error("empty_locus_api_url", __("Locus API URL cannot be empty", "botdot-wp"));
                 }
                 if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                    return new WP_Error('invalid_locus_api_url', __('Invalid Locus API URL format', 'botdot-wp'));
+                    return new WP_Error("invalid_locus_api_url", __("Invalid Locus API URL format", "botdot-wp"));
+                }
+                if (function_exists("wp_http_validate_url") && !wp_http_validate_url($value)) {
+                    return new WP_Error(
+                        "blocked_locus_api_url",
+                        __("Locus API URL points to a blocked address", "botdot-wp"),
+                    );
                 }
                 break;
 
-            case 'connector_url':
+            case "connector_url":
                 if (empty($value)) {
-                    return new WP_Error('empty_connector_url', __('Connector URL cannot be empty', 'botdot-wp'));
+                    return new WP_Error("empty_connector_url", __("Connector URL cannot be empty", "botdot-wp"));
                 }
                 if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                    return new WP_Error('invalid_connector_url', __('Invalid Connector URL format', 'botdot-wp'));
+                    return new WP_Error("invalid_connector_url", __("Invalid Connector URL format", "botdot-wp"));
+                }
+                if (function_exists("wp_http_validate_url") && !wp_http_validate_url($value)) {
+                    return new WP_Error(
+                        "blocked_connector_url",
+                        __("Connector URL points to a blocked address", "botdot-wp"),
+                    );
                 }
                 break;
 
-            case 'api_key':
+            case "api_key":
                 if (empty($value)) {
-                    return new WP_Error('empty_api_key', __('API key cannot be empty', 'botdot-wp'));
+                    return new WP_Error("empty_api_key", __("API key cannot be empty", "botdot-wp"));
                 }
                 break;
 
-            case 'cache_ttl':
+            case "cache_ttl":
                 if ($value < 60 || $value > 86400) {
-                    return new WP_Error('invalid_cache_ttl', __('Cache TTL must be between 60 and 86400 seconds', 'botdot-wp'));
+                    return new WP_Error(
+                        "invalid_cache_ttl",
+                        __("Cache TTL must be between 60 and 86400 seconds", "botdot-wp"),
+                    );
                 }
                 break;
 
-            case 'sync_post_types':
-            case 'inject_on_post_types':
+            case "sync_post_types":
+            case "inject_on_post_types":
                 if (!is_array($value) || empty($value)) {
-                    return new WP_Error('invalid_post_types', __('At least one post type must be selected', 'botdot-wp'));
+                    return new WP_Error(
+                        "invalid_post_types",
+                        __("At least one post type must be selected", "botdot-wp"),
+                    );
                 }
                 break;
         }

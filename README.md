@@ -1,129 +1,155 @@
 # BotSpot WP
 
-Server-side JSON-LD injection for WordPress from a configurable mirror domain.
+WordPress plugin for AI discoverability via structured data injection and push-based content sync.
 
 ## Description
 
-BotSpot WP is a WordPress plugin that fetches JSON-LD structured data from a mirror domain and injects it into your WordPress pages before they are rendered. This enables AI discoverability by providing structured data that can be queried by AI agents.
+BotSpot WP connects your WordPress site to the BotSpot platform through two paths:
+
+- **Read path**: Fetches rendered JSON-LD and appendix HTML from locus-core and injects them into your pages server-side.
+- **Write path**: Pushes content changes to locus-connectors via webhook on publish, update, or delete.
 
 ## Features
 
-- Fetches JSON-LD from a configurable mirror domain
-- Server-side injection into page headers
-- Configurable post type filtering
-- Individual page exclusion by ID
-- Error logging and admin notices
-- Test connection functionality
-- Debug mode for troubleshooting
-- No caching (always fetches fresh data)
+- JSON-LD structured data injection into `<head>`
+- Appendix HTML injection (bottom of content, above footer, or manual placement)
+- Push-based content sync with configurable change-detection thresholds
+- Per-page injection control via post meta
+- Shortcode (`[botdot_appendix]`), Gutenberg block, WPBakery, and TinyMCE support
+- Transient caching with freshness checks and per-request deduplication
+- Webhook retry via WP-Cron on failure
+- Bulk sync in batches of 100
+- Admin settings with 3-tab interface (Connection, Content Sync, Display & Injection)
+- Error logging with admin notices on dashboard and post edit screens
+- Debug mode for detailed logging
 
 ## Requirements
 
-- WordPress 5.0 or higher
-- PHP 7.4 or higher
-- PHP cURL extension
-- PHP JSON extension
+- WordPress 5.0+
+- PHP 7.4+
 
 ## Installation
 
 1. Upload the `botdot-wp` folder to `/wp-content/plugins/`
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Go to Settings > BotSpot WP to configure the plugin
+2. Activate the plugin through the Plugins menu
+3. Go to BotSpot in the admin menu to configure
 
 ## Configuration
 
-### General Settings
+### Connection Tab
 
-- **Mirror Domain**: The domain to fetch JSON-LD from (e.g., `ai.example.com`)
-- **Enable Plugin**: Toggle to enable/disable JSON-LD injection
+| Setting | Description |
+|---------|-------------|
+| **Locus API URL** | locus-core endpoint for appendix rendering |
+| **Connector URL** | locus-connectors endpoint for content push |
+| **API Key** | Authentication key for locus-connectors |
+| **Botspot Key** | X-Botspot-Key for appendix rendering |
+| **Webhook Secret** | HMAC-SHA256 signing secret for webhook payloads |
+| **Connection ID** | WordPress connection ID from locus-connectors |
 
-### Injection Settings
+Secret fields (API Key, Botspot Key, Webhook Secret) are never rendered in HTML source. Leave empty when saving to preserve existing values.
 
-- **Inject on Post Types**: Select which post types should receive JSON-LD injection
-- **Exclude Page IDs**: Comma-separated list of page/post IDs to exclude
+### Content Sync Tab
 
-### Advanced Settings
+| Setting | Description |
+|---------|-------------|
+| **Auto-Sync on Publish** | Automatically push content on save |
+| **Sync Sensitivity** | High (every save), Medium (10% change), Low (25% change) |
+| **Post Types to Sync** | Which post types to push |
 
-- **Fetch Timeout**: Maximum time to wait for JSON-LD fetch (1-60 seconds)
-- **Debug Mode**: Enable debug logging to WordPress debug log
+### Display & Injection Tab
 
-## How It Works
+| Setting | Description |
+|---------|-------------|
+| **Enable Injection** | Global toggle for JSON-LD + appendix |
+| **Injection Position** | Bottom of content, above footer, or manual only |
+| **Post Types for Injection** | Which post types receive injected content |
+| **Cache TTL** | Transient cache duration (60-86400s) |
+| **Debug Mode** | Enable verbose logging |
+| **Per-Page Injection** | Toggle injection per page via post meta |
 
-1. When a page is rendered, the plugin checks if injection is enabled
-2. It verifies the current page type is in the allowed list
-3. It constructs the mirror domain URL by appending `.json` to the path
-4. Fetches JSON-LD from the mirror domain using WordPress HTTP API
-5. Validates the response is valid JSON-LD
-6. Injects the JSON-LD into the page header as a script tag
+## Architecture
 
-### Example
+### Read Path (Content Injection)
 
-For a page at `https://example.com/blog/my-post`, the plugin will:
-- Fetch JSON-LD from `https://ai.example.com/blog/my-post.json`
-- Inject it into the page head as:
-```html
-<script type="application/ld+json">
-{JSON-LD content here}
-</script>
-```
+1. `BotDot_WP_Content_Fetcher::fetch()` retrieves data from locus-core `/api/v1/appendix/render`
+2. Results are cached as WordPress transients with freshness checks via `/api/v1/appendix/check`
+3. Per-request static cache eliminates duplicate HTTP calls within a single page load
+4. `BotDot_WP_Content_Injector` injects JSON-LD into `wp_head` and appendix HTML via `the_content` or `wp_footer`
+5. All external HTML is sanitized through `wp_kses` with an extended allowlist
+6. JSON-LD is re-encoded through `json_decode`/`wp_json_encode` to prevent script-tag breakout
 
-## Error Handling
+### Write Path (Content Sync)
 
-- Fetch failures are logged and displayed in admin notices
-- Pages render normally even if JSON-LD fetch fails
-- Recent errors are displayed on the settings page
-- Errors can be cleared from the settings page
+1. `BotDot_WP_Sync::on_save_post()` computes content hash and word-count change percentage
+2. If change exceeds the configured threshold, sends webhook to locus-connectors
+3. On failure, schedules a single WP-Cron retry in 5 minutes
+4. `bulk_sync()` processes posts in batches of 100 with per-chunk error tracking
 
 ## Developer Hooks
 
 ### Filters
 
-- `botdot_wp_url_path` - Modify the URL path before fetching
-- `botdot_wp_should_inject` - Control injection logic
-- `botdot_wp_inject_on_archives` - Enable injection on archive pages
+| Filter | Args | Description |
+|--------|------|-------------|
+| `botdot_wp_url_path` | `$path` | Modify the URL path before fetching |
+| `botdot_wp_should_inject` | `$should_inject` | Control whether injection happens |
+| `botdot_wp_appendix_html` | `$html` | Modify appendix HTML before output |
+| `botdot_wp_appendix_jsonld` | `$jsonld` | Modify JSON-LD before output |
+| `botdot_wp_should_sync` | `$should_sync, $post_id, $post` | Control whether a post syncs |
+| `botdot_wp_sync_payload` | `$payload, $post, $event` | Modify webhook payload |
 
-### Example Usage
+### Examples
 
 ```php
-// Modify URL path before fetching
-add_filter('botdot_wp_url_path', function($path) {
-    return '/custom' . $path;
+// Skip injection on category archives
+add_filter('botdot_wp_should_inject', function($should_inject) {
+    return is_category() ? false : $should_inject;
 });
 
-// Custom injection logic
-add_filter('botdot_wp_should_inject', function($should_inject) {
-    if (is_category()) {
+// Modify appendix HTML
+add_filter('botdot_wp_appendix_html', function($html) {
+    return '<div class="my-wrapper">' . $html . '</div>';
+});
+
+// Skip syncing drafts converted to publish for a specific category
+add_filter('botdot_wp_should_sync', function($should_sync, $post_id, $post) {
+    if (has_category('internal', $post)) {
         return false;
     }
-    return $should_inject;
-});
+    return $should_sync;
+}, 10, 3);
 ```
 
-## Changelog
+## Manual Placement
 
-### 0.1.0
-- Initial release
-- Basic JSON-LD fetching and injection
-- Admin settings page
-- Error logging and notices
-- Post type filtering
-- Page exclusion
+### Shortcode
 
-## License
+```
+[botdot_appendix]
+```
 
-Proprietary - All rights reserved by BotSpot Team
+### Gutenberg Block
 
-## Support
+Search for "BotDot Appendix" in the block inserter.
 
-For issues and questions, please contact BotSpot support.
+### WPBakery
+
+The "BotSpot Appendix" element is available under the Content category.
+
+## Building
+
+```bash
+./build.sh
+```
+
+Creates a distributable zip in `dist/botdot-wp-{version}.zip`.
 
 ## Debugging
 
-If you encounter a fatal error during activation, the plugin now provides detailed error messages:
+Enable Debug Mode in the Display & Injection tab. Errors are always logged to PHP `error_log` regardless of `WP_DEBUG`. Recent errors display as admin notices on the dashboard, settings page, and post edit screens.
 
-### Check WordPress Error Log
-
-The plugin logs all errors to your WordPress debug log. To enable it, add these lines to your `wp-config.php`:
+To enable WordPress debug logging:
 
 ```php
 define('WP_DEBUG', true);
@@ -131,74 +157,51 @@ define('WP_DEBUG_LOG', true);
 define('WP_DEBUG_DISPLAY', false);
 ```
 
-Error log location: `wp-content/debug.log`
+## Changelog
 
-### Pre-Activation Check
+### 1.0.1
+- **Security**: Sanitize all external HTML through `wp_kses` with extended allowlist (S1)
+- **Security**: Prevent JSON-LD script-tag breakout via re-encoding (S2)
+- **Security**: Remove API keys/secrets from HTML source (S3)
+- **Security**: Truncate response bodies in error logs to 500 chars (S4)
+- **Security**: Remove raw `$_POST` access from sanitize callbacks (S5)
+- **Security**: Add `wp_http_validate_url()` SSRF check for configured URLs (S7)
+- **Security**: Use `$wpdb->prepare()` for all LIKE queries (S9)
+- **Security**: Escape `paginate_links()` output with `wp_kses_post()` (S10)
+- **Fix**: Eliminate dual Content_Injector instances causing double injection (L2)
+- **Fix**: `check_freshness()` treats errors as fresh to prevent unnecessary re-fetches (E1)
+- **Fix**: Add per-request static cache to eliminate duplicate HTTP calls (E1)
+- **Fix**: Add `return` after all `wp_send_json_error()` calls to prevent double-send (E2)
+- **Fix**: Show admin notices on post/page edit screens (E3)
+- **Fix**: Schedule WP-Cron retry on webhook failure (E4)
+- **Fix**: Initialize word count on first sync for accurate change detection (L4/A7)
+- **Fix**: Migrate `page_injection_status` from single option to per-post meta (E5/P4)
+- **Fix**: Replace deprecated `current_time('timestamp')` with `time()` (E8)
+- **Performance**: Bulk sync processes in batches of 100 (P2/P3)
+- **Performance**: Consolidate sync stats into single SQL query (P5)
+- **Architecture**: Guard admin hooks with `is_admin()` (A4)
+- **Architecture**: Remove unused shortcode attributes from TinyMCE and Gutenberg editors (A2/A5)
+- **Architecture**: Remove debug-check.sh from production build (A6)
 
-Before installing, you can validate the plugin files:
+### 1.0.0
+- Complete rewrite: replace mirror-domain model with push-based ingestion
+- Unified content injector for JSON-LD and appendix HTML
+- Push-based content sync via locus-connectors webhooks
+- 3-tab admin interface (Connection, Content Sync, Display & Injection)
+- Shortcode, Gutenberg block, WPBakery, and TinyMCE support
 
-```bash
-./debug-check.sh
-```
+### 0.7.0
+- Fix homepage appendix injection + comprehensive logging
 
-This will check:
-- PHP syntax errors
-- File structure
-- Class dependencies
-- Common issues
+### 0.6.5
+- Hotfix release
 
-### Common Issues
+### 0.6
+- Display improvements
 
-1. **Fatal error on activation**: Usually means a required class wasn't loaded
-   - Check `wp-content/debug.log` for details
-   - Run `./debug-check.sh` to verify files
+### 0.1.0
+- Initial release with basic JSON-LD fetching and injection
 
-2. **White screen**: PHP fatal error
-   - Enable WP_DEBUG_LOG in wp-config.php
-   - Check error log
+## License
 
-3. **Plugin deactivates immediately**: Requirements not met
-   - Check PHP version (7.4+)
-   - Check for required extensions (curl, json)
-
-## Development & Testing
-
-### Test Server
-
-A test server is included for local development and testing:
-
-```bash
-# Quick start (installs dependencies and starts server)
-./run-test-server.sh
-
-# Or manually
-pip install -r requirements.txt
-python3 test-server.py
-```
-
-The test server runs on `http://localhost:5000` and serves random JSON-LD at any path:
-
-- Request `http://localhost:5000/blog/my-post.json` to get JSON-LD
-- Request `http://localhost:5000/blog/my-post` to get the appendix
-
-Configure your plugin to use `localhost:5000` as the mirror domain for testing.
-
-### Testing the Plugin
-
-1. Start the test server: `./run-test-server.sh`
-2. In WordPress, configure mirror domain: `localhost:5000`
-3. Enable the plugin
-4. Visit any page/post on your WordPress site
-5. View page source to see injected JSON-LD
-
-### Building the Plugin
-
-```bash
-./build.sh
-```
-
-This creates a distributable zip file in `dist/botdot-wp-{version}.zip`
-
-## Credits
-
-Developed by the BotSpot Team
+Proprietary - All rights reserved by BotSpot Team

@@ -1,121 +1,87 @@
 # Theme Integration Guide
 
-## Inheriting Your Theme's FAQ/Accordion Styles
+## How Appendix Content Works
 
-BotSpot WP automatically detects popular themes and inherits their FAQ/accordion classes. If you're using a custom theme or want to customize the styling, here are your options:
+BotSpot WP fetches pre-rendered HTML from locus-core and injects it into your pages. The HTML uses semantic elements (`<details>`, `<summary>`, `<dl>`, `<dt>`, `<dd>`) styled via the bundled `botdot-wp-appendix.css`.
 
-### Option 1: Automatic Detection (Built-in)
+## Injection Positions
 
-The plugin automatically detects these themes and applies their classes:
-- **Divi** - Uses `et_pb_toggle` classes
-- **Avada** - Uses `fusion-accordian` classes
-- **Astra** - Uses `ast-accordion` classes
-- **GeneratePress** - Uses `accordion-container` classes
-- **OceanWP** - Uses `oceanwp-accordion` classes
+1. **Bottom of Content** (default) - appended to `the_content` filter output
+2. **Above Footer** - output via `wp_footer` hook
+3. **Manual Placement** - use the `[botdot_appendix]` shortcode or the Gutenberg block
 
-### Option 2: Custom Theme Filter
+Configure in BotSpot > Display & Injection > Injection Position.
 
-Add this to your theme's `functions.php`:
+## CSS Custom Properties
 
-```php
-add_filter('botdot_wp_theme_classes', function($classes, $theme_name, $theme_template) {
-    // Replace with your theme's FAQ/accordion classes
-    return array(
-        'wrapper' => 'my-faq-wrapper',
-        'details' => 'my-faq-item',
-        'summary' => 'my-faq-header',
-        'title' => 'my-faq-title',
-        'content' => 'my-faq-body',
-    );
-}, 10, 3);
-```
-
-### Option 3: Find Your Theme's Classes
-
-1. Go to a page on your site that has an FAQ or accordion
-2. Right-click the FAQ element and select "Inspect"
-3. Look for the class names in the HTML
-4. Use those classes in the filter above
-
-### Option 4: Disable Theme Classes
-
-If you prefer the default BotSpot styling:
-
-```php
-add_filter('botdot_wp_appendix_args', function($args) {
-    $args['use_theme_classes'] = false;
-    return $args;
-});
-```
-
-## CSS Customization
-
-The appendix uses CSS custom properties that inherit from WordPress theme.json:
+The appendix stylesheet uses CSS custom properties that inherit from WordPress `theme.json` values:
 
 ```css
 /* Override in your theme's custom CSS */
-.botdot-appendix-details {
+.botdot-appendix {
     --wp--preset--color--primary: #your-color;
-    --wp--preset--color--border: #border-color;
+    --wp--preset--color--contrast: #your-text-color;
 }
 ```
 
-## Example: Complete Custom Styling
+## Customizing Appendix HTML
+
+Use the `botdot_wp_appendix_html` filter (1 argument: the HTML string) to modify or replace the appendix output:
 
 ```php
-// functions.php
-add_filter('botdot_wp_appendix_html', function($html, $data, $args) {
-    // Completely replace the HTML structure
-    ob_start();
-    ?>
-    <div class="my-custom-accordion">
-        <button class="my-accordion-toggle"><?php echo esc_html($args['title']); ?></button>
-        <div class="my-accordion-content" style="display: none;">
-            <?php
-            // Your custom rendering logic
-            print_r($data);
-            ?>
-        </div>
-    </div>
-    <?php
-    return ob_get_clean();
-}, 10, 3);
-```
-
-## Elementor Integration
-
-For Elementor users, add this widget:
-
-```php
-add_action('elementor/widgets/widgets_registered', function($widgets_manager) {
-    // Register custom Elementor widget
-    // See Elementor docs for full implementation
+// Wrap appendix in a custom container
+add_filter('botdot_wp_appendix_html', function($html) {
+    if (empty($html)) {
+        return $html;
+    }
+    return '<section class="my-appendix-wrapper">' . $html . '</section>';
 });
 ```
 
-## Testing Theme Inheritance
+## Shortcode Placement
 
-1. Enable Debug Mode in BotSpot WP settings
-2. View page source and look for `<!-- BotSpot WP Appendix Start -->`
-3. Check the classes applied to the appendix elements
-4. Compare with your theme's FAQ classes
+Insert the shortcode anywhere in your content:
 
-## Common Issues
+```
+[botdot_appendix]
+```
 
-**Q: The appendix still looks different from my theme's FAQs**
-- Check if your theme uses JavaScript for accordion behavior
-- You may need to enqueue your theme's FAQ scripts
+When manual placement is detected (shortcode or Gutenberg block), automatic injection is skipped to prevent duplicates.
 
-**Q: How do I match my theme's colors?**
-- Use browser DevTools to inspect your theme's FAQ colors
-- Override using the CSS custom properties above
+## Gutenberg Block
 
-**Q: The accordion doesn't animate like my theme**
-- Add theme-specific JavaScript or use the filter to inject custom behavior
+Search for "BotDot Appendix" in the block inserter. The block renders server-side, so you'll see a placeholder in the editor and the actual content on the front end.
 
-## Support
+## Per-Page Control
 
-For theme-specific integration help:
-1. Check your theme's documentation for FAQ/accordion structure
-2. Contact theme support for CSS class names
-3. Use browser DevTools to inspect existing FAQ elements
+Disable injection for specific pages via:
+- The toggle switches in BotSpot > Display & Injection > Per-Page Injection
+- Or programmatically: `update_post_meta($post_id, '_botdot_inject_enabled', '0')`
+
+## Controlling Injection Programmatically
+
+```php
+// Disable injection on specific templates
+add_filter('botdot_wp_should_inject', function($should_inject) {
+    if (is_page_template('landing-page.php')) {
+        return false;
+    }
+    return $should_inject;
+});
+```
+
+## Troubleshooting
+
+**Appendix not appearing?**
+1. Check that injection is enabled in BotSpot > Display & Injection
+2. Verify the current post type is in the "Post Types for Injection" list
+3. Check per-page override isn't set to disabled
+4. Enable Debug Mode and check `wp-content/debug.log` for fetch errors
+
+**Appendix appearing twice?**
+- Ensure you're not using both automatic injection and manual placement on the same page
+- The plugin prevents double injection, but some themes may call `the_content` multiple times
+
+**Styling conflicts?**
+- The appendix CSS has low specificity by design
+- Override with your theme's stylesheet using more specific selectors

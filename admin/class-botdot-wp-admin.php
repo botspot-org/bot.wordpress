@@ -10,8 +10,8 @@
  */
 
 // If this file is called directly, abort.
-if (!defined('WPINC')) {
-    die;
+if (!defined("WPINC")) {
+    die();
 }
 
 /**
@@ -21,8 +21,8 @@ if (!defined('WPINC')) {
  * @subpackage BotDot_WP/admin
  * @author     BotDot Team
  */
-class BotDot_WP_Admin {
-
+class BotDot_WP_Admin
+{
     /**
      * The plugin name.
      *
@@ -48,7 +48,8 @@ class BotDot_WP_Admin {
      * @param    string    $plugin_name    The name of this plugin.
      * @param    string    $version        The version of this plugin.
      */
-    public function __construct($plugin_name, $version) {
+    public function __construct($plugin_name, $version)
+    {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
     }
@@ -58,15 +59,16 @@ class BotDot_WP_Admin {
      *
      * @since    0.1.0
      */
-    public function add_admin_menu() {
+    public function add_admin_menu()
+    {
         add_menu_page(
-            __('BotSpot Settings', 'botdot-wp'),
-            __('BotSpot', 'botdot-wp'),
-            'manage_options',
-            'botdot-wp',
-            array($this, 'display_settings_page'),
-            'dashicons-admin-site-alt3',
-            80
+            __("BotSpot Settings", "botdot-wp"),
+            __("BotSpot", "botdot-wp"),
+            "manage_options",
+            "botdot-wp",
+            [$this, "display_settings_page"],
+            "dashicons-admin-site-alt3",
+            80,
         );
     }
 
@@ -75,76 +77,70 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function init_settings() {
+    public function init_settings()
+    {
         // Connection settings
-        register_setting('botdot_wp_settings', 'botdot_wp_locus_api_url', array(
-            'sanitize_callback' => array($this, 'sanitize_url'),
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_connector_url', array(
-            'sanitize_callback' => array($this, 'sanitize_url'),
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_api_key', array(
-            'sanitize_callback' => 'sanitize_text_field',
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_botspot_key', array(
-            'sanitize_callback' => 'sanitize_text_field',
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_webhook_secret', array(
-            'sanitize_callback' => 'sanitize_text_field',
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_connection_id', array(
-            'sanitize_callback' => 'sanitize_text_field',
-        ));
+        register_setting("botdot_wp_settings", "botdot_wp_locus_api_url", [
+            "sanitize_callback" => [$this, "sanitize_url"],
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_connector_url", [
+            "sanitize_callback" => [$this, "sanitize_url"],
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_api_key", [
+            "sanitize_callback" => [$this, "sanitize_secret_field_api_key"],
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_botspot_key", [
+            "sanitize_callback" => [$this, "sanitize_secret_field_botspot_key"],
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_webhook_secret", [
+            "sanitize_callback" => [$this, "sanitize_secret_field_webhook_secret"],
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_connection_id", [
+            "sanitize_callback" => "sanitize_text_field",
+        ]);
 
         // Sync settings
-        register_setting('botdot_wp_settings', 'botdot_wp_auto_sync_enabled', array(
-            'sanitize_callback' => array($this, 'sanitize_checkbox'),
-            'default' => true,
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_sync_sensitivity', array(
-            'sanitize_callback' => array($this, 'sanitize_sensitivity'),
-            'default' => 'medium',
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_sync_post_types', array(
-            'sanitize_callback' => array($this, 'sanitize_post_types'),
-            'default' => array('post', 'page'),
-        ));
+        register_setting("botdot_wp_settings", "botdot_wp_auto_sync_enabled", [
+            "sanitize_callback" => [$this, "sanitize_checkbox"],
+            "default" => true,
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_sync_sensitivity", [
+            "sanitize_callback" => [$this, "sanitize_sensitivity"],
+            "default" => "medium",
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_sync_post_types", [
+            "sanitize_callback" => [$this, "sanitize_post_types"],
+            "default" => ["post", "page"],
+        ]);
 
         // Display settings
-        register_setting('botdot_wp_settings', 'botdot_wp_injection_enabled', array(
-            'sanitize_callback' => array($this, 'sanitize_checkbox'),
-            'default' => true,
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_injection_position', array(
-            'sanitize_callback' => array($this, 'sanitize_position'),
-            'default' => 'bottom',
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_inject_on_post_types', array(
-            'sanitize_callback' => array($this, 'sanitize_post_types'),
-            'default' => array('post', 'page'),
-        ));
-        register_setting('botdot_wp_settings', 'botdot_wp_page_injection_status', array(
-            'sanitize_callback' => array($this, 'sanitize_page_injection_status'),
-            'default' => array(),
-        ));
+        register_setting("botdot_wp_settings", "botdot_wp_injection_enabled", [
+            "sanitize_callback" => [$this, "sanitize_checkbox"],
+            "default" => true,
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_injection_position", [
+            "sanitize_callback" => [$this, "sanitize_position"],
+            "default" => "bottom",
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_inject_on_post_types", [
+            "sanitize_callback" => [$this, "sanitize_post_types"],
+            "default" => ["post", "page"],
+        ]);
+        // page_injection_status is now stored as post_meta (_botdot_inject_enabled)
 
         // Cache settings
-        register_setting('botdot_wp_settings', 'botdot_wp_cache_ttl', array(
-            'sanitize_callback' => 'absint',
-            'default' => 3600,
-        ));
+        register_setting("botdot_wp_settings", "botdot_wp_cache_ttl", [
+            "sanitize_callback" => "absint",
+            "default" => 3600,
+        ]);
 
         // Debug settings
-        register_setting('botdot_wp_settings', 'botdot_wp_debug_mode', array(
-            'sanitize_callback' => array($this, 'sanitize_checkbox'),
-            'default' => false,
-        ));
+        register_setting("botdot_wp_settings", "botdot_wp_debug_mode", [
+            "sanitize_callback" => [$this, "sanitize_checkbox"],
+            "default" => false,
+        ]);
 
-        // Hidden JSON field for page injection status
-        register_setting('botdot_wp_settings', 'botdot_wp_page_injection_status_json', array(
-            'sanitize_callback' => array($this, 'sanitize_page_injection_status_json'),
-            'default' => '',
-        ));
+        // page_injection_status_json is no longer needed (migrated to post_meta)
     }
 
     /**
@@ -152,8 +148,9 @@ class BotDot_WP_Admin {
      *
      * @since    0.1.0
      */
-    public function display_settings_page() {
-        require_once BOTDOT_WP_PLUGIN_PATH . 'admin/partials/botdot-wp-admin-settings.php';
+    public function display_settings_page()
+    {
+        require_once BOTDOT_WP_PLUGIN_PATH . "admin/partials/botdot-wp-admin-settings.php";
     }
 
     /**
@@ -161,13 +158,14 @@ class BotDot_WP_Admin {
      *
      * @since    0.1.0
      */
-    public function display_admin_notices() {
+    public function display_admin_notices()
+    {
         if (!BotDot_WP_Logger::has_errors()) {
             return;
         }
 
         $screen = get_current_screen();
-        if (!$screen || !in_array($screen->base, array('toplevel_page_botdot-wp', 'dashboard'))) {
+        if (!$screen || !in_array($screen->base, ["toplevel_page_botdot-wp", "dashboard", "post", "page"])) {
             return;
         }
 
@@ -176,23 +174,21 @@ class BotDot_WP_Admin {
             return;
         }
 
-        $time_ago = human_time_diff($last_error['timestamp'], current_time('timestamp'));
+        $time_ago = human_time_diff($last_error["timestamp"], time());
         ?>
-        <div class="notice notice-<?php echo esc_attr($last_error['type']); ?> is-dismissible">
+        <div class="notice notice-<?php echo esc_attr($last_error["type"]); ?> is-dismissible">
             <p>
-                <strong><?php _e('BotSpot WP:', 'botdot-wp'); ?></strong>
-                <?php echo esc_html($last_error['message']); ?>
-                <em>(<?php echo esc_html(sprintf(__('%s ago', 'botdot-wp'), $time_ago)); ?>)</em>
+                <strong><?php _e("BotSpot WP:", "botdot-wp"); ?></strong>
+                <?php echo esc_html($last_error["message"]); ?>
+                <em>(<?php echo esc_html(sprintf(__("%s ago", "botdot-wp"), $time_ago)); ?>)</em>
             </p>
-            <?php if (BotDot_WP_Logger::get_error_count() > 1) : ?>
+            <?php if (BotDot_WP_Logger::get_error_count() > 1): ?>
                 <p>
-                    <?php
-                    printf(
-                        __('There are %d more errors. <a href="%s">View settings</a> for details.', 'botdot-wp'),
+                    <?php printf(
+                        __('There are %d more errors. <a href="%s">View settings</a> for details.', "botdot-wp"),
                         BotDot_WP_Logger::get_error_count() - 1,
-                        admin_url('admin.php?page=botdot-wp')
-                    );
-                    ?>
+                        admin_url("admin.php?page=botdot-wp"),
+                    ); ?>
                 </p>
             <?php endif; ?>
         </div>
@@ -204,16 +200,17 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function add_sync_meta_box() {
-        $sync_post_types = BotDot_WP_Options::get('sync_post_types', array('post', 'page'));
+    public function add_sync_meta_box()
+    {
+        $sync_post_types = BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
         foreach ($sync_post_types as $post_type) {
             add_meta_box(
-                'botdot-wp-sync',
-                __('BotDot Sync', 'botdot-wp'),
-                array($this, 'render_sync_meta_box'),
+                "botdot-wp-sync",
+                __("BotDot Sync", "botdot-wp"),
+                [$this, "render_sync_meta_box"],
                 $post_type,
-                'side',
-                'default'
+                "side",
+                "default",
             );
         }
     }
@@ -224,25 +221,31 @@ class BotDot_WP_Admin {
      * @since    1.0.0
      * @param    WP_Post    $post    The post object.
      */
-    public function render_sync_meta_box($post) {
+    public function render_sync_meta_box($post)
+    {
         $status = BotDot_WP_Sync::get_sync_status($post->ID);
-        $status_label = $this->get_sync_status_label($status['status']);
-        $status_color = $this->get_sync_status_color($status['status']);
+        $status_label = $this->get_sync_status_label($status["status"]);
+        $status_color = $this->get_sync_status_color($status["status"]);
         ?>
         <div class="botdot-sync-meta-box">
             <p>
-                <strong><?php _e('Status:', 'botdot-wp'); ?></strong>
-                <span style="color: <?php echo esc_attr($status_color); ?>;"><?php echo esc_html($status_label); ?></span>
+                <strong><?php _e("Status:", "botdot-wp"); ?></strong>
+                <span style="color: <?php echo esc_attr(
+                    $status_color,
+                ); ?>;"><?php echo esc_html($status_label); ?></span>
             </p>
-            <?php if ($status['last_synced_at']) : ?>
+            <?php if ($status["last_synced_at"]): ?>
                 <p>
-                    <strong><?php _e('Last synced:', 'botdot-wp'); ?></strong>
-                    <?php echo esc_html(human_time_diff(strtotime($status['last_synced_at']), current_time('timestamp'))); ?> <?php _e('ago', 'botdot-wp'); ?>
+                    <strong><?php _e("Last synced:", "botdot-wp"); ?></strong>
+                    <?php echo esc_html(human_time_diff(strtotime($status["last_synced_at"]), time())); ?> <?php _e(
+     "ago",
+     "botdot-wp",
+ ); ?>
                 </p>
             <?php endif; ?>
             <p>
                 <button type="button" class="button botdot-sync-now" data-post-id="<?php echo esc_attr($post->ID); ?>">
-                    <?php _e('Sync Now', 'botdot-wp'); ?>
+                    <?php _e("Sync Now", "botdot-wp"); ?>
                 </button>
                 <span class="botdot-sync-result"></span>
             </p>
@@ -253,28 +256,34 @@ class BotDot_WP_Admin {
                 e.preventDefault();
                 var btn = $(this);
                 var result = btn.siblings('.botdot-sync-result');
-                btn.prop('disabled', true).text('<?php _e('Syncing...', 'botdot-wp'); ?>');
+                btn.prop('disabled', true).text('<?php _e("Syncing...", "botdot-wp"); ?>');
                 result.html('');
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
                     data: {
                         action: 'botdot_wp_manual_sync',
-                        nonce: '<?php echo wp_create_nonce('botdot_wp_manual_sync'); ?>',
+                        nonce: '<?php echo wp_create_nonce("botdot_wp_manual_sync"); ?>',
                         post_id: btn.data('post-id')
                     },
                     success: function(response) {
                         if (response.success) {
                             result.html('<span style="color: green;">&#10003; ' + response.data.message + '</span>');
                         } else {
-                            result.html('<span style="color: red;">&#10007; ' + (response.data.message || '<?php _e('Sync failed', 'botdot-wp'); ?>') + '</span>');
+                            result.html('<span style="color: red;">&#10007; ' + (response.data.message || '<?php _e(
+                                "Sync failed",
+                                "botdot-wp",
+                            ); ?>') + '</span>');
                         }
                     },
                     error: function() {
-                        result.html('<span style="color: red;">&#10007; <?php _e('Request failed', 'botdot-wp'); ?></span>');
+                        result.html('<span style="color: red;">&#10007; <?php _e(
+                            "Request failed",
+                            "botdot-wp",
+                        ); ?></span>');
                     },
                     complete: function() {
-                        btn.prop('disabled', false).text('<?php _e('Sync Now', 'botdot-wp'); ?>');
+                        btn.prop('disabled', false).text('<?php _e("Sync Now", "botdot-wp"); ?>');
                     }
                 });
             });
@@ -290,8 +299,9 @@ class BotDot_WP_Admin {
      * @param    array    $columns    Existing columns.
      * @return   array
      */
-    public function add_sync_column($columns) {
-        $columns['botdot_sync'] = __('BotDot', 'botdot-wp');
+    public function add_sync_column($columns)
+    {
+        $columns["botdot_sync"] = __("BotDot", "botdot-wp");
         return $columns;
     }
 
@@ -302,23 +312,24 @@ class BotDot_WP_Admin {
      * @param    string    $column_name    The column name.
      * @param    int       $post_id        The post ID.
      */
-    public function render_sync_column($column_name, $post_id) {
-        if ($column_name !== 'botdot_sync') {
+    public function render_sync_column($column_name, $post_id)
+    {
+        if ($column_name !== "botdot_sync") {
             return;
         }
 
-        $sync_post_types = BotDot_WP_Options::get('sync_post_types', array('post', 'page'));
+        $sync_post_types = BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
         if (!in_array(get_post_type($post_id), $sync_post_types)) {
             echo '<span style="color: #999;">&#8212;</span>';
             return;
         }
 
         $status = BotDot_WP_Sync::get_sync_status($post_id);
-        $color = $this->get_sync_status_color($status['status']);
-        $label = $this->get_sync_status_label($status['status']);
-        $icon = $this->get_sync_status_icon($status['status']);
+        $color = $this->get_sync_status_color($status["status"]);
+        $label = $this->get_sync_status_label($status["status"]);
+        $icon = $this->get_sync_status_icon($status["status"]);
 
-        echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">' . $icon . '</span>';
+        echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">' . $icon . "</span>";
     }
 
     /**
@@ -328,8 +339,9 @@ class BotDot_WP_Admin {
      * @param    array    $actions    Existing bulk actions.
      * @return   array
      */
-    public function add_bulk_sync_action($actions) {
-        $actions['botdot_sync'] = __('Sync with BotDot', 'botdot-wp');
+    public function add_bulk_sync_action($actions)
+    {
+        $actions["botdot_sync"] = __("Sync with BotDot", "botdot-wp");
         return $actions;
     }
 
@@ -342,8 +354,9 @@ class BotDot_WP_Admin {
      * @param    array     $post_ids       The selected post IDs.
      * @return   string
      */
-    public function handle_bulk_sync_action($redirect_to, $doaction, $post_ids) {
-        if ($doaction !== 'botdot_sync') {
+    public function handle_bulk_sync_action($redirect_to, $doaction, $post_ids)
+    {
+        if ($doaction !== "botdot_sync") {
             return $redirect_to;
         }
 
@@ -354,7 +367,7 @@ class BotDot_WP_Admin {
             }
         }
 
-        return add_query_arg('botdot_synced', $synced, $redirect_to);
+        return add_query_arg("botdot_synced", $synced, $redirect_to);
     }
 
     // ---- AJAX Handlers ----
@@ -364,62 +377,68 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function handle_test_connection() {
-        check_ajax_referer('botdot_wp_test_connection', 'nonce');
+    public function handle_test_connection()
+    {
+        check_ajax_referer("botdot_wp_test_connection", "nonce");
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
         }
 
-        $results = array();
+        $results = [];
 
         // Test locus-core connection
         $core_result = BotDot_WP_Content_Fetcher::test_connection();
-        $results['locus_core'] = $core_result;
+        $results["locus_core"] = $core_result;
 
         // Test locus-connectors connection
-        $connector_url = BotDot_WP_Options::get('connector_url');
-        $api_key = BotDot_WP_Options::get('api_key');
+        $connector_url = BotDot_WP_Options::get("connector_url");
+        $api_key = BotDot_WP_Options::get("api_key");
 
         if (!empty($connector_url) && !empty($api_key)) {
-            $response = wp_remote_get(rtrim($connector_url, '/') . '/health', array(
-                'headers' => array('X-API-Key' => $api_key),
-                'timeout' => 10,
-            ));
+            $response = wp_remote_get(rtrim($connector_url, "/") . "/health", [
+                "headers" => ["X-API-Key" => $api_key],
+                "timeout" => 10,
+            ]);
 
             if (is_wp_error($response)) {
-                $results['connector'] = array(
-                    'success' => false,
-                    'message' => sprintf(__('Connector connection failed: %s', 'botdot-wp'), $response->get_error_message()),
-                );
+                $results["connector"] = [
+                    "success" => false,
+                    "message" => sprintf(
+                        __("Connector connection failed: %s", "botdot-wp"),
+                        $response->get_error_message(),
+                    ),
+                ];
             } else {
                 $status = wp_remote_retrieve_response_code($response);
-                $results['connector'] = array(
-                    'success' => $status >= 200 && $status < 300,
-                    'message' => $status >= 200 && $status < 300
-                        ? __('Connected to locus-connectors successfully', 'botdot-wp')
-                        : sprintf(__('Connector returned HTTP %d', 'botdot-wp'), $status),
-                );
+                $results["connector"] = [
+                    "success" => $status >= 200 && $status < 300,
+                    "message" =>
+                        $status >= 200 && $status < 300
+                            ? __("Connected to locus-connectors successfully", "botdot-wp")
+                            : sprintf(__("Connector returned HTTP %d", "botdot-wp"), $status),
+                ];
             }
         } else {
-            $results['connector'] = array(
-                'success' => false,
-                'message' => __('Connector URL or API key not configured', 'botdot-wp'),
-            );
+            $results["connector"] = [
+                "success" => false,
+                "message" => __("Connector URL or API key not configured", "botdot-wp"),
+            ];
         }
 
-        $all_success = $results['locus_core']['success'] && $results['connector']['success'];
+        $all_success = $results["locus_core"]["success"] && $results["connector"]["success"];
 
         if ($all_success) {
-            wp_send_json_success(array(
-                'message' => __('Both connections successful', 'botdot-wp'),
-                'details' => $results,
-            ));
+            wp_send_json_success([
+                "message" => __("Both connections successful", "botdot-wp"),
+                "details" => $results,
+            ]);
         } else {
-            wp_send_json_error(array(
-                'message' => __('One or more connections failed', 'botdot-wp'),
-                'details' => $results,
-            ));
+            wp_send_json_error([
+                "message" => __("One or more connections failed", "botdot-wp"),
+                "details" => $results,
+            ]);
         }
     }
 
@@ -428,11 +447,13 @@ class BotDot_WP_Admin {
      *
      * @since    0.1.0
      */
-    public function handle_clear_errors() {
-        check_ajax_referer('botdot_wp_clear_errors', 'nonce');
+    public function handle_clear_errors()
+    {
+        check_ajax_referer("botdot_wp_clear_errors", "nonce");
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
         }
 
         BotDot_WP_Logger::clear_errors();
@@ -444,28 +465,29 @@ class BotDot_WP_Admin {
      *
      * @since    0.3.0
      */
-    public function handle_toggle_page_injection() {
-        check_ajax_referer('botdot_wp_toggle_page', 'nonce');
+    public function handle_toggle_page_injection()
+    {
+        check_ajax_referer("botdot_wp_toggle_page", "nonce");
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
         }
 
-        $page_id = isset($_POST['page_id']) ? absint($_POST['page_id']) : 0;
-        $enabled = isset($_POST['enabled']) ? (bool) $_POST['enabled'] : false;
+        $page_id = isset($_POST["page_id"]) ? absint($_POST["page_id"]) : 0;
+        $enabled = isset($_POST["enabled"]) ? (bool) $_POST["enabled"] : false;
 
         if (!$page_id) {
-            wp_send_json_error(array('message' => __('Invalid page ID', 'botdot-wp')));
+            wp_send_json_error(["message" => __("Invalid page ID", "botdot-wp")]);
+            return;
         }
 
-        $injection_status = BotDot_WP_Options::get('page_injection_status', array());
-        $injection_status[$page_id] = $enabled;
-        BotDot_WP_Options::set('page_injection_status', $injection_status);
+        update_post_meta($page_id, "_botdot_inject_enabled", $enabled ? "1" : "0");
 
-        wp_send_json_success(array(
-            'page_id' => $page_id,
-            'enabled' => $enabled,
-        ));
+        wp_send_json_success([
+            "page_id" => $page_id,
+            "enabled" => $enabled,
+        ]);
     }
 
     /**
@@ -473,34 +495,33 @@ class BotDot_WP_Admin {
      *
      * @since    0.3.0
      */
-    public function handle_bulk_update_pages() {
-        check_ajax_referer('botdot_wp_bulk_pages', 'nonce');
+    public function handle_bulk_update_pages()
+    {
+        check_ajax_referer("botdot_wp_bulk_pages", "nonce");
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
         }
 
-        $page_ids = isset($_POST['page_ids']) ? array_map('absint', (array) $_POST['page_ids']) : array();
-        $enabled = isset($_POST['enabled']) ? (bool) $_POST['enabled'] : false;
+        $page_ids = isset($_POST["page_ids"]) ? array_map("absint", (array) $_POST["page_ids"]) : [];
+        $enabled = isset($_POST["enabled"]) ? (bool) $_POST["enabled"] : false;
 
         if (empty($page_ids)) {
-            wp_send_json_error(array('message' => __('No pages selected', 'botdot-wp')));
+            wp_send_json_error(["message" => __("No pages selected", "botdot-wp")]);
+            return;
         }
-
-        $injection_status = BotDot_WP_Options::get('page_injection_status', array());
 
         foreach ($page_ids as $page_id) {
             if ($page_id > 0) {
-                $injection_status[$page_id] = $enabled;
+                update_post_meta($page_id, "_botdot_inject_enabled", $enabled ? "1" : "0");
             }
         }
 
-        BotDot_WP_Options::set('page_injection_status', $injection_status);
-
-        wp_send_json_success(array(
-            'count' => count($page_ids),
-            'enabled' => $enabled,
-        ));
+        wp_send_json_success([
+            "count" => count($page_ids),
+            "enabled" => $enabled,
+        ]);
     }
 
     /**
@@ -508,25 +529,28 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function handle_manual_sync() {
-        check_ajax_referer('botdot_wp_manual_sync', 'nonce');
+    public function handle_manual_sync()
+    {
+        check_ajax_referer("botdot_wp_manual_sync", "nonce");
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
         }
 
-        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
+        $post_id = isset($_POST["post_id"]) ? absint($_POST["post_id"]) : 0;
 
         if (!$post_id) {
-            wp_send_json_error(array('message' => __('Invalid post ID', 'botdot-wp')));
+            wp_send_json_error(["message" => __("Invalid post ID", "botdot-wp")]);
+            return;
         }
 
         $result = BotDot_WP_Sync::manual_sync($post_id);
 
         if ($result) {
-            wp_send_json_success(array('message' => __('Synced successfully', 'botdot-wp')));
+            wp_send_json_success(["message" => __("Synced successfully", "botdot-wp")]);
         } else {
-            wp_send_json_error(array('message' => __('Sync failed. Check error log for details.', 'botdot-wp')));
+            wp_send_json_error(["message" => __("Sync failed. Check error log for details.", "botdot-wp")]);
         }
     }
 
@@ -535,22 +559,24 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function handle_bulk_sync() {
-        check_ajax_referer('botdot_wp_bulk_sync', 'nonce');
+    public function handle_bulk_sync()
+    {
+        check_ajax_referer("botdot_wp_bulk_sync", "nonce");
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
         }
 
         $result = BotDot_WP_Sync::bulk_sync();
 
         if ($result !== false) {
-            wp_send_json_success(array(
-                'message' => __('Bulk sync initiated', 'botdot-wp'),
-                'status' => $result,
-            ));
+            wp_send_json_success([
+                "message" => __("Bulk sync initiated", "botdot-wp"),
+                "status" => $result,
+            ]);
         } else {
-            wp_send_json_error(array('message' => __('Bulk sync failed. Check connection settings.', 'botdot-wp')));
+            wp_send_json_error(["message" => __("Bulk sync failed. Check connection settings.", "botdot-wp")]);
         }
     }
 
@@ -559,30 +585,34 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function handle_sync_status() {
-        check_ajax_referer('botdot_wp_sync_status', 'nonce');
+    public function handle_sync_status()
+    {
+        check_ajax_referer("botdot_wp_sync_status", "nonce");
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Permission denied', 'botdot-wp')));
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
         }
 
-        $connector_url = BotDot_WP_Options::get('connector_url');
-        $api_key = BotDot_WP_Options::get('api_key');
-        $connection_id = BotDot_WP_Options::get('connection_id');
+        $connector_url = BotDot_WP_Options::get("connector_url");
+        $api_key = BotDot_WP_Options::get("api_key");
+        $connection_id = BotDot_WP_Options::get("connection_id");
 
         if (empty($connector_url) || empty($connection_id)) {
-            wp_send_json_error(array('message' => __('Connection not configured', 'botdot-wp')));
+            wp_send_json_error(["message" => __("Connection not configured", "botdot-wp")]);
+            return;
         }
 
-        $endpoint = rtrim($connector_url, '/') . '/sync/wordpress/' . $connection_id . '/status';
+        $endpoint = rtrim($connector_url, "/") . "/sync/wordpress/" . $connection_id . "/status";
 
-        $response = wp_remote_get($endpoint, array(
-            'headers' => array('X-API-Key' => $api_key),
-            'timeout' => 10,
-        ));
+        $response = wp_remote_get($endpoint, [
+            "headers" => ["X-API-Key" => $api_key],
+            "timeout" => 10,
+        ]);
 
         if (is_wp_error($response)) {
-            wp_send_json_error(array('message' => $response->get_error_message()));
+            wp_send_json_error(["message" => $response->get_error_message()]);
+            return;
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
@@ -592,12 +622,46 @@ class BotDot_WP_Admin {
     // ---- Sanitization helpers ----
 
     /**
+     * Sanitize a secret field, preserving existing value if submitted empty.
+     *
+     * @since    1.0.1
+     * @param    string    $value          The submitted value.
+     * @param    string    $option_name    The option name (without prefix).
+     * @return   string
+     */
+    private function sanitize_secret_field($value, $option_name)
+    {
+        $value = sanitize_text_field(trim($value));
+        if (empty($value)) {
+            // Keep existing value when empty submission
+            return BotDot_WP_Options::get($option_name);
+        }
+        return $value;
+    }
+
+    public function sanitize_secret_field_api_key($value)
+    {
+        return $this->sanitize_secret_field($value, "api_key");
+    }
+
+    public function sanitize_secret_field_botspot_key($value)
+    {
+        return $this->sanitize_secret_field($value, "botspot_key");
+    }
+
+    public function sanitize_secret_field_webhook_secret($value)
+    {
+        return $this->sanitize_secret_field($value, "webhook_secret");
+    }
+
+    /**
      * Sanitize URL value
      *
      * @since    1.0.0
      */
-    public function sanitize_url($value) {
-        return BotDot_WP_Options::sanitize_option_value('locus_api_url', $value);
+    public function sanitize_url($value)
+    {
+        return BotDot_WP_Options::sanitize_option_value("locus_api_url", $value);
     }
 
     /**
@@ -605,7 +669,8 @@ class BotDot_WP_Admin {
      *
      * @since    0.1.0
      */
-    public function sanitize_checkbox($value) {
+    public function sanitize_checkbox($value)
+    {
         return !empty($value);
     }
 
@@ -614,8 +679,9 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function sanitize_sensitivity($value) {
-        return BotDot_WP_Options::sanitize_option_value('sync_sensitivity', $value);
+    public function sanitize_sensitivity($value)
+    {
+        return BotDot_WP_Options::sanitize_option_value("sync_sensitivity", $value);
     }
 
     /**
@@ -623,8 +689,9 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    public function sanitize_position($value) {
-        return BotDot_WP_Options::sanitize_option_value('injection_position', $value);
+    public function sanitize_position($value)
+    {
+        return BotDot_WP_Options::sanitize_option_value("injection_position", $value);
     }
 
     /**
@@ -632,11 +699,12 @@ class BotDot_WP_Admin {
      *
      * @since    0.1.0
      */
-    public function sanitize_post_types($value) {
+    public function sanitize_post_types($value)
+    {
         if (!is_array($value)) {
-            return array();
+            return [];
         }
-        return array_map('sanitize_text_field', $value);
+        return array_map("sanitize_text_field", $value);
     }
 
     /**
@@ -644,30 +712,8 @@ class BotDot_WP_Admin {
      *
      * @since    0.3.0
      */
-    public function sanitize_page_injection_status($value) {
-        $sanitized = BotDot_WP_Options::sanitize_option_value('page_injection_status', $value);
-
-        if (isset($_POST['botdot_wp_page_injection_status_json'])) {
-            $json_data = $_POST['botdot_wp_page_injection_status_json'];
-            if (!empty($json_data)) {
-                $json_decoded = json_decode(stripslashes($json_data), true);
-                if (is_array($json_decoded)) {
-                    $sanitized = array_merge($sanitized, $json_decoded);
-                }
-            }
-        }
-
-        return $sanitized;
-    }
-
-    /**
-     * Sanitize page injection status JSON field
-     *
-     * @since    0.3.0
-     */
-    public function sanitize_page_injection_status_json($value) {
-        return '';
-    }
+    // sanitize_page_injection_status and sanitize_page_injection_status_json
+    // removed: page injection status is now stored as post_meta
 
     // ---- Status helpers ----
 
@@ -676,13 +722,18 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    private function get_sync_status_label($status) {
+    private function get_sync_status_label($status)
+    {
         switch ($status) {
-            case 'synced': return __('Synced', 'botdot-wp');
-            case 'pending': return __('Pending', 'botdot-wp');
-            case 'error': return __('Error', 'botdot-wp');
-            case 'never':
-            default: return __('Never synced', 'botdot-wp');
+            case "synced":
+                return __("Synced", "botdot-wp");
+            case "pending":
+                return __("Pending", "botdot-wp");
+            case "error":
+                return __("Error", "botdot-wp");
+            case "never":
+            default:
+                return __("Never synced", "botdot-wp");
         }
     }
 
@@ -691,13 +742,18 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    private function get_sync_status_color($status) {
+    private function get_sync_status_color($status)
+    {
         switch ($status) {
-            case 'synced': return '#00a32a';
-            case 'pending': return '#dba617';
-            case 'error': return '#d63638';
-            case 'never':
-            default: return '#999';
+            case "synced":
+                return "#00a32a";
+            case "pending":
+                return "#dba617";
+            case "error":
+                return "#d63638";
+            case "never":
+            default:
+                return "#999";
         }
     }
 
@@ -706,13 +762,18 @@ class BotDot_WP_Admin {
      *
      * @since    1.0.0
      */
-    private function get_sync_status_icon($status) {
+    private function get_sync_status_icon($status)
+    {
         switch ($status) {
-            case 'synced': return '&#9679;';   // filled circle
-            case 'pending': return '&#9675;';  // empty circle
-            case 'error': return '&#9888;';    // warning
-            case 'never':
-            default: return '&#8212;';          // em dash
+            case "synced":
+                return "&#9679;"; // filled circle
+            case "pending":
+                return "&#9675;"; // empty circle
+            case "error":
+                return "&#9888;"; // warning
+            case "never":
+            default:
+                return "&#8212;"; // em dash
         }
     }
 }

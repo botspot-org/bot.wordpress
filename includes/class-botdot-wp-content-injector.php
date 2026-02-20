@@ -12,8 +12,8 @@
  */
 
 // If this file is called directly, abort.
-if (!defined('WPINC')) {
-    die;
+if (!defined("WPINC")) {
+    die();
 }
 
 /**
@@ -27,8 +27,8 @@ if (!defined('WPINC')) {
  * @subpackage BotDot_WP/includes
  * @author     BotDot Team
  */
-class BotDot_WP_Content_Injector {
-
+class BotDot_WP_Content_Injector
+{
     /**
      * The plugin name.
      *
@@ -72,7 +72,8 @@ class BotDot_WP_Content_Injector {
      * @param    string    $plugin_name    The plugin name.
      * @param    string    $version        The plugin version.
      */
-    public function __construct($plugin_name, $version) {
+    public function __construct($plugin_name, $version)
+    {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
     }
@@ -84,7 +85,8 @@ class BotDot_WP_Content_Injector {
      *
      * @since    1.0.0
      */
-    public function inject_jsonld() {
+    public function inject_jsonld()
+    {
         if (!$this->should_inject()) {
             return;
         }
@@ -92,27 +94,40 @@ class BotDot_WP_Content_Injector {
         $path = $this->get_current_url_path();
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
-        if (!$data || $data['jsonld'] === null) {
+        if (!$data || $data["jsonld"] === null) {
             return;
         }
 
-        $jsonld = $data['jsonld'];
+        $jsonld = $data["jsonld"];
 
         // Apply filter
-        $jsonld = apply_filters('botdot_wp_appendix_jsonld', $jsonld);
+        $jsonld = apply_filters("botdot_wp_appendix_jsonld", $jsonld);
 
         if (empty($jsonld)) {
             return;
         }
 
-        // Output as JSON-LD script tag
-        $json_string = is_string($jsonld) ? $jsonld : wp_json_encode($jsonld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        // Normalize JSON-LD: always re-encode through json_decode + wp_json_encode
+        if (is_string($jsonld)) {
+            $decoded = json_decode($jsonld, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $json_string = wp_json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            } else {
+                // Invalid JSON string, skip injection
+                return;
+            }
+        } else {
+            $json_string = wp_json_encode($jsonld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        // Prevent script-tag breakout
+        $json_string = str_replace("</script>", "<\/script>", $json_string);
 
         echo "\n<!-- BotSpot JSON-LD -->\n";
-        echo '<script type="application/ld+json">' . $json_string . '</script>';
+        echo '<script type="application/ld+json">' . $json_string . "</script>";
         echo "\n<!-- /BotSpot JSON-LD -->\n";
 
-        $this->log_debug('JSON-LD injected into wp_head');
+        $this->log_debug("JSON-LD injected into wp_head");
     }
 
     /**
@@ -124,7 +139,8 @@ class BotDot_WP_Content_Injector {
      * @param    string    $content    The post content.
      * @return   string                Modified content with appendix.
      */
-    public function inject_appendix_content($content) {
+    public function inject_appendix_content($content)
+    {
         // Don't add if already injected
         if ($this->appendix_injected) {
             return $content;
@@ -134,10 +150,10 @@ class BotDot_WP_Content_Injector {
             return $content;
         }
 
-        $position = BotDot_WP_Options::get('injection_position', 'bottom');
+        $position = BotDot_WP_Options::get("injection_position", "bottom");
 
         // Only inject via content filter for 'bottom' position
-        if ($position !== 'bottom') {
+        if ($position !== "bottom") {
             return $content;
         }
 
@@ -154,19 +170,19 @@ class BotDot_WP_Content_Injector {
         $path = $this->get_current_url_path();
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
-        if (!$data || $data['html'] === null) {
+        if (!$data || $data["html"] === null) {
             return $content;
         }
 
-        $html = $data['html'];
+        $html = $this->sanitize_html($data["html"]);
 
         // Apply filter
-        $html = apply_filters('botdot_wp_appendix_html', $html);
+        $html = apply_filters("botdot_wp_appendix_html", $html);
 
         if (!empty($html)) {
             $this->appendix_injected = true;
             $content .= $html;
-            $this->log_debug(sprintf('Appendix injected via content filter (%d bytes)', strlen($html)));
+            $this->log_debug(sprintf("Appendix injected via content filter (%d bytes)", strlen($html)));
         }
 
         return $content;
@@ -179,7 +195,8 @@ class BotDot_WP_Content_Injector {
      *
      * @since    1.0.0
      */
-    public function inject_above_footer() {
+    public function inject_above_footer()
+    {
         if ($this->appendix_injected) {
             return;
         }
@@ -188,10 +205,10 @@ class BotDot_WP_Content_Injector {
             return;
         }
 
-        $position = BotDot_WP_Options::get('injection_position', 'bottom');
+        $position = BotDot_WP_Options::get("injection_position", "bottom");
 
         // Only inject via footer for 'above_footer' position
-        if ($position !== 'above_footer') {
+        if ($position !== "above_footer") {
             return;
         }
 
@@ -209,19 +226,19 @@ class BotDot_WP_Content_Injector {
         $path = $this->get_current_url_path();
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
-        if (!$data || $data['html'] === null) {
+        if (!$data || $data["html"] === null) {
             return;
         }
 
-        $html = $data['html'];
+        $html = $this->sanitize_html($data["html"]);
 
         // Apply filter
-        $html = apply_filters('botdot_wp_appendix_html', $html);
+        $html = apply_filters("botdot_wp_appendix_html", $html);
 
         if (!empty($html)) {
             $this->appendix_injected = true;
             echo $html;
-            $this->log_debug(sprintf('Appendix injected via footer hook (%d bytes)', strlen($html)));
+            $this->log_debug(sprintf("Appendix injected via footer hook (%d bytes)", strlen($html)));
         }
     }
 
@@ -232,24 +249,25 @@ class BotDot_WP_Content_Injector {
      * @param    array     $atts    Shortcode attributes.
      * @return   string             Rendered appendix HTML.
      */
-    public function render_shortcode($atts) {
+    public function render_shortcode($atts)
+    {
         $this->shortcode_used = true;
 
         if (!$this->should_inject()) {
-            return '';
+            return "";
         }
 
         $path = $this->get_current_url_path();
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
-        if (!$data || $data['html'] === null) {
-            return '';
+        if (!$data || $data["html"] === null) {
+            return "";
         }
 
-        $html = $data['html'];
+        $html = $this->sanitize_html($data["html"]);
 
         // Apply filter
-        $html = apply_filters('botdot_wp_appendix_html', $html);
+        $html = apply_filters("botdot_wp_appendix_html", $html);
 
         $this->appendix_injected = true;
 
@@ -262,9 +280,10 @@ class BotDot_WP_Content_Injector {
      * @since    1.0.0
      * @return   bool    True if should inject, false otherwise.
      */
-    private function should_inject() {
+    private function should_inject()
+    {
         // Check global injection toggle
-        if (!BotDot_WP_Options::get('injection_enabled')) {
+        if (!BotDot_WP_Options::get("injection_enabled")) {
             return false;
         }
 
@@ -286,7 +305,7 @@ class BotDot_WP_Content_Injector {
         // Check post type
         $post_type = get_post_type();
         if ($post_type) {
-            $allowed_types = BotDot_WP_Options::get('inject_on_post_types', array('post', 'page'));
+            $allowed_types = BotDot_WP_Options::get("inject_on_post_types", ["post", "page"]);
             if (!in_array($post_type, $allowed_types)) {
                 // Allow front page even if post type doesn't match
                 if (!is_front_page()) {
@@ -295,17 +314,17 @@ class BotDot_WP_Content_Injector {
             }
         }
 
-        // Check per-page override
+        // Check per-page override via post_meta
         $current_id = get_the_ID();
         if ($current_id) {
-            $injection_status = BotDot_WP_Options::get('page_injection_status', array());
-            if (isset($injection_status[$current_id])) {
-                return (bool) $injection_status[$current_id];
+            $inject_meta = get_post_meta($current_id, "_botdot_inject_enabled", true);
+            if ($inject_meta !== "") {
+                return (bool) $inject_meta;
             }
         }
 
         // Apply filter
-        return apply_filters('botdot_wp_should_inject', true);
+        return apply_filters("botdot_wp_should_inject", true);
     }
 
     /**
@@ -315,7 +334,8 @@ class BotDot_WP_Content_Injector {
      * @access   private
      * @return   bool
      */
-    private function is_valid_page_type() {
+    private function is_valid_page_type()
+    {
         if (is_front_page() || is_home() || is_singular()) {
             return true;
         }
@@ -331,12 +351,13 @@ class BotDot_WP_Content_Injector {
      * @param    string    $content    The post content.
      * @return   bool
      */
-    private function has_manual_placement($content) {
-        if (function_exists('has_block') && has_block('botdot-wp/appendix', $content)) {
+    private function has_manual_placement($content)
+    {
+        if (function_exists("has_block") && has_block("botdot-wp/appendix", $content)) {
             return true;
         }
 
-        if (has_shortcode($content, 'botdot_appendix')) {
+        if (has_shortcode($content, "botdot_appendix")) {
             return true;
         }
 
@@ -354,30 +375,50 @@ class BotDot_WP_Content_Injector {
      * @access   private
      * @return   string    The URL path.
      */
-    private function get_current_url_path() {
+    private function get_current_url_path()
+    {
         global $wp;
-        $current_url = home_url(add_query_arg(array(), $wp->request));
+        $current_url = home_url(add_query_arg([], $wp->request));
         $parsed = parse_url($current_url);
-        $path = isset($parsed['path']) ? $parsed['path'] : '/';
+        $path = isset($parsed["path"]) ? $parsed["path"] : "/";
 
         // Remove home path if WordPress is in a subdirectory
         $home_path = parse_url(home_url(), PHP_URL_PATH);
-        if ($home_path && $home_path !== '/') {
-            $path = str_replace($home_path, '', $path);
+        if ($home_path && $home_path !== "/") {
+            $path = str_replace($home_path, "", $path);
         }
 
-        if (!empty($path) && $path[0] !== '/') {
-            $path = '/' . $path;
+        if (!empty($path) && $path[0] !== "/") {
+            $path = "/" . $path;
         }
 
         if (empty($path)) {
-            $path = '/';
+            $path = "/";
         }
 
         // Apply filter
-        $path = apply_filters('botdot_wp_url_path', $path);
+        $path = apply_filters("botdot_wp_url_path", $path);
 
         return $path;
+    }
+
+    /**
+     * Sanitize external HTML using wp_kses with extended allowlist
+     *
+     * @since    1.0.1
+     * @access   private
+     * @param    string    $html    The HTML to sanitize.
+     * @return   string             Sanitized HTML.
+     */
+    private function sanitize_html($html)
+    {
+        $allowed = wp_kses_allowed_html("post");
+        $allowed["details"] = ["class" => true, "open" => true, "id" => true];
+        $allowed["summary"] = ["class" => true, "id" => true];
+        $allowed["dl"] = ["class" => true, "id" => true];
+        $allowed["dt"] = ["class" => true, "id" => true];
+        $allowed["dd"] = ["class" => true, "id" => true];
+        return wp_kses($html, $allowed);
     }
 
     /**
@@ -386,9 +427,10 @@ class BotDot_WP_Content_Injector {
      * @since    1.0.0
      * @param    string    $message    The message to log.
      */
-    private function log_debug($message) {
-        if (BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('[ContentInjector] ' . $message);
+    private function log_debug($message)
+    {
+        if (BotDot_WP_Options::get("debug_mode")) {
+            BotDot_WP_Logger::log_debug("[ContentInjector] " . $message);
         }
     }
 }
