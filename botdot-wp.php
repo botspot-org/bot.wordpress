@@ -3,7 +3,7 @@
  * Plugin Name: BotSpot WordPress
  * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-connectors and renders JSON-LD + appendix from locus-core.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: BotSpot Team
  * Author URI: https://bot.spot
  * License: Proprietary
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package BotDot_WP
- * @version 1.0.0
+ * @version 1.0.1
  */
 
 // If this file is called directly, abort.
@@ -32,7 +32,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin version.
  */
-define('BOTDOT_WP_VERSION', '1.0.0');
+define('BOTDOT_WP_VERSION', '1.0.1');
 
 /**
  * Plugin file path
@@ -58,6 +58,20 @@ define('BOTDOT_WP_PLUGIN_BASENAME', plugin_basename(__FILE__));
  * Plugin text domain for translations
  */
 define('BOTDOT_WP_TEXT_DOMAIN', 'botdot-wp');
+
+/**
+ * Locus API URL (overridable via wp-config.php)
+ */
+if (!defined('BOTDOT_WP_LOCUS_API_URL')) {
+    define('BOTDOT_WP_LOCUS_API_URL', 'https://locus-staging-api.bot.spot');
+}
+
+/**
+ * Connector URL (overridable via wp-config.php)
+ */
+if (!defined('BOTDOT_WP_CONNECTOR_URL')) {
+    define('BOTDOT_WP_CONNECTOR_URL', 'https://staging-locus-connectors.bot.spot');
+}
 
 /**
  * Minimum WordPress version required

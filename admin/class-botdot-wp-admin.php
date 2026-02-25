@@ -80,23 +80,8 @@ class BotDot_WP_Admin
     public function init_settings()
     {
         // Connection settings
-        register_setting("botdot_wp_settings", "botdot_wp_locus_api_url", [
-            "sanitize_callback" => [$this, "sanitize_url"],
-        ]);
-        register_setting("botdot_wp_settings", "botdot_wp_connector_url", [
-            "sanitize_callback" => [$this, "sanitize_url"],
-        ]);
         register_setting("botdot_wp_settings", "botdot_wp_api_key", [
             "sanitize_callback" => [$this, "sanitize_secret_field_api_key"],
-        ]);
-        register_setting("botdot_wp_settings", "botdot_wp_botspot_key", [
-            "sanitize_callback" => [$this, "sanitize_secret_field_botspot_key"],
-        ]);
-        register_setting("botdot_wp_settings", "botdot_wp_webhook_secret", [
-            "sanitize_callback" => [$this, "sanitize_secret_field_webhook_secret"],
-        ]);
-        register_setting("botdot_wp_settings", "botdot_wp_connection_id", [
-            "sanitize_callback" => "sanitize_text_field",
         ]);
 
         // Sync settings
@@ -393,10 +378,10 @@ class BotDot_WP_Admin
         $results["locus_core"] = $core_result;
 
         // Test locus-connectors connection
-        $connector_url = BotDot_WP_Options::get("connector_url");
+        $connector_url = BotDot_WP_Options::get_connector_url();
         $api_key = BotDot_WP_Options::get("api_key");
 
-        if (!empty($connector_url) && !empty($api_key)) {
+        if (!empty($api_key)) {
             $response = wp_remote_get(rtrim($connector_url, "/") . "/health", [
                 "headers" => ["X-API-Key" => $api_key],
                 "timeout" => 10,
@@ -423,7 +408,7 @@ class BotDot_WP_Admin
         } else {
             $results["connector"] = [
                 "success" => false,
-                "message" => __("Connector URL or API key not configured", "botdot-wp"),
+                "message" => __("API key not configured", "botdot-wp"),
             ];
         }
 
@@ -594,11 +579,11 @@ class BotDot_WP_Admin
             return;
         }
 
-        $connector_url = BotDot_WP_Options::get("connector_url");
+        $connector_url = BotDot_WP_Options::get_connector_url();
         $api_key = BotDot_WP_Options::get("api_key");
         $connection_id = BotDot_WP_Options::get("connection_id");
 
-        if (empty($connector_url) || empty($connection_id)) {
+        if (empty($connection_id)) {
             wp_send_json_error(["message" => __("Connection not configured", "botdot-wp")]);
             return;
         }
@@ -642,26 +627,6 @@ class BotDot_WP_Admin
     public function sanitize_secret_field_api_key($value)
     {
         return $this->sanitize_secret_field($value, "api_key");
-    }
-
-    public function sanitize_secret_field_botspot_key($value)
-    {
-        return $this->sanitize_secret_field($value, "botspot_key");
-    }
-
-    public function sanitize_secret_field_webhook_secret($value)
-    {
-        return $this->sanitize_secret_field($value, "webhook_secret");
-    }
-
-    /**
-     * Sanitize URL value
-     *
-     * @since    1.0.0
-     */
-    public function sanitize_url($value)
-    {
-        return BotDot_WP_Options::sanitize_option_value("locus_api_url", $value);
     }
 
     /**
@@ -714,6 +679,111 @@ class BotDot_WP_Admin
      */
     // sanitize_page_injection_status and sanitize_page_injection_status_json
     // removed: page injection status is now stored as post_meta
+
+    /**
+     * Handle AJAX connection registration
+     *
+     * POST to connectors /api/v1/connections/register with API key + site info,
+     * store returned connection_id, webhook_secret, botspot_key.
+     *
+     * @since    1.1.0
+     */
+    public function handle_register_connection()
+    {
+        check_ajax_referer("botdot_wp_register_connection", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
+        }
+
+        $api_key = BotDot_WP_Options::get("api_key");
+        if (empty($api_key)) {
+            wp_send_json_error(["message" => __("Please save an API key first.", "botdot-wp")]);
+            return;
+        }
+
+        $connector_url = BotDot_WP_Options::get_connector_url();
+        $endpoint = rtrim($connector_url, "/") . "/api/v1/connections/register";
+
+        $payload = [
+            "site_url" => home_url(),
+            "site_name" => get_bloginfo("name"),
+            "wp_version" => get_bloginfo("version"),
+            "plugin_version" => BOTDOT_WP_VERSION,
+        ];
+
+        $response = wp_remote_post($endpoint, [
+            "headers" => [
+                "Content-Type" => "application/json",
+                "X-API-Key" => $api_key,
+            ],
+            "body" => wp_json_encode($payload),
+            "timeout" => 15,
+        ]);
+
+        if (is_wp_error($response)) {
+            wp_send_json_error([
+                "message" => sprintf(
+                    __("Registration failed: %s", "botdot-wp"),
+                    $response->get_error_message(),
+                ),
+            ]);
+            return;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
+            $error_msg = is_array($body) && isset($body["error"]) ? $body["error"] : sprintf("HTTP %d", $status_code);
+            wp_send_json_error([
+                "message" => sprintf(__("Registration failed: %s", "botdot-wp"), $error_msg),
+            ]);
+            return;
+        }
+
+        // Store provisioned credentials
+        if (isset($body["connection_id"])) {
+            BotDot_WP_Options::set("connection_id", $body["connection_id"]);
+        }
+        if (isset($body["webhook_secret"])) {
+            BotDot_WP_Options::set("webhook_secret", $body["webhook_secret"]);
+        }
+        if (isset($body["botspot_key"])) {
+            BotDot_WP_Options::set("botspot_key", $body["botspot_key"]);
+        }
+
+        wp_send_json_success([
+            "message" => __("Connection registered successfully.", "botdot-wp"),
+            "connection_id" => isset($body["connection_id"]) ? $body["connection_id"] : "",
+        ]);
+    }
+
+    /**
+     * Handle AJAX disconnect
+     *
+     * Clears connection_id, webhook_secret, botspot_key.
+     *
+     * @since    1.1.0
+     */
+    public function handle_disconnect()
+    {
+        check_ajax_referer("botdot_wp_disconnect", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
+        }
+
+        BotDot_WP_Options::set("connection_id", "");
+        BotDot_WP_Options::set("webhook_secret", "");
+        BotDot_WP_Options::set("botspot_key", "");
+
+        wp_send_json_success([
+            "message" => __("Disconnected successfully.", "botdot-wp"),
+        ]);
+    }
 
     // ---- Status helpers ----
 

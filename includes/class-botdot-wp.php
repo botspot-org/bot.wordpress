@@ -67,7 +67,7 @@ class BotDot_WP
         if (defined("BOTDOT_WP_VERSION")) {
             $this->version = BOTDOT_WP_VERSION;
         } else {
-            $this->version = "1.0.0";
+            $this->version = "1.0.1";
         }
         $this->plugin_name = "botdot-wp";
 
@@ -155,6 +155,8 @@ class BotDot_WP
         $this->loader->add_action("wp_ajax_botdot_wp_manual_sync", $plugin_admin, "handle_manual_sync");
         $this->loader->add_action("wp_ajax_botdot_wp_bulk_sync", $plugin_admin, "handle_bulk_sync");
         $this->loader->add_action("wp_ajax_botdot_wp_sync_status", $plugin_admin, "handle_sync_status");
+        $this->loader->add_action("wp_ajax_botdot_wp_register_connection", $plugin_admin, "handle_register_connection");
+        $this->loader->add_action("wp_ajax_botdot_wp_disconnect", $plugin_admin, "handle_disconnect");
 
         // Admin notices for errors
         $this->loader->add_action("admin_notices", $plugin_admin, "display_admin_notices");

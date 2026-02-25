@@ -36,8 +36,6 @@ class BotDot_WP_Options
      */
     private static $defaults = [
         // Connection
-        "locus_api_url" => "",
-        "connector_url" => "",
         "api_key" => "",
         "botspot_key" => "",
         "webhook_secret" => "",
@@ -232,8 +230,6 @@ class BotDot_WP_Options
             case "inject_on_post_types":
                 return is_array($value) ? $value : [];
 
-            case "locus_api_url":
-            case "connector_url":
             case "api_key":
             case "botspot_key":
             case "webhook_secret":
@@ -259,12 +255,6 @@ class BotDot_WP_Options
     public static function sanitize_option_value($option_name, $value)
     {
         switch ($option_name) {
-            case "locus_api_url":
-            case "connector_url":
-                $value = trim($value);
-                $value = rtrim($value, "/");
-                return esc_url_raw($value);
-
             case "api_key":
             case "botspot_key":
             case "webhook_secret":
@@ -325,36 +315,6 @@ class BotDot_WP_Options
     public static function validate($option_name, $value)
     {
         switch ($option_name) {
-            case "locus_api_url":
-                if (empty($value)) {
-                    return new WP_Error("empty_locus_api_url", __("Locus API URL cannot be empty", "botdot-wp"));
-                }
-                if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                    return new WP_Error("invalid_locus_api_url", __("Invalid Locus API URL format", "botdot-wp"));
-                }
-                if (function_exists("wp_http_validate_url") && !wp_http_validate_url($value)) {
-                    return new WP_Error(
-                        "blocked_locus_api_url",
-                        __("Locus API URL points to a blocked address", "botdot-wp"),
-                    );
-                }
-                break;
-
-            case "connector_url":
-                if (empty($value)) {
-                    return new WP_Error("empty_connector_url", __("Connector URL cannot be empty", "botdot-wp"));
-                }
-                if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                    return new WP_Error("invalid_connector_url", __("Invalid Connector URL format", "botdot-wp"));
-                }
-                if (function_exists("wp_http_validate_url") && !wp_http_validate_url($value)) {
-                    return new WP_Error(
-                        "blocked_connector_url",
-                        __("Connector URL points to a blocked address", "botdot-wp"),
-                    );
-                }
-                break;
-
             case "api_key":
                 if (empty($value)) {
                     return new WP_Error("empty_api_key", __("API key cannot be empty", "botdot-wp"));
@@ -382,5 +342,27 @@ class BotDot_WP_Options
         }
 
         return true;
+    }
+
+    /**
+     * Get the Locus API URL from build-time constant
+     *
+     * @since    1.1.0
+     * @return   string
+     */
+    public static function get_locus_api_url()
+    {
+        return BOTDOT_WP_LOCUS_API_URL;
+    }
+
+    /**
+     * Get the Connector URL from build-time constant
+     *
+     * @since    1.1.0
+     * @return   string
+     */
+    public static function get_connector_url()
+    {
+        return BOTDOT_WP_CONNECTOR_URL;
     }
 }

@@ -33,12 +33,6 @@ class BotDot_WP_Activator {
      */
     public static function activate() {
         // Connection defaults
-        if (!BotDot_WP_Options::exists('locus_api_url')) {
-            BotDot_WP_Options::set('locus_api_url', '');
-        }
-        if (!BotDot_WP_Options::exists('connector_url')) {
-            BotDot_WP_Options::set('connector_url', '');
-        }
         if (!BotDot_WP_Options::exists('api_key')) {
             BotDot_WP_Options::set('api_key', '');
         }
@@ -91,7 +85,7 @@ class BotDot_WP_Activator {
         set_transient('botdot_wp_activation_notice', true, 60);
 
         if (BotDot_WP_Options::get('debug_mode')) {
-            BotDot_WP_Logger::log_debug('BotSpot WP v1.0.0 activated.');
+            BotDot_WP_Logger::log_debug('BotSpot WP v1.0.1 activated.');
         }
     }
 }

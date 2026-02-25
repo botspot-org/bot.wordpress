@@ -148,12 +148,7 @@ if ($active_tab === "sync") {
         // Preserve settings from other tabs via hidden fields
         $all_settings = [
             "connection" => [
-                "botdot_wp_locus_api_url" => BotDot_WP_Options::get("locus_api_url"),
-                "botdot_wp_connector_url" => BotDot_WP_Options::get("connector_url"),
                 "botdot_wp_api_key" => "", // Never expose secret values in hidden fields
-                "botdot_wp_botspot_key" => "",
-                "botdot_wp_webhook_secret" => "",
-                "botdot_wp_connection_id" => BotDot_WP_Options::get("connection_id"),
             ],
             "sync" => [
                 "botdot_wp_auto_sync_enabled" => BotDot_WP_Options::get("auto_sync_enabled") ? "1" : "0",
@@ -194,16 +189,19 @@ if ($active_tab === "sync") {
 
         <!-- Tab 1: Connection -->
         <?php if ($active_tab === "connection"): ?>
+        <?php
+            $has_api_key = !empty(BotDot_WP_Options::get("api_key"));
+            $connection_id = BotDot_WP_Options::get("connection_id");
+            $is_connected = !empty($connection_id);
+        ?>
         <div class="tab-content">
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php _e("Locus API URL", "botdot-wp"); ?></th>
                     <td>
-                        <input type="url" name="botdot_wp_locus_api_url" value="<?php echo esc_attr(
-                            BotDot_WP_Options::get("locus_api_url"),
-                        ); ?>" class="regular-text" placeholder="https://api.bot.spot">
+                        <code><?php echo esc_html(BotDot_WP_Options::get_locus_api_url()); ?></code>
                         <p class="description"><?php _e(
-                            "The locus-core endpoint for appendix rendering.",
+                            "Set at build time. Override via BOTDOT_WP_LOCUS_API_URL in wp-config.php.",
                             "botdot-wp",
                         ); ?></p>
                     </td>
@@ -211,11 +209,9 @@ if ($active_tab === "sync") {
                 <tr>
                     <th scope="row"><?php _e("Connector URL", "botdot-wp"); ?></th>
                     <td>
-                        <input type="url" name="botdot_wp_connector_url" value="<?php echo esc_attr(
-                            BotDot_WP_Options::get("connector_url"),
-                        ); ?>" class="regular-text" placeholder="https://connectors.bot.spot">
+                        <code><?php echo esc_html(BotDot_WP_Options::get_connector_url()); ?></code>
                         <p class="description"><?php _e(
-                            "The locus-connectors endpoint for content push.",
+                            "Set at build time. Override via BOTDOT_WP_CONNECTOR_URL in wp-config.php.",
                             "botdot-wp",
                         ); ?></p>
                     </td>
@@ -223,68 +219,45 @@ if ($active_tab === "sync") {
                 <tr>
                     <th scope="row"><?php _e("API Key", "botdot-wp"); ?></th>
                     <td>
-                        <?php $has_api_key = !empty(BotDot_WP_Options::get("api_key")); ?>
                         <input type="password" name="botdot_wp_api_key" value="" class="regular-text" placeholder="<?php echo $has_api_key
                             ? "••••••••"
                             : "lc_wp_xxx"; ?>" autocomplete="off" data-has-value="<?php echo $has_api_key
     ? "1"
     : "0"; ?>">
                         <p class="description"><?php
-                        _e("API key for locus-connectors authentication.", "botdot-wp");
+                        _e("API key for authentication.", "botdot-wp");
                         if ($has_api_key): ?> <?php _e("Leave empty to keep current value.", "botdot-wp");endif;
                         ?></p>
                     </td>
                 </tr>
                 <tr>
-                    <th scope="row"><?php _e("Botspot Key", "botdot-wp"); ?></th>
+                    <th scope="row"><?php _e("Connection Status", "botdot-wp"); ?></th>
                     <td>
-                        <?php $has_botspot_key = !empty(BotDot_WP_Options::get("botspot_key")); ?>
-                        <input type="password" name="botdot_wp_botspot_key" value="" class="regular-text" placeholder="<?php echo $has_botspot_key
-                            ? "••••••••"
-                            : "bsk_xxx"; ?>" autocomplete="off" data-has-value="<?php echo $has_botspot_key
-    ? "1"
-    : "0"; ?>">
-                        <p class="description"><?php
-                        _e("X-Botspot-Key for appendix rendering authentication.", "botdot-wp");
-                        if ($has_botspot_key): ?> <?php _e("Leave empty to keep current value.", "botdot-wp");endif;
-                        ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php _e("Webhook Secret", "botdot-wp"); ?></th>
-                    <td>
-                        <?php $has_webhook_secret = !empty(BotDot_WP_Options::get("webhook_secret")); ?>
-                        <input type="password" name="botdot_wp_webhook_secret" value="" class="regular-text" placeholder="<?php echo $has_webhook_secret
-                            ? "••••••••"
-                            : "whsec_xxx"; ?>" autocomplete="off" data-has-value="<?php echo $has_webhook_secret
-    ? "1"
-    : "0"; ?>">
-                        <p class="description"><?php
-                        _e("HMAC-SHA256 signing secret for webhook payloads.", "botdot-wp");
-                        if ($has_webhook_secret): ?> <?php _e("Leave empty to keep current value.", "botdot-wp");endif;
-                        ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php _e("Connection ID", "botdot-wp"); ?></th>
-                    <td>
-                        <input type="text" name="botdot_wp_connection_id" value="<?php echo esc_attr(
-                            BotDot_WP_Options::get("connection_id"),
-                        ); ?>" class="regular-text" placeholder="wp_xxx">
-                        <p class="description"><?php _e(
-                            "WordPress connection ID from locus-connectors registration.",
-                            "botdot-wp",
-                        ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php _e("Test Connection", "botdot-wp"); ?></th>
-                    <td>
-                        <button type="button" id="botdot-wp-test-connection" class="button">
-                            <?php _e("Test Both Connections", "botdot-wp"); ?>
-                        </button>
-                        <span id="botdot-wp-test-result" style="margin-left: 10px; font-weight: 500;"></span>
-                        <div id="botdot-wp-test-details" style="margin-top: 10px; display: none;"></div>
+                        <?php if ($is_connected): ?>
+                            <span style="color: #00a32a; font-weight: 500;">&#9679; <?php _e("Connected", "botdot-wp"); ?></span>
+                            <span style="margin-left: 8px; color: #666;">(<?php echo esc_html($connection_id); ?>)</span>
+                            <div style="margin-top: 10px;">
+                                <button type="button" id="botdot-wp-test-connection" class="button">
+                                    <?php _e("Test Connection", "botdot-wp"); ?>
+                                </button>
+                                <button type="button" id="botdot-wp-disconnect" class="button" style="margin-left: 5px; color: #d63638;">
+                                    <?php _e("Disconnect", "botdot-wp"); ?>
+                                </button>
+                                <span id="botdot-wp-test-result" style="margin-left: 10px; font-weight: 500;"></span>
+                            </div>
+                            <div id="botdot-wp-test-details" style="margin-top: 10px; display: none;"></div>
+                        <?php else: ?>
+                            <span style="color: #999;">&#9675; <?php _e("Not connected", "botdot-wp"); ?></span>
+                            <div style="margin-top: 10px;">
+                                <button type="button" id="botdot-wp-connect" class="button button-primary" <?php echo !$has_api_key ? 'disabled' : ''; ?>>
+                                    <?php _e("Connect", "botdot-wp"); ?>
+                                </button>
+                                <span id="botdot-wp-connect-result" style="margin-left: 10px; font-weight: 500;"></span>
+                            </div>
+                            <?php if (!$has_api_key): ?>
+                                <p class="description"><?php _e("Save an API key first, then click Connect.", "botdot-wp"); ?></p>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </td>
                 </tr>
             </table>
@@ -705,7 +678,74 @@ if ($active_tab === "sync") {
                     ); ?>: ' + (error || status) + '</span>');
                 },
                 complete: function() {
-                    button.prop('disabled', false).text('<?php _e("Test Both Connections", "botdot-wp"); ?>');
+                    button.prop('disabled', false).text('<?php _e("Test Connection", "botdot-wp"); ?>');
+                }
+            });
+        });
+
+        // Connect (register connection)
+        $('#botdot-wp-connect').on('click', function(e) {
+            e.preventDefault();
+            var button = $(this);
+            var result = $('#botdot-wp-connect-result');
+
+            button.prop('disabled', true).text('<?php _e("Connecting...", "botdot-wp"); ?>');
+            result.html('');
+
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_register_connection',
+                    nonce: '<?php echo wp_create_nonce("botdot_wp_register_connection"); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        result.html('<span style="color: #00a32a;">&#10003; ' + response.data.message + '</span>');
+                        setTimeout(function() { location.reload(); }, 1000);
+                    } else {
+                        result.html('<span style="color: #d63638;">&#10007; ' + (response.data && response.data.message ? response.data.message : '<?php _e(
+                            "Registration failed",
+                            "botdot-wp",
+                        ); ?>') + '</span>');
+                        button.prop('disabled', false).text('<?php _e("Connect", "botdot-wp"); ?>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    result.html('<span style="color: #d63638;">&#10007; <?php _e(
+                        "Request failed",
+                        "botdot-wp",
+                    ); ?>: ' + (error || status) + '</span>');
+                    button.prop('disabled', false).text('<?php _e("Connect", "botdot-wp"); ?>');
+                }
+            });
+        });
+
+        // Disconnect
+        $('#botdot-wp-disconnect').on('click', function(e) {
+            e.preventDefault();
+            if (!confirm('<?php _e("Are you sure you want to disconnect?", "botdot-wp"); ?>')) return;
+            var button = $(this);
+            button.prop('disabled', true);
+
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'botdot_wp_disconnect',
+                    nonce: '<?php echo wp_create_nonce("botdot_wp_disconnect"); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.data && response.data.message ? response.data.message : '<?php _e("Disconnect failed", "botdot-wp"); ?>');
+                        button.prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alert('<?php _e("Request failed", "botdot-wp"); ?>');
+                    button.prop('disabled', false);
                 }
             });
         });

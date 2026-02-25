@@ -18,8 +18,6 @@ if (!defined("WP_UNINSTALL_PLUGIN")) {
  */
 $options = [
     // Connection
-    "botdot_wp_locus_api_url",
-    "botdot_wp_connector_url",
     "botdot_wp_api_key",
     "botdot_wp_botspot_key",
     "botdot_wp_webhook_secret",

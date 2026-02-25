@@ -218,13 +218,13 @@ class BotDot_WP_Sync
      */
     public static function send_webhook($post, $event, $change_meta = null)
     {
-        $connector_url = BotDot_WP_Options::get("connector_url");
+        $connector_url = BotDot_WP_Options::get_connector_url();
         $api_key = BotDot_WP_Options::get("api_key");
         $webhook_secret = BotDot_WP_Options::get("webhook_secret");
         $connection_id = BotDot_WP_Options::get("connection_id");
 
-        if (empty($connector_url) || empty($api_key) || empty($connection_id)) {
-            self::log_error("Cannot send webhook: connector URL, API key, or connection ID not configured");
+        if (empty($api_key) || empty($connection_id)) {
+            self::log_error("Cannot send webhook: API key or connection ID not configured");
             return false;
         }
 
@@ -322,12 +322,12 @@ class BotDot_WP_Sync
      */
     public static function bulk_sync($post_type = null)
     {
-        $connector_url = BotDot_WP_Options::get("connector_url");
+        $connector_url = BotDot_WP_Options::get_connector_url();
         $api_key = BotDot_WP_Options::get("api_key");
         $webhook_secret = BotDot_WP_Options::get("webhook_secret");
         $connection_id = BotDot_WP_Options::get("connection_id");
 
-        if (empty($connector_url) || empty($api_key) || empty($connection_id)) {
+        if (empty($api_key) || empty($connection_id)) {
             return false;
         }
 

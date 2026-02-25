@@ -55,11 +55,11 @@ class BotDot_WP_Content_Fetcher
             return self::$request_cache[$url_path];
         }
 
-        $locus_api_url = BotDot_WP_Options::get("locus_api_url");
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
         $botspot_key = BotDot_WP_Options::get("botspot_key");
 
-        if (empty($locus_api_url) || empty($botspot_key)) {
-            self::log_debug("Cannot fetch: locus_api_url or botspot_key not configured");
+        if (empty($botspot_key)) {
+            self::log_debug("Cannot fetch: botspot_key not configured");
             return null;
         }
 
@@ -165,7 +165,7 @@ class BotDot_WP_Content_Fetcher
             return false;
         }
 
-        $locus_api_url = BotDot_WP_Options::get("locus_api_url");
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
         $botspot_key = BotDot_WP_Options::get("botspot_key");
 
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/check";
@@ -205,15 +205,8 @@ class BotDot_WP_Content_Fetcher
      */
     public static function test_connection()
     {
-        $locus_api_url = BotDot_WP_Options::get("locus_api_url");
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
         $botspot_key = BotDot_WP_Options::get("botspot_key");
-
-        if (empty($locus_api_url)) {
-            return [
-                "success" => false,
-                "message" => __("Locus API URL is not configured", "botdot-wp"),
-            ];
-        }
 
         if (empty($botspot_key)) {
             return [
