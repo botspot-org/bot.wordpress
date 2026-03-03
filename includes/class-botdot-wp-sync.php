@@ -2,7 +2,7 @@
 /**
  * Content sync class for push-based ingestion
  *
- * Handles pushing content to locus-connectors on publish/update/delete.
+ * Handles pushing content to locus-core ingest endpoint on publish/update/delete.
  *
  * @link       https://bot.spot
  * @since      1.0.0
@@ -20,7 +20,7 @@ if (!defined("WPINC")) {
  * Content sync class for push-based ingestion.
  *
  * Hooks into save_post, transition_post_status, and before_delete_post
- * to push content changes to locus-connectors via webhook.
+ * to push content to locus-core via the IngestPayload API.
  *
  * @since      1.0.0
  * @package    BotDot_WP
@@ -208,9 +208,9 @@ class BotDot_WP_Sync
     }
 
     /**
-     * Send webhook to locus-connectors
+     * Send content to locus-core ingest endpoint
      *
-     * @since    1.0.0
+     * @since    2.0.0
      * @param    WP_Post   $post           The post object.
      * @param    string    $event          The event type.
      * @param    array     $change_meta    Optional change metadata.
@@ -218,70 +218,36 @@ class BotDot_WP_Sync
      */
     public static function send_webhook($post, $event, $change_meta = null)
     {
-        $connector_url = BotDot_WP_Options::get_connector_url();
         $api_key = BotDot_WP_Options::get("api_key");
-        $webhook_secret = BotDot_WP_Options::get("webhook_secret");
-        $connection_id = BotDot_WP_Options::get("connection_id");
 
-        if (empty($api_key) || empty($connection_id)) {
-            self::log_error("Cannot send webhook: API key or connection ID not configured");
+        if (empty($api_key)) {
+            self::log_error("Cannot send content: API key not configured");
             return false;
         }
 
-        // Build content payload
-        $url_path = self::get_post_url_path($post);
-        $categories = wp_get_post_categories($post->ID, ["fields" => "names"]);
-        $tags = wp_get_post_tags($post->ID, ["fields" => "names"]);
-        $featured_image = get_the_post_thumbnail_url($post->ID, "full");
-        $author = get_the_author_meta("display_name", $post->post_author);
-
-        $content = [
-            "post_id" => $post->ID,
-            "url" => $url_path,
-            "title" => $post->post_title,
-            "body" => $post->post_content,
-            "excerpt" => $post->post_excerpt ?: null,
-            "post_type" => $post->post_type,
-            "status" => $post->post_status,
-            "author" => $author ?: null,
-            "published_at" => $post->post_date_gmt !== "0000-00-00 00:00:00" ? $post->post_date_gmt : null,
-            "modified_at" => $post->post_modified_gmt !== "0000-00-00 00:00:00" ? $post->post_modified_gmt : null,
-            "categories" => is_array($categories) ? $categories : [],
-            "tags" => is_array($tags) ? $tags : [],
-            "featured_image" => $featured_image ?: null,
-            "meta" => [],
-        ];
-
-        $payload = [
-            "event" => $event,
-            "site_url" => home_url(),
-            "content" => $content,
-        ];
-
-        if ($change_meta) {
-            $payload["change_meta"] = $change_meta;
+        // Skip delete/unpublish events (no delete endpoint in locus-core yet)
+        if (in_array($event, ["content.deleted", "content.status_changed"])) {
+            self::log_debug(sprintf("Post %d: skipping %s event (no delete endpoint)", $post->ID, $event));
+            return true;
         }
+
+        $payload = self::build_ingest_payload($post);
 
         // Apply filter to allow payload modification
         $payload = apply_filters("botdot_wp_sync_payload", $payload, $post, $event);
 
         $json_body = wp_json_encode($payload);
 
-        // Build headers
         $headers = [
             "Content-Type" => "application/json",
             "X-API-Key" => $api_key,
+            "X-Source-Type" => "wordpress",
         ];
 
-        // Compute HMAC signature if secret is configured
-        if (!empty($webhook_secret)) {
-            $signature = hash_hmac("sha256", $json_body, $webhook_secret);
-            $headers["X-WP-Signature"] = $signature;
-        }
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/connector/ingest";
 
-        $endpoint = rtrim($connector_url, "/") . "/webhooks/wordpress/" . $connection_id;
-
-        self::log_debug(sprintf("Sending %s webhook for post %d to %s", $event, $post->ID, $endpoint));
+        self::log_debug(sprintf("Sending %s for post %d to %s", $event, $post->ID, $endpoint));
 
         $response = wp_remote_post($endpoint, [
             "headers" => $headers,
@@ -291,20 +257,20 @@ class BotDot_WP_Sync
         ]);
 
         if (is_wp_error($response)) {
-            self::log_error(sprintf("Webhook failed for post %d: %s", $post->ID, $response->get_error_message()));
+            self::log_error(sprintf("Ingest failed for post %d: %s", $post->ID, $response->get_error_message()));
             return false;
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
 
         if ($status_code >= 200 && $status_code < 300) {
-            self::log_debug(sprintf("Webhook sent successfully for post %d (HTTP %d)", $post->ID, $status_code));
+            self::log_debug(sprintf("Ingest successful for post %d (HTTP %d)", $post->ID, $status_code));
             return true;
         }
 
         self::log_error(
             sprintf(
-                "Webhook returned HTTP %d for post %d: %s",
+                "Ingest returned HTTP %d for post %d: %s",
                 $status_code,
                 $post->ID,
                 substr(wp_remote_retrieve_body($response), 0, 500),
@@ -314,30 +280,118 @@ class BotDot_WP_Sync
     }
 
     /**
-     * Bulk sync all published posts
+     * Build IngestPayload for a post
      *
-     * @since    1.0.0
+     * @since    2.0.0
+     * @param    WP_Post   $post    The post object.
+     * @return   array              IngestPayload-compatible array.
+     */
+    private static function build_ingest_payload($post)
+    {
+        $permalink = get_permalink($post->ID);
+        $categories = wp_get_post_categories($post->ID, ["fields" => "names"]);
+        $tags = wp_get_post_tags($post->ID, ["fields" => "names"]);
+        $featured_image = get_the_post_thumbnail_url($post->ID, "full");
+        $author = get_the_author_meta("display_name", $post->post_author);
+
+        $published_at =
+            $post->post_date_gmt !== "0000-00-00 00:00:00" ? get_post_time("c", true, $post) : null;
+        $updated_at =
+            $post->post_modified_gmt !== "0000-00-00 00:00:00" ? get_post_modified_time("c", true, $post) : null;
+
+        // Build media array from featured image
+        $media = [];
+        if ($featured_image) {
+            $media[] = [
+                "url" => $featured_image,
+                "media_type" => self::infer_media_type($featured_image),
+            ];
+        }
+
+        $tenant_id = BotDot_WP_Options::get("tenant_id");
+
+        $payload = [
+            "source_type" => "wordpress",
+            "identifier" => [
+                "source_id" => $permalink,
+                "source_url" => $permalink,
+            ],
+            "metadata" => [
+                "title" => $post->post_title,
+                "author" => $author ?: null,
+                "published_at" => $published_at,
+                "updated_at" => $updated_at,
+                "tags" => is_array($tags) ? array_values($tags) : [],
+                "categories" => is_array($categories) ? array_values($categories) : [],
+            ],
+            "body" => [
+                "format" => "html",
+                "content" => $post->post_content,
+                "excerpt" => $post->post_excerpt ?: null,
+            ],
+            "media" => $media,
+        ];
+
+        if (!empty($tenant_id)) {
+            $payload["tenant_id"] = $tenant_id;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Infer MIME type from image URL extension
+     *
+     * @since    2.0.0
+     * @param    string    $url    The image URL.
+     * @return   string            MIME type.
+     */
+    private static function infer_media_type($url)
+    {
+        $extension = strtolower(pathinfo(wp_parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+
+        $mime_types = [
+            "jpg" => "image/jpeg",
+            "jpeg" => "image/jpeg",
+            "png" => "image/png",
+            "gif" => "image/gif",
+            "webp" => "image/webp",
+            "svg" => "image/svg+xml",
+            "avif" => "image/avif",
+        ];
+
+        return isset($mime_types[$extension]) ? $mime_types[$extension] : "image/jpeg";
+    }
+
+    /**
+     * Bulk sync all published posts via batch ingest endpoint
+     *
+     * @since    2.0.0
      * @param    string|null    $post_type    Optional post type filter.
      * @return   array|false                  Job status or false on failure.
      */
     public static function bulk_sync($post_type = null)
     {
-        $connector_url = BotDot_WP_Options::get_connector_url();
         $api_key = BotDot_WP_Options::get("api_key");
-        $webhook_secret = BotDot_WP_Options::get("webhook_secret");
-        $connection_id = BotDot_WP_Options::get("connection_id");
 
-        if (empty($api_key) || empty($connection_id)) {
+        if (empty($api_key)) {
             return false;
         }
 
         $sync_post_types = $post_type ? [$post_type] : BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
-        $endpoint = rtrim($connector_url, "/") . "/webhooks/wordpress/" . $connection_id;
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/connector/ingest/batch";
         $batch_size = 100;
         $offset = 0;
         $total_processed = 0;
         $total_success = 0;
         $total_failed = 0;
+
+        $headers = [
+            "Content-Type" => "application/json",
+            "X-API-Key" => $api_key,
+            "X-Source-Type" => "wordpress",
+        ];
 
         while (true) {
             $posts = get_posts([
@@ -353,32 +407,10 @@ class BotDot_WP_Sync
                 break;
             }
 
-            $content_items = [];
+            $items = [];
             $post_hashes = [];
             foreach ($posts as $post) {
-                $url_path = self::get_post_url_path($post);
-                $categories = wp_get_post_categories($post->ID, ["fields" => "names"]);
-                $tags = wp_get_post_tags($post->ID, ["fields" => "names"]);
-                $featured_image = get_the_post_thumbnail_url($post->ID, "full");
-                $author = get_the_author_meta("display_name", $post->post_author);
-
-                $content_items[] = [
-                    "post_id" => $post->ID,
-                    "url" => $url_path,
-                    "title" => $post->post_title,
-                    "body" => $post->post_content,
-                    "excerpt" => $post->post_excerpt ?: null,
-                    "post_type" => $post->post_type,
-                    "status" => $post->post_status,
-                    "author" => $author ?: null,
-                    "published_at" => $post->post_date_gmt !== "0000-00-00 00:00:00" ? $post->post_date_gmt : null,
-                    "modified_at" =>
-                        $post->post_modified_gmt !== "0000-00-00 00:00:00" ? $post->post_modified_gmt : null,
-                    "categories" => is_array($categories) ? $categories : [],
-                    "tags" => is_array($tags) ? $tags : [],
-                    "featured_image" => $featured_image ?: null,
-                    "meta" => [],
-                ];
+                $items[] = self::build_ingest_payload($post);
 
                 $post_hashes[$post->ID] = [
                     "hash" => self::compute_content_hash($post),
@@ -388,22 +420,8 @@ class BotDot_WP_Sync
                 ];
             }
 
-            $payload = [
-                "event" => "content.bulk_sync",
-                "site_url" => home_url(),
-                "content" => $content_items,
-            ];
-
+            $payload = ["items" => $items];
             $json_body = wp_json_encode($payload);
-
-            $headers = [
-                "Content-Type" => "application/json",
-                "X-API-Key" => $api_key,
-            ];
-
-            if (!empty($webhook_secret)) {
-                $headers["X-WP-Signature"] = hash_hmac("sha256", $json_body, $webhook_secret);
-            }
 
             $response = wp_remote_post($endpoint, [
                 "headers" => $headers,
@@ -412,18 +430,25 @@ class BotDot_WP_Sync
                 "data_format" => "body",
             ]);
 
-            $chunk_count = count($content_items);
+            $chunk_count = count($items);
             $total_processed += $chunk_count;
 
             if (is_wp_error($response)) {
                 self::log_error(
-                    sprintf("Bulk sync chunk failed (offset %d): %s", $offset, $response->get_error_message()),
+                    sprintf("Bulk sync batch failed (offset %d): %s", $offset, $response->get_error_message()),
                 );
                 $total_failed += $chunk_count;
             } else {
                 $status_code = wp_remote_retrieve_response_code($response);
-                if ($status_code >= 200 && $status_code < 300) {
-                    $total_success += $chunk_count;
+                $body = json_decode(wp_remote_retrieve_body($response), true);
+
+                if ($status_code >= 200 && $status_code < 300 && is_array($body)) {
+                    $batch_accepted = isset($body["accepted"]) ? (int) $body["accepted"] : 0;
+                    $batch_rejected = isset($body["rejected"]) ? (int) $body["rejected"] : 0;
+                    $total_success += $batch_accepted;
+                    $total_failed += $batch_rejected;
+
+                    // Update meta for all posts in accepted batch
                     foreach ($posts as $post) {
                         $meta = $post_hashes[$post->ID];
                         update_post_meta($post->ID, "_botdot_sync_hash", $meta["hash"]);
@@ -431,8 +456,14 @@ class BotDot_WP_Sync
                         update_post_meta($post->ID, "_botdot_sync_status", "synced");
                         update_post_meta($post->ID, "_botdot_sync_word_count", $meta["word_count"]);
                     }
+
+                    if (!empty($body["errors"])) {
+                        foreach ($body["errors"] as $error) {
+                            self::log_error(sprintf("Batch item error: %s", $error));
+                        }
+                    }
                 } else {
-                    self::log_error(sprintf("Bulk sync chunk returned HTTP %d (offset %d)", $status_code, $offset));
+                    self::log_error(sprintf("Bulk sync batch returned HTTP %d (offset %d)", $status_code, $offset));
                     $total_failed += $chunk_count;
                 }
             }

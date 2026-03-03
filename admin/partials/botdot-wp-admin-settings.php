@@ -192,30 +192,11 @@ if ($active_tab === "sync") {
         <?php
             $has_api_key = !empty(BotDot_WP_Options::get("api_key"));
             $connection_id = BotDot_WP_Options::get("connection_id");
+            $tenant_id = BotDot_WP_Options::get("tenant_id");
             $is_connected = !empty($connection_id);
         ?>
         <div class="tab-content">
             <table class="form-table">
-                <tr>
-                    <th scope="row"><?php _e("Locus API URL", "botdot-wp"); ?></th>
-                    <td>
-                        <code><?php echo esc_html(BotDot_WP_Options::get_locus_api_url()); ?></code>
-                        <p class="description"><?php _e(
-                            "Set at build time. Override via BOTDOT_WP_LOCUS_API_URL in wp-config.php.",
-                            "botdot-wp",
-                        ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php _e("Connector URL", "botdot-wp"); ?></th>
-                    <td>
-                        <code><?php echo esc_html(BotDot_WP_Options::get_connector_url()); ?></code>
-                        <p class="description"><?php _e(
-                            "Set at build time. Override via BOTDOT_WP_CONNECTOR_URL in wp-config.php.",
-                            "botdot-wp",
-                        ); ?></p>
-                    </td>
-                </tr>
                 <tr>
                     <th scope="row"><?php _e("API Key", "botdot-wp"); ?></th>
                     <td>
@@ -260,6 +241,15 @@ if ($active_tab === "sync") {
                         <?php endif; ?>
                     </td>
                 </tr>
+                <?php if (!empty($tenant_id)): ?>
+                <tr>
+                    <th scope="row"><?php _e("Tenant ID", "botdot-wp"); ?></th>
+                    <td>
+                        <code><?php echo esc_html($tenant_id); ?></code>
+                        <p class="description"><?php _e("Auto-populated from registration. Used to scope content to your organization.", "botdot-wp"); ?></p>
+                    </td>
+                </tr>
+                <?php endif; ?>
             </table>
 
             <?php submit_button(); ?>

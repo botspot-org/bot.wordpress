@@ -40,6 +40,7 @@ class BotDot_WP_Options
         "botspot_key" => "",
         "webhook_secret" => "",
         "connection_id" => "",
+        "tenant_id" => "",
 
         // Sync
         "auto_sync_enabled" => true,
@@ -234,6 +235,7 @@ class BotDot_WP_Options
             case "botspot_key":
             case "webhook_secret":
             case "connection_id":
+            case "tenant_id":
             case "sync_sensitivity":
             case "injection_position":
                 return is_string($value) ? trim($value) : "";
@@ -259,6 +261,7 @@ class BotDot_WP_Options
             case "botspot_key":
             case "webhook_secret":
             case "connection_id":
+            case "tenant_id":
                 return sanitize_text_field(trim($value));
 
             case "auto_sync_enabled":

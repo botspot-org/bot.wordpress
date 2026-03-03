@@ -753,6 +753,9 @@ class BotDot_WP_Admin
         if (isset($body["botspot_key"])) {
             BotDot_WP_Options::set("botspot_key", $body["botspot_key"]);
         }
+        if (isset($body["org_id"])) {
+            BotDot_WP_Options::set("tenant_id", $body["org_id"]);
+        }
 
         wp_send_json_success([
             "message" => __("Connection registered successfully.", "botdot-wp"),
@@ -779,6 +782,7 @@ class BotDot_WP_Admin
         BotDot_WP_Options::set("connection_id", "");
         BotDot_WP_Options::set("webhook_secret", "");
         BotDot_WP_Options::set("botspot_key", "");
+        BotDot_WP_Options::set("tenant_id", "");
 
         wp_send_json_success([
             "message" => __("Disconnected successfully.", "botdot-wp"),
