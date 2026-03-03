@@ -310,15 +310,21 @@ class BotDot_WP_Sync
 
         $tenant_id = BotDot_WP_Options::get("tenant_id");
 
+        // Truncate fields to match DB column limits (safety net)
+        $title = mb_substr($post->post_title, 0, 500);
+        $author = $author ? mb_substr($author, 0, 255) : null;
+        $excerpt = $post->post_excerpt ? mb_substr($post->post_excerpt, 0, 2000) : null;
+        $url = mb_substr($permalink, 0, 2048);
+
         $payload = [
             "source_type" => "wordpress",
             "identifier" => [
-                "source_id" => $permalink,
-                "source_url" => $permalink,
+                "source_id" => $url,
+                "source_url" => $url,
             ],
             "metadata" => [
-                "title" => $post->post_title,
-                "author" => $author ?: null,
+                "title" => $title,
+                "author" => $author,
                 "published_at" => $published_at,
                 "updated_at" => $updated_at,
                 "tags" => is_array($tags) ? array_values($tags) : [],
@@ -327,7 +333,7 @@ class BotDot_WP_Sync
             "body" => [
                 "format" => "html",
                 "content" => $post->post_content,
-                "excerpt" => $post->post_excerpt ?: null,
+                "excerpt" => $excerpt,
             ],
             "media" => $media,
         ];
