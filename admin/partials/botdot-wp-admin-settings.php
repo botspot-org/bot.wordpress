@@ -32,6 +32,9 @@ if (is_array($legacy_injection_status) && !empty($legacy_injection_status)) {
     delete_option("botdot_wp_page_injection_status");
 }
 
+// Migrate legacy injection_enabled to split appendix_enabled + jsonld_enabled
+BotDot_WP_Options::migrate_injection_toggles();
+
 // Pagination for display tab
 $per_page = 20;
 $current_page = isset($_GET["paged"]) ? max(1, intval($_GET["paged"])) : 1;
@@ -155,7 +158,9 @@ if ($active_tab === "sync") {
                 "botdot_wp_sync_sensitivity" => BotDot_WP_Options::get("sync_sensitivity", "medium"),
             ],
             "display" => [
-                "botdot_wp_injection_enabled" => BotDot_WP_Options::get("injection_enabled") ? "1" : "0",
+                "botdot_wp_appendix_enabled" => BotDot_WP_Options::get("appendix_enabled") ? "1" : "0",
+                "botdot_wp_jsonld_enabled" => BotDot_WP_Options::get("jsonld_enabled") ? "1" : "0",
+                "botdot_wp_jsonld_conflict_mode" => BotDot_WP_Options::get("jsonld_conflict_mode", "merge"),
                 "botdot_wp_injection_position" => BotDot_WP_Options::get("injection_position", "bottom"),
                 "botdot_wp_cache_ttl" => BotDot_WP_Options::get("cache_ttl", 3600),
                 "botdot_wp_debug_mode" => BotDot_WP_Options::get("debug_mode") ? "1" : "0",
@@ -377,19 +382,71 @@ if ($active_tab === "sync") {
         <div class="tab-content">
             <table class="form-table">
                 <tr>
-                    <th scope="row"><?php _e("Enable Injection", "botdot-wp"); ?></th>
+                    <th scope="row"><?php _e("HTML Appendix", "botdot-wp"); ?></th>
                     <td>
                         <label>
-                            <input type="checkbox" name="botdot_wp_injection_enabled" value="1" <?php checked(
-                                BotDot_WP_Options::get("injection_enabled"),
+                            <input type="checkbox" name="botdot_wp_appendix_enabled" value="1" <?php checked(
+                                BotDot_WP_Options::get("appendix_enabled"),
                                 true,
                             ); ?>>
-                            <?php _e("Enable JSON-LD + appendix injection", "botdot-wp"); ?>
+                            <?php _e("Enable HTML appendix injection", "botdot-wp"); ?>
                         </label>
                         <p class="description"><?php _e(
-                            "Controls both JSON-LD in &lt;head&gt; and appendix HTML on the page.",
+                            "Injects the rendered appendix HTML into your page content.",
                             "botdot-wp",
                         ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php _e("JSON-LD Structured Data", "botdot-wp"); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="botdot_wp_jsonld_enabled" value="1" <?php checked(
+                                BotDot_WP_Options::get("jsonld_enabled"),
+                                true,
+                            ); ?>>
+                            <?php _e("Enable JSON-LD structured data injection", "botdot-wp"); ?>
+                        </label>
+                        <p class="description"><?php _e(
+                            "Injects JSON-LD structured data into &lt;head&gt; for search engine optimization.",
+                            "botdot-wp",
+                        ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php _e("JSON-LD Conflict Mode", "botdot-wp"); ?></th>
+                    <td>
+                        <?php $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge"); ?>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="radio" name="botdot_wp_jsonld_conflict_mode" value="merge" <?php checked(
+                                $conflict_mode,
+                                "merge",
+                            ); ?>>
+                            <?php _e("Merge", "botdot-wp"); ?> &mdash; <span class="description"><?php _e(
+     "Suppress our JSON-LD @types that are already emitted by other SEO plugins (Yoast, RankMath)",
+     "botdot-wp",
+ ); ?></span>
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="radio" name="botdot_wp_jsonld_conflict_mode" value="replace" <?php checked(
+                                $conflict_mode,
+                                "replace",
+                            ); ?>>
+                            <?php _e("Replace", "botdot-wp"); ?> &mdash; <span class="description"><?php _e(
+     "Always inject our JSON-LD regardless of other plugins",
+     "botdot-wp",
+ ); ?></span>
+                        </label>
+                        <label style="display: block;">
+                            <input type="radio" name="botdot_wp_jsonld_conflict_mode" value="off" <?php checked(
+                                $conflict_mode,
+                                "off",
+                            ); ?>>
+                            <?php _e("Off", "botdot-wp"); ?> &mdash; <span class="description"><?php _e(
+     "Disable conflict detection entirely",
+     "botdot-wp",
+ ); ?></span>
+                        </label>
                     </td>
                 </tr>
                 <tr>

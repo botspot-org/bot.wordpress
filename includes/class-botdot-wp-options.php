@@ -37,7 +37,6 @@ class BotDot_WP_Options
     private static $defaults = [
         // Connection
         "api_key" => "",
-        "botspot_key" => "",
         "webhook_secret" => "",
         "connection_id" => "",
         "tenant_id" => "",
@@ -48,7 +47,9 @@ class BotDot_WP_Options
         "sync_post_types" => ["post", "page"],
 
         // Display
-        "injection_enabled" => true,
+        "appendix_enabled" => true,
+        "jsonld_enabled" => true,
+        "jsonld_conflict_mode" => "merge",
         "injection_position" => "bottom",
         "inject_on_post_types" => ["post", "page"],
 
@@ -221,6 +222,8 @@ class BotDot_WP_Options
         switch ($option_name) {
             case "auto_sync_enabled":
             case "injection_enabled":
+            case "appendix_enabled":
+            case "jsonld_enabled":
             case "debug_mode":
                 return (bool) $value;
 
@@ -232,12 +235,12 @@ class BotDot_WP_Options
                 return is_array($value) ? $value : [];
 
             case "api_key":
-            case "botspot_key":
             case "webhook_secret":
             case "connection_id":
             case "tenant_id":
             case "sync_sensitivity":
             case "injection_position":
+            case "jsonld_conflict_mode":
                 return is_string($value) ? trim($value) : "";
 
             default:
@@ -258,7 +261,6 @@ class BotDot_WP_Options
     {
         switch ($option_name) {
             case "api_key":
-            case "botspot_key":
             case "webhook_secret":
             case "connection_id":
             case "tenant_id":
@@ -266,12 +268,18 @@ class BotDot_WP_Options
 
             case "auto_sync_enabled":
             case "injection_enabled":
+            case "appendix_enabled":
+            case "jsonld_enabled":
             case "debug_mode":
                 return (bool) $value;
 
             case "sync_sensitivity":
                 $allowed = ["high", "medium", "low"];
                 return in_array($value, $allowed) ? $value : "medium";
+
+            case "jsonld_conflict_mode":
+                $allowed = ["merge", "replace", "off"];
+                return in_array($value, $allowed) ? $value : "merge";
 
             case "injection_position":
                 $allowed = ["bottom", "above_footer", "shortcode"];
@@ -345,6 +353,42 @@ class BotDot_WP_Options
         }
 
         return true;
+    }
+
+    /**
+     * Migrate legacy injection_enabled option to split toggles
+     *
+     * If the old injection_enabled option exists, copy its value to both
+     * appendix_enabled and jsonld_enabled, then delete the old option.
+     *
+     * @since    1.2.0
+     */
+    public static function migrate_injection_toggles()
+    {
+        $legacy = get_option("botdot_wp_injection_enabled");
+        if ($legacy !== false) {
+            $enabled = (bool) $legacy;
+            if (!self::exists("appendix_enabled")) {
+                self::set("appendix_enabled", $enabled);
+            }
+            if (!self::exists("jsonld_enabled")) {
+                self::set("jsonld_enabled", $enabled);
+            }
+            delete_option("botdot_wp_injection_enabled");
+        }
+    }
+
+    /**
+     * Remove legacy botspot_key option
+     *
+     * The botspot_key was a redundant copy of api_key that caused stale
+     * state bugs. All code now reads api_key directly.
+     *
+     * @since    1.3.0
+     */
+    public static function migrate_remove_botspot_key()
+    {
+        delete_option("botdot_wp_botspot_key");
     }
 
     /**

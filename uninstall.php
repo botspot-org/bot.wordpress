@@ -19,7 +19,7 @@ if (!defined("WP_UNINSTALL_PLUGIN")) {
 $options = [
     // Connection
     "botdot_wp_api_key",
-    "botdot_wp_botspot_key",
+    "botdot_wp_botspot_key", // legacy, removed in 1.3.0 but clean up if present
     "botdot_wp_webhook_secret",
     "botdot_wp_connection_id",
     // Sync
@@ -28,6 +28,9 @@ $options = [
     "botdot_wp_sync_post_types",
     // Display
     "botdot_wp_injection_enabled",
+    "botdot_wp_appendix_enabled",
+    "botdot_wp_jsonld_enabled",
+    "botdot_wp_jsonld_conflict_mode",
     "botdot_wp_injection_position",
     "botdot_wp_inject_on_post_types",
     // Cache

@@ -56,10 +56,10 @@ class BotDot_WP_Content_Fetcher
         }
 
         $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $botspot_key = BotDot_WP_Options::get("botspot_key");
+        $api_key = BotDot_WP_Options::get("api_key");
 
-        if (empty($botspot_key)) {
-            self::log_debug("Cannot fetch: botspot_key not configured");
+        if (empty($api_key)) {
+            self::log_debug("Cannot fetch: API key not configured");
             return null;
         }
 
@@ -89,7 +89,7 @@ class BotDot_WP_Content_Fetcher
 
         $response = wp_remote_get($endpoint, [
             "headers" => [
-                "X-Botspot-Key" => $botspot_key,
+                "X-API-Key" => $api_key,
                 "Accept" => "application/json",
             ],
             "timeout" => 15,
@@ -152,6 +152,99 @@ class BotDot_WP_Content_Fetcher
     }
 
     /**
+     * Fetch JSON-LD only from the dedicated /appendix/jsonld endpoint
+     *
+     * Used when appendix is disabled but jsonld is enabled, so we do not
+     * need to fetch the full rendered HTML.
+     *
+     * @since    1.2.0
+     * @param    string    $url_path    The URL path to fetch JSON-LD for.
+     * @return   array|null             Array with 'jsonld' and 'content_hash' keys, or null on failure.
+     */
+    public static function fetch_jsonld($url_path)
+    {
+        $cache_key_jsonld = "botdot_jsonld_" . md5($url_path);
+
+        // Check per-request cache first
+        if (isset(self::$request_cache[$cache_key_jsonld])) {
+            return self::$request_cache[$cache_key_jsonld];
+        }
+
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
+        $api_key = BotDot_WP_Options::get("api_key");
+
+        if (empty($api_key)) {
+            self::log_debug("Cannot fetch JSON-LD: API key not configured");
+            return null;
+        }
+
+        // Check transient cache
+        $cached = get_transient($cache_key_jsonld);
+        if ($cached !== false && is_array($cached)) {
+            self::log_debug(sprintf("JSON-LD cache hit for path: %s", $url_path));
+            self::$request_cache[$cache_key_jsonld] = $cached;
+            return $cached;
+        }
+
+        // Fetch from locus-core /appendix/jsonld
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/jsonld";
+        $endpoint = add_query_arg("path", $url_path, $endpoint);
+
+        self::log_debug(sprintf("Fetching JSON-LD from: %s", $endpoint));
+
+        $response = wp_remote_get($endpoint, [
+            "headers" => [
+                "X-API-Key" => $api_key,
+                "Accept" => "application/json",
+            ],
+            "timeout" => 15,
+        ]);
+
+        if (is_wp_error($response)) {
+            self::log_error(sprintf("JSON-LD fetch failed for path %s: %s", $url_path, $response->get_error_message()));
+            self::$request_cache[$cache_key_jsonld] = null;
+            return null;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+
+        if ($status_code !== 200) {
+            self::log_error(sprintf("JSON-LD fetch returned HTTP %d for path %s", $status_code, $url_path));
+            self::$request_cache[$cache_key_jsonld] = null;
+            return null;
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if (!is_array($body)) {
+            self::log_error("JSON-LD fetch returned invalid JSON");
+            self::$request_cache[$cache_key_jsonld] = null;
+            return null;
+        }
+
+        $data = [
+            "jsonld" => isset($body["jsonld"]) ? $body["jsonld"] : null,
+            "content_hash" => isset($body["content_hash"]) ? $body["content_hash"] : null,
+        ];
+
+        // Cache with configured TTL
+        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotDot_WP_Options::get("cache_ttl", 3600);
+        set_transient($cache_key_jsonld, $data, $ttl);
+
+        self::log_debug(
+            sprintf(
+                "Fetched and cached JSON-LD for path %s (TTL: %ds, jsonld: %s)",
+                $url_path,
+                $ttl,
+                $data["jsonld"] !== null ? "present" : "null",
+            ),
+        );
+
+        self::$request_cache[$cache_key_jsonld] = $data;
+        return $data;
+    }
+
+    /**
      * Check cache freshness via /appendix/check endpoint
      *
      * @since    1.0.0
@@ -166,14 +259,14 @@ class BotDot_WP_Content_Fetcher
         }
 
         $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $botspot_key = BotDot_WP_Options::get("botspot_key");
+        $api_key = BotDot_WP_Options::get("api_key");
 
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/check";
         $endpoint = add_query_arg("path", $url_path, $endpoint);
 
         $response = wp_remote_get($endpoint, [
             "headers" => [
-                "X-Botspot-Key" => $botspot_key,
+                "X-API-Key" => $api_key,
                 "Accept" => "application/json",
             ],
             "timeout" => 5,
@@ -206,12 +299,12 @@ class BotDot_WP_Content_Fetcher
     public static function test_connection()
     {
         $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $botspot_key = BotDot_WP_Options::get("botspot_key");
+        $api_key = BotDot_WP_Options::get("api_key");
 
-        if (empty($botspot_key)) {
+        if (empty($api_key)) {
             return [
                 "success" => false,
-                "message" => __("Botspot Key is not configured", "botdot-wp"),
+                "message" => __("API key is not configured", "botdot-wp"),
             ];
         }
 
@@ -219,7 +312,7 @@ class BotDot_WP_Content_Fetcher
 
         $response = wp_remote_get($endpoint, [
             "headers" => [
-                "X-Botspot-Key" => $botspot_key,
+                "X-API-Key" => $api_key,
                 "Accept" => "application/json",
             ],
             "timeout" => 10,
@@ -244,7 +337,7 @@ class BotDot_WP_Content_Fetcher
         if ($status_code === 401 || $status_code === 403) {
             return [
                 "success" => false,
-                "message" => __("Authentication failed. Check your Botspot Key.", "botdot-wp"),
+                "message" => __("Authentication failed. Check your API key.", "botdot-wp"),
             ];
         }
 

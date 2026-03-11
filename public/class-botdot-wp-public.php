@@ -220,7 +220,7 @@ class BotDot_WP_Public
      */
     public function enqueue_styles()
     {
-        if (!BotDot_WP_Options::get("injection_enabled")) {
+        if (!BotDot_WP_Options::get("appendix_enabled") && !BotDot_WP_Options::get("jsonld_enabled")) {
             return;
         }
 

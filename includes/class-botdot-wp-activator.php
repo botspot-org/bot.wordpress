@@ -36,9 +36,8 @@ class BotDot_WP_Activator {
         if (!BotDot_WP_Options::exists('api_key')) {
             BotDot_WP_Options::set('api_key', '');
         }
-        if (!BotDot_WP_Options::exists('botspot_key')) {
-            BotDot_WP_Options::set('botspot_key', '');
-        }
+        // Remove legacy botspot_key (was a redundant copy of api_key)
+        BotDot_WP_Options::migrate_remove_botspot_key();
         if (!BotDot_WP_Options::exists('webhook_secret')) {
             BotDot_WP_Options::set('webhook_secret', '');
         }
@@ -58,8 +57,14 @@ class BotDot_WP_Activator {
         }
 
         // Display defaults
-        if (!BotDot_WP_Options::exists('injection_enabled')) {
-            BotDot_WP_Options::set('injection_enabled', true);
+        if (!BotDot_WP_Options::exists('appendix_enabled')) {
+            BotDot_WP_Options::set('appendix_enabled', true);
+        }
+        if (!BotDot_WP_Options::exists('jsonld_enabled')) {
+            BotDot_WP_Options::set('jsonld_enabled', true);
+        }
+        if (!BotDot_WP_Options::exists('jsonld_conflict_mode')) {
+            BotDot_WP_Options::set('jsonld_conflict_mode', 'merge');
         }
         if (!BotDot_WP_Options::exists('injection_position')) {
             BotDot_WP_Options::set('injection_position', 'bottom');

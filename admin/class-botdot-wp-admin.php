@@ -99,9 +99,17 @@ class BotDot_WP_Admin
         ]);
 
         // Display settings
-        register_setting("botdot_wp_settings", "botdot_wp_injection_enabled", [
+        register_setting("botdot_wp_settings", "botdot_wp_appendix_enabled", [
             "sanitize_callback" => [$this, "sanitize_checkbox"],
             "default" => true,
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_jsonld_enabled", [
+            "sanitize_callback" => [$this, "sanitize_checkbox"],
+            "default" => true,
+        ]);
+        register_setting("botdot_wp_settings", "botdot_wp_jsonld_conflict_mode", [
+            "sanitize_callback" => [$this, "sanitize_jsonld_conflict_mode"],
+            "default" => "merge",
         ]);
         register_setting("botdot_wp_settings", "botdot_wp_injection_position", [
             "sanitize_callback" => [$this, "sanitize_position"],
@@ -626,7 +634,24 @@ class BotDot_WP_Admin
 
     public function sanitize_secret_field_api_key($value)
     {
-        return $this->sanitize_secret_field($value, "api_key");
+        $new_value = $this->sanitize_secret_field($value, "api_key");
+        $old_value = BotDot_WP_Options::get("api_key");
+
+        // Auto-disconnect when API key changes and a connection exists
+        if (!empty($new_value) && $new_value !== $old_value && !empty(BotDot_WP_Options::get("connection_id"))) {
+            BotDot_WP_Options::set("connection_id", "");
+            BotDot_WP_Options::set("webhook_secret", "");
+            BotDot_WP_Options::set("tenant_id", "");
+
+            add_settings_error(
+                "botdot_wp_api_key",
+                "botdot_wp_api_key_changed",
+                __("API key changed. Previous connection has been disconnected. Please re-connect.", "botdot-wp"),
+                "warning"
+            );
+        }
+
+        return $new_value;
     }
 
     /**
@@ -660,6 +685,16 @@ class BotDot_WP_Admin
     }
 
     /**
+     * Sanitize JSON-LD conflict mode value
+     *
+     * @since    1.2.0
+     */
+    public function sanitize_jsonld_conflict_mode($value)
+    {
+        return BotDot_WP_Options::sanitize_option_value("jsonld_conflict_mode", $value);
+    }
+
+    /**
      * Sanitize post types array
      *
      * @since    0.1.0
@@ -684,7 +719,7 @@ class BotDot_WP_Admin
      * Handle AJAX connection registration
      *
      * POST to connectors /api/v1/connections/register with API key + site info,
-     * store returned connection_id, webhook_secret, botspot_key.
+     * store returned connection_id and webhook_secret.
      *
      * @since    1.1.0
      */
@@ -750,9 +785,6 @@ class BotDot_WP_Admin
         if (isset($body["webhook_secret"])) {
             BotDot_WP_Options::set("webhook_secret", $body["webhook_secret"]);
         }
-        if (isset($body["botspot_key"])) {
-            BotDot_WP_Options::set("botspot_key", $body["botspot_key"]);
-        }
         if (isset($body["org_id"])) {
             BotDot_WP_Options::set("tenant_id", $body["org_id"]);
         }
@@ -766,7 +798,7 @@ class BotDot_WP_Admin
     /**
      * Handle AJAX disconnect
      *
-     * Clears connection_id, webhook_secret, botspot_key.
+     * Clears connection_id, webhook_secret, and tenant_id.
      *
      * @since    1.1.0
      */
@@ -781,7 +813,6 @@ class BotDot_WP_Admin
 
         BotDot_WP_Options::set("connection_id", "");
         BotDot_WP_Options::set("webhook_secret", "");
-        BotDot_WP_Options::set("botspot_key", "");
         BotDot_WP_Options::set("tenant_id", "");
 
         wp_send_json_success([
