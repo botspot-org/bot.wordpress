@@ -232,6 +232,9 @@ class BotDot_WP
         $this->loader->add_action("transition_post_status", "BotDot_WP_Sync", "on_status_change", 10, 3);
         $this->loader->add_action("before_delete_post", "BotDot_WP_Sync", "on_delete_post");
         $this->loader->add_action("botdot_wp_retry_sync", "BotDot_WP_Sync", "retry_sync");
+
+        // REST API webhook endpoint for enrichment status updates
+        $this->loader->add_action("rest_api_init", "BotDot_WP_Sync", "register_webhook_route");
     }
 
     /**

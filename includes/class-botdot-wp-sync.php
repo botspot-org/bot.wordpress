@@ -30,6 +30,86 @@ if (!defined("WPINC")) {
 class BotDot_WP_Sync
 {
     /**
+     * Register REST API webhook endpoint
+     *
+     * @since    2.1.0
+     */
+    public static function register_webhook_route()
+    {
+        register_rest_route("botdot-wp/v1", "/webhook", [
+            "methods" => "POST",
+            "callback" => [__CLASS__, "handle_webhook"],
+            "permission_callback" => "__return_true", // Auth via HMAC
+        ]);
+    }
+
+    /**
+     * Handle incoming webhook from locus-core
+     *
+     * Verifies HMAC signature, resolves WordPress post, and updates enrichment meta.
+     *
+     * @since    2.1.0
+     * @param    WP_REST_Request    $request    The REST request object.
+     * @return   WP_REST_Response
+     */
+    public static function handle_webhook($request)
+    {
+        $signature = $request->get_header("X-Webhook-Signature");
+        $raw_body = $request->get_body();
+        $secret = BotDot_WP_Options::get("webhook_secret");
+
+        if (!$secret || !$signature) {
+            return new WP_REST_Response(["error" => "Unauthorized"], 401);
+        }
+
+        $expected = "sha256=" . hash_hmac("sha256", $raw_body, $secret);
+        if (!hash_equals($expected, $signature)) {
+            return new WP_REST_Response(["error" => "Invalid signature"], 401);
+        }
+
+        $payload = json_decode($raw_body, true);
+        $event = $payload["event"] ?? "";
+        $data = $payload["data"] ?? [];
+        $content_id = $payload["content_id"] ?? "";
+
+        // Resolve WordPress post from source_id (URL)
+        $source_id = $data["source_id"] ?? $data["url"] ?? "";
+        $post_id = $source_id ? url_to_postid($source_id) : 0;
+
+        // Fallback: lookup by artifact_id stored in post_meta
+        if (!$post_id && $content_id) {
+            $posts = get_posts([
+                "meta_key" => "_botdot_artifact_id",
+                "meta_value" => $content_id,
+                "post_type" => "any",
+                "numberposts" => 1,
+                "fields" => "ids",
+            ]);
+            $post_id = $posts[0] ?? 0;
+        }
+
+        if (!$post_id) {
+            return new WP_REST_Response(["status" => "ok", "matched" => false], 200);
+        }
+
+        // Update enrichment meta (idempotent, no downgrades)
+        $tier_order = ["NONE" => 0, "TIER0" => 1, "TIER1" => 2, "TIER2" => 3];
+        $new_tier = $data["enrichment_tier"] ?? "TIER0";
+        $current_tier = get_post_meta($post_id, "_botdot_enrichment_tier", true) ?: "NONE";
+
+        if (($tier_order[$new_tier] ?? 0) >= ($tier_order[$current_tier] ?? 0)) {
+            update_post_meta($post_id, "_botdot_enrichment_tier", $new_tier);
+            update_post_meta($post_id, "_botdot_artifact_id", $content_id);
+
+            // Derive human-readable status
+            $status_map = ["TIER0" => "indexed", "TIER1" => "enriching", "TIER2" => "enriched"];
+            update_post_meta($post_id, "_botdot_enrichment_status", $status_map[$new_tier] ?? "unknown");
+        }
+
+        return new WP_REST_Response(["status" => "ok", "post_id" => $post_id], 200);
+    }
+
+    /**
      * Handle save_post hook
      *
      * @since    1.0.0
@@ -264,6 +344,11 @@ class BotDot_WP_Sync
         $status_code = wp_remote_retrieve_response_code($response);
 
         if ($status_code >= 200 && $status_code < 300) {
+            // Store artifact_id from response for webhook mapping
+            $body = json_decode(wp_remote_retrieve_body($response), true);
+            if (!empty($body["artifact_id"])) {
+                update_post_meta($post->ID, "_botdot_artifact_id", $body["artifact_id"]);
+            }
             self::log_debug(sprintf("Ingest successful for post %d (HTTP %d)", $post->ID, $status_code));
             return true;
         }
@@ -325,6 +410,7 @@ class BotDot_WP_Sync
             "metadata" => [
                 "title" => $title,
                 "author" => $author,
+                "language" => substr(get_locale(), 0, 2),
                 "published_at" => $published_at,
                 "updated_at" => $updated_at,
                 "tags" => is_array($tags) ? array_values($tags) : [],
@@ -454,13 +540,19 @@ class BotDot_WP_Sync
                     $total_success += $batch_accepted;
                     $total_failed += $batch_rejected;
 
+                    // Store artifact_ids from batch response (matched by index)
+                    $artifact_ids = isset($body["artifact_ids"]) ? (array) $body["artifact_ids"] : [];
+
                     // Update meta for all posts in accepted batch
-                    foreach ($posts as $post) {
+                    foreach ($posts as $idx => $post) {
                         $meta = $post_hashes[$post->ID];
                         update_post_meta($post->ID, "_botdot_sync_hash", $meta["hash"]);
                         update_post_meta($post->ID, "_botdot_last_synced_at", current_time("mysql"));
                         update_post_meta($post->ID, "_botdot_sync_status", "synced");
                         update_post_meta($post->ID, "_botdot_sync_word_count", $meta["word_count"]);
+                        if (!empty($artifact_ids[$idx])) {
+                            update_post_meta($post->ID, "_botdot_artifact_id", $artifact_ids[$idx]);
+                        }
                     }
 
                     if (!empty($body["errors"])) {

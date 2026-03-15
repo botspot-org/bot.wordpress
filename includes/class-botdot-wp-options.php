@@ -38,6 +38,7 @@ class BotDot_WP_Options
         // Connection
         "api_key" => "",
         "webhook_secret" => "",
+        "webhook_id" => "",
         "connection_id" => "",
         "tenant_id" => "",
 
@@ -236,6 +237,7 @@ class BotDot_WP_Options
 
             case "api_key":
             case "webhook_secret":
+            case "webhook_id":
             case "connection_id":
             case "tenant_id":
             case "sync_sensitivity":
@@ -262,6 +264,7 @@ class BotDot_WP_Options
         switch ($option_name) {
             case "api_key":
             case "webhook_secret":
+            case "webhook_id":
             case "connection_id":
             case "tenant_id":
                 return sanitize_text_field(trim($value));

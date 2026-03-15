@@ -3,7 +3,7 @@
  * Plugin Name: BotSpot WordPress
  * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 2.0.2
+ * Version: 2.0.3
  * Author: BotSpot Team
  * Author URI: https://bot.spot
  * License: Proprietary
@@ -32,7 +32,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin version.
  */
-define('BOTDOT_WP_VERSION', '2.0.2');
+define('BOTDOT_WP_VERSION', '2.0.3');
 
 /**
  * Plugin file path

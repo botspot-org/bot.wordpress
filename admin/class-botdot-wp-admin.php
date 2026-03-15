@@ -317,6 +317,25 @@ class BotDot_WP_Admin
             return;
         }
 
+        // Show enrichment status if available, fall back to sync status
+        $enrichment_status = get_post_meta($post_id, "_botdot_enrichment_status", true);
+        if ($enrichment_status) {
+            $enrichment_colors = [
+                "indexed" => "#2271b1",
+                "enriching" => "#dba617",
+                "enriched" => "#00a32a",
+            ];
+            $enrichment_labels = [
+                "indexed" => __("Indexed", "botdot-wp"),
+                "enriching" => __("Enriching", "botdot-wp"),
+                "enriched" => __("Enriched", "botdot-wp"),
+            ];
+            $color = $enrichment_colors[$enrichment_status] ?? "#999";
+            $label = $enrichment_labels[$enrichment_status] ?? ucfirst($enrichment_status);
+            echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">&#9679;</span>';
+            return;
+        }
+
         $status = BotDot_WP_Sync::get_sync_status($post_id);
         $color = $this->get_sync_status_color($status["status"]);
         $label = $this->get_sync_status_label($status["status"]);
@@ -641,6 +660,7 @@ class BotDot_WP_Admin
         if (!empty($new_value) && $new_value !== $old_value && !empty(BotDot_WP_Options::get("connection_id"))) {
             BotDot_WP_Options::set("connection_id", "");
             BotDot_WP_Options::set("webhook_secret", "");
+            BotDot_WP_Options::set("webhook_id", "");
             BotDot_WP_Options::set("tenant_id", "");
 
             add_settings_error(
@@ -789,6 +809,32 @@ class BotDot_WP_Admin
             BotDot_WP_Options::set("tenant_id", $body["org_id"]);
         }
 
+        // Auto-register webhook for enrichment status updates
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
+        $webhook_url = home_url("/wp-json/botdot-wp/v1/webhook");
+        $webhook_response = wp_remote_post(
+            rtrim($locus_api_url, "/") . "/api/v1/webhooks",
+            [
+                "headers" => ["Content-Type" => "application/json", "X-API-Key" => $api_key],
+                "body" => wp_json_encode([
+                    "url" => $webhook_url,
+                    "events" => ["content.indexed", "content.enriched"],
+                    "name" => "WordPress - " . get_bloginfo("name"),
+                ]),
+                "timeout" => 15,
+            ],
+        );
+
+        if (!is_wp_error($webhook_response) && wp_remote_retrieve_response_code($webhook_response) < 300) {
+            $wh_body = json_decode(wp_remote_retrieve_body($webhook_response), true);
+            if (!empty($wh_body["id"])) {
+                BotDot_WP_Options::set("webhook_id", $wh_body["id"]);
+            }
+            if (!empty($wh_body["secret"])) {
+                BotDot_WP_Options::set("webhook_secret", $wh_body["secret"]);
+            }
+        }
+
         wp_send_json_success([
             "message" => __("Connection registered successfully.", "botdot-wp"),
             "connection_id" => isset($body["connection_id"]) ? $body["connection_id"] : "",
@@ -811,8 +857,24 @@ class BotDot_WP_Admin
             return;
         }
 
+        // Delete webhook registration from locus-core
+        $webhook_id = BotDot_WP_Options::get("webhook_id");
+        if (!empty($webhook_id)) {
+            $locus_api_url = BotDot_WP_Options::get_locus_api_url();
+            $api_key = BotDot_WP_Options::get("api_key");
+            wp_remote_request(
+                rtrim($locus_api_url, "/") . "/api/v1/webhooks/" . urlencode($webhook_id),
+                [
+                    "method" => "DELETE",
+                    "headers" => ["X-API-Key" => $api_key],
+                    "timeout" => 10,
+                ],
+            );
+        }
+
         BotDot_WP_Options::set("connection_id", "");
         BotDot_WP_Options::set("webhook_secret", "");
+        BotDot_WP_Options::set("webhook_id", "");
         BotDot_WP_Options::set("tenant_id", "");
 
         wp_send_json_success([

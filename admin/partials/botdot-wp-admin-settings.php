@@ -97,6 +97,23 @@ if ($active_tab === "sync") {
         $total_published - $sync_stats["synced"] - $sync_stats["pending"] - $sync_stats["error"],
     );
     $sync_stats["total"] = $total_published;
+
+    // Enrichment status breakdown
+    $enrichment_results = $wpdb->get_results(
+        "SELECT pm.meta_value AS status, COUNT(DISTINCT pm.post_id) AS cnt
+         FROM {$wpdb->postmeta} pm
+         WHERE pm.meta_key = '_botdot_enrichment_status'
+         GROUP BY pm.meta_value",
+    );
+
+    $enrichment_stats = ["indexed" => 0, "enriching" => 0, "enriched" => 0];
+    if (is_array($enrichment_results)) {
+        foreach ($enrichment_results as $row) {
+            if (isset($enrichment_stats[$row->status])) {
+                $enrichment_stats[$row->status] = (int) $row->cnt;
+            }
+        }
+    }
 }
 ?>
 
@@ -359,6 +376,30 @@ if ($active_tab === "sync") {
                         <div style="font-size: 12px; color: #555;"><?php _e("Never Synced", "botdot-wp"); ?></div>
                     </div>
                 </div>
+
+                <?php if (array_sum($enrichment_stats) > 0): ?>
+                <h3 style="margin-top: 20px;"><?php _e("Enrichment Status", "botdot-wp"); ?></h3>
+                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                    <div style="padding: 15px; background: #e8f0fe; border-radius: 4px; min-width: 100px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: 600; color: #2271b1;"><?php echo esc_html(
+                            $enrichment_stats["indexed"],
+                        ); ?></div>
+                        <div style="font-size: 12px; color: #555;"><?php _e("Indexed", "botdot-wp"); ?></div>
+                    </div>
+                    <div style="padding: 15px; background: #fef3e0; border-radius: 4px; min-width: 100px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: 600; color: #dba617;"><?php echo esc_html(
+                            $enrichment_stats["enriching"],
+                        ); ?></div>
+                        <div style="font-size: 12px; color: #555;"><?php _e("Enriching", "botdot-wp"); ?></div>
+                    </div>
+                    <div style="padding: 15px; background: #edfaef; border-radius: 4px; min-width: 100px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: 600; color: #00a32a;"><?php echo esc_html(
+                            $enrichment_stats["enriched"],
+                        ); ?></div>
+                        <div style="font-size: 12px; color: #555;"><?php _e("Enriched", "botdot-wp"); ?></div>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <p>
                     <button type="button" id="botdot-wp-bulk-sync" class="button button-primary">
