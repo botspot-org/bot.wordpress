@@ -557,7 +557,13 @@ class BotDot_WP_Sync
 
                     if (!empty($body["errors"])) {
                         foreach ($body["errors"] as $error) {
-                            self::log_error(sprintf("Batch item error: %s", $error));
+                            $detail = is_array($error)
+                                ? sprintf("index=%s code=%s detail=%s",
+                                    isset($error["index"]) ? $error["index"] : "?",
+                                    isset($error["error_code"]) ? $error["error_code"] : "?",
+                                    isset($error["detail"]) ? $error["detail"] : "?")
+                                : (string) $error;
+                            self::log_error(sprintf("Batch item error: %s", $detail));
                         }
                     }
                 } else {
