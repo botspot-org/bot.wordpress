@@ -131,6 +131,8 @@ class BotDot_WP_Content_Fetcher
             "html" => isset($body["html"]) ? $body["html"] : null,
             "jsonld" => isset($body["jsonld"]) ? $body["jsonld"] : null,
             "content_hash" => isset($body["content_hash"]) ? $body["content_hash"] : null,
+            "status" => isset($body["status"]) ? $body["status"] : null,
+            "reason" => isset($body["reason"]) ? $body["reason"] : null,
         ];
 
         // Cache with configured TTL

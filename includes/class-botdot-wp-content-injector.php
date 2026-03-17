@@ -66,13 +66,31 @@ class BotDot_WP_Content_Injector
     private $shortcode_used = false;
 
     /**
-     * Collected @types from other SEO plugins (Yoast, RankMath).
+     * Whether JSON-LD has been merged into an SEO plugin's output.
      *
-     * @since    1.2.0
+     * @since    1.3.0
      * @access   private
-     * @var      array
+     * @var      bool
      */
-    private $external_jsonld_types = [];
+    private $jsonld_merged_into_seo_plugin = false;
+
+    /**
+     * Per-request cache of locus JSON-LD data.
+     *
+     * @since    1.3.0
+     * @access   private
+     * @var      array|null
+     */
+    private $locus_jsonld_cache = null;
+
+    /**
+     * Whether locus JSON-LD cache has been populated.
+     *
+     * @since    1.3.0
+     * @access   private
+     * @var      bool
+     */
+    private $locus_jsonld_fetched = false;
 
     /**
      * Initialize the class.
@@ -88,70 +106,226 @@ class BotDot_WP_Content_Injector
     }
 
     /**
-     * Hook into Yoast SEO JSON-LD output to detect existing @types.
+     * Merge locus JSON-LD into Yoast SEO's @graph output.
      *
-     * Filter: wpseo_json_ld_output (priority 10)
+     * Filter: wpseo_json_ld_output (priority 99)
      *
-     * @since    1.2.0
+     * In "merge" mode: merges locus properties into colliding @type nodes (additive only),
+     * appends non-colliding nodes to Yoast's @graph.
+     * In "replace" mode: appends all locus nodes unconditionally.
+     * In "off" mode: returns data unmodified.
+     *
+     * @since    1.3.0
      * @param    array    $data    Yoast JSON-LD data.
-     * @return   array             Unmodified data.
+     * @return   array             Modified data with locus nodes merged in.
      */
-    public function detect_yoast_jsonld($data)
+    public function merge_into_yoast_jsonld($data)
     {
-        if (is_array($data)) {
-            $this->collect_types_from_jsonld($data);
-        }
-        return $data;
+        return $this->merge_into_seo_jsonld($data, "Yoast");
     }
 
     /**
-     * Hook into RankMath JSON-LD output to detect existing @types.
+     * Merge locus JSON-LD into RankMath's @graph output.
      *
-     * Filter: rank_math/json_ld (priority 10)
+     * Filter: rank_math/json_ld (priority 99)
      *
-     * @since    1.2.0
+     * @since    1.3.0
      * @param    array    $data    RankMath JSON-LD data.
-     * @return   array             Unmodified data.
+     * @return   array             Modified data with locus nodes merged in.
      */
-    public function detect_rankmath_jsonld($data)
+    public function merge_into_rankmath_jsonld($data)
     {
-        if (is_array($data)) {
-            $this->collect_types_from_jsonld($data);
-        }
-        return $data;
+        return $this->merge_into_seo_jsonld($data, "RankMath");
     }
 
     /**
-     * Recursively collect @type values from a JSON-LD structure.
+     * Core merge logic for SEO plugin JSON-LD integration.
      *
-     * @since    1.2.0
+     * @since    1.3.0
      * @access   private
-     * @param    array    $data    JSON-LD data (may be nested).
+     * @param    array     $data          SEO plugin's JSON-LD data.
+     * @param    string    $plugin_name   Name of the SEO plugin (for logging).
+     * @return   array                    Modified JSON-LD data.
      */
-    private function collect_types_from_jsonld($data)
+    private function merge_into_seo_jsonld($data, $plugin_name)
     {
-        if (isset($data["@type"])) {
-            $types = (array) $data["@type"];
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
+        if ($conflict_mode === "off") {
+            $this->log_debug(sprintf("JSON-LD conflict mode is 'off', skipping %s merge", $plugin_name));
+            return $data;
+        }
+
+        $locus_jsonld = $this->get_locus_jsonld();
+        if ($locus_jsonld === null) {
+            $this->log_debug(sprintf("No locus JSON-LD available for %s merge", $plugin_name));
+            return $data;
+        }
+
+        $locus_nodes = $this->extract_graph_nodes($locus_jsonld);
+        if (empty($locus_nodes)) {
+            $this->log_debug("No locus @graph nodes to merge");
+            return $data;
+        }
+
+        // Ensure @graph exists in the SEO data
+        if (!isset($data["@graph"]) || !is_array($data["@graph"])) {
+            $data["@graph"] = [];
+        }
+
+        // Build a map of existing @types in the SEO plugin's graph (lowercased)
+        $seo_type_index = [];
+        foreach ($data["@graph"] as $idx => $node) {
+            if (!is_array($node) || !isset($node["@type"])) {
+                continue;
+            }
+            $types = (array) $node["@type"];
             foreach ($types as $type) {
-                $this->external_jsonld_types[] = $type;
+                $seo_type_index[strtolower($type)] = $idx;
             }
         }
 
-        // Check @graph array (common in Yoast/RankMath)
-        if (isset($data["@graph"]) && is_array($data["@graph"])) {
-            foreach ($data["@graph"] as $node) {
-                if (is_array($node)) {
-                    $this->collect_types_from_jsonld($node);
+        foreach ($locus_nodes as $locus_node) {
+            if (!is_array($locus_node) || !isset($locus_node["@type"])) {
+                // No @type - just append
+                $data["@graph"][] = $locus_node;
+                continue;
+            }
+
+            $locus_types = (array) $locus_node["@type"];
+            $collision_idx = null;
+
+            if ($conflict_mode === "merge") {
+                // Check for @type collision
+                foreach ($locus_types as $type) {
+                    $key = strtolower($type);
+                    if (isset($seo_type_index[$key])) {
+                        $collision_idx = $seo_type_index[$key];
+                        break;
+                    }
                 }
             }
-        }
 
-        // Check top-level numeric keys (array of nodes)
-        foreach ($data as $key => $value) {
-            if (is_int($key) && is_array($value)) {
-                $this->collect_types_from_jsonld($value);
+            if ($collision_idx !== null) {
+                // Merge: add locus properties into existing node (additive only)
+                foreach ($locus_node as $prop => $value) {
+                    if (!isset($data["@graph"][$collision_idx][$prop])) {
+                        $data["@graph"][$collision_idx][$prop] = $value;
+                    }
+                }
+                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
+                $this->log_debug(sprintf(
+                    "Merged locus node @id=%s into %s node @type=%s (additive)",
+                    $node_id,
+                    $plugin_name,
+                    implode(",", $locus_types)
+                ));
+            } else {
+                // No collision or replace mode: append
+                $data["@graph"][] = $locus_node;
+                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
+                $this->log_debug(sprintf(
+                    "Appended locus node @id=%s (@type=%s) to %s @graph",
+                    $node_id,
+                    implode(",", $locus_types),
+                    $plugin_name
+                ));
             }
         }
+
+        $this->jsonld_merged_into_seo_plugin = true;
+        $this->log_debug(sprintf("JSON-LD merge into %s complete (%d locus nodes processed)", $plugin_name, count($locus_nodes)));
+
+        return $data;
+    }
+
+    /**
+     * Fetch and cache locus JSON-LD for the current page.
+     *
+     * @since    1.3.0
+     * @access   private
+     * @return   array|null    Decoded JSON-LD data, or null if unavailable.
+     */
+    private function get_locus_jsonld()
+    {
+        if ($this->locus_jsonld_fetched) {
+            return $this->locus_jsonld_cache;
+        }
+
+        $this->locus_jsonld_fetched = true;
+        $path = $this->get_current_url_path();
+
+        $appendix_enabled = BotDot_WP_Options::get("appendix_enabled");
+        if (!$appendix_enabled) {
+            $data = BotDot_WP_Content_Fetcher::fetch_jsonld($path);
+        } else {
+            $data = BotDot_WP_Content_Fetcher::fetch($path);
+        }
+
+        if (!$data || !isset($data["jsonld"]) || $data["jsonld"] === null) {
+            $this->locus_jsonld_cache = null;
+            return null;
+        }
+
+        $jsonld = $data["jsonld"];
+
+        // Normalize: decode string to array if needed
+        if (is_string($jsonld)) {
+            $decoded = json_decode($jsonld, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->locus_jsonld_cache = null;
+                return null;
+            }
+            $jsonld = $decoded;
+        }
+
+        // Apply filter
+        $jsonld = apply_filters("botdot_wp_appendix_jsonld", $jsonld);
+
+        if (empty($jsonld)) {
+            $this->locus_jsonld_cache = null;
+            return null;
+        }
+
+        $this->locus_jsonld_cache = $jsonld;
+        return $jsonld;
+    }
+
+    /**
+     * Extract @graph nodes from a JSON-LD structure.
+     *
+     * Handles both @graph arrays and single-node structures.
+     *
+     * @since    1.3.0
+     * @access   private
+     * @param    array    $jsonld    Decoded JSON-LD data.
+     * @return   array               Array of individual nodes.
+     */
+    private function extract_graph_nodes($jsonld)
+    {
+        if (!is_array($jsonld)) {
+            return [];
+        }
+
+        // Has @graph array
+        if (isset($jsonld["@graph"]) && is_array($jsonld["@graph"])) {
+            return $jsonld["@graph"];
+        }
+
+        // Flat array of nodes
+        if (isset($jsonld[0]) && is_array($jsonld[0])) {
+            return $jsonld;
+        }
+
+        // Single node (has @type)
+        if (isset($jsonld["@type"])) {
+            return [$jsonld];
+        }
+
+        return [];
     }
 
     /**
@@ -167,48 +341,15 @@ class BotDot_WP_Content_Injector
             return;
         }
 
-        $path = $this->get_current_url_path();
-
-        // When appendix is disabled but jsonld is enabled, use the dedicated jsonld endpoint
-        $appendix_enabled = BotDot_WP_Options::get("appendix_enabled");
-        if (!$appendix_enabled) {
-            $data = BotDot_WP_Content_Fetcher::fetch_jsonld($path);
-        } else {
-            $data = BotDot_WP_Content_Fetcher::fetch($path);
-        }
-
-        if (!$data || !isset($data["jsonld"]) || $data["jsonld"] === null) {
+        // Skip standalone output if already merged into SEO plugin's @graph
+        if ($this->jsonld_merged_into_seo_plugin) {
+            $this->log_debug("JSON-LD already merged into SEO plugin output, skipping standalone injection");
             return;
         }
 
-        $jsonld = $data["jsonld"];
-
-        // Apply filter
-        $jsonld = apply_filters("botdot_wp_appendix_jsonld", $jsonld);
-
-        if (empty($jsonld)) {
+        $decoded = $this->get_locus_jsonld();
+        if ($decoded === null) {
             return;
-        }
-
-        // Normalize JSON-LD: always decode to array for processing
-        if (is_string($jsonld)) {
-            $decoded = json_decode($jsonld, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // Invalid JSON string, skip injection
-                return;
-            }
-        } else {
-            $decoded = $jsonld;
-        }
-
-        // Apply conflict detection in merge mode
-        $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
-        if ($conflict_mode === "merge" && !empty($this->external_jsonld_types)) {
-            $decoded = $this->filter_conflicting_types($decoded);
-            if (empty($decoded)) {
-                $this->log_debug("All JSON-LD nodes suppressed due to conflicts with other SEO plugins");
-                return;
-            }
         }
 
         $json_string = wp_json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -220,94 +361,7 @@ class BotDot_WP_Content_Injector
         echo '<script type="application/ld+json">' . $json_string . "</script>";
         echo "\n<!-- /BotSpot JSON-LD -->\n";
 
-        $this->log_debug("JSON-LD injected into wp_head");
-    }
-
-    /**
-     * Filter out JSON-LD nodes whose @type conflicts with other SEO plugins.
-     *
-     * In merge mode, suppress our nodes (identified by #locus- @id prefix)
-     * if another plugin already emits the same @type.
-     *
-     * @since    1.2.0
-     * @access   private
-     * @param    array    $data    Decoded JSON-LD data.
-     * @return   array             Filtered JSON-LD data.
-     */
-    private function filter_conflicting_types($data)
-    {
-        $external_types = array_map("strtolower", $this->external_jsonld_types);
-
-        // Handle @graph structure
-        if (isset($data["@graph"]) && is_array($data["@graph"])) {
-            $filtered_graph = [];
-            foreach ($data["@graph"] as $node) {
-                if (!$this->is_conflicting_node($node, $external_types)) {
-                    $filtered_graph[] = $node;
-                }
-            }
-            if (empty($filtered_graph)) {
-                return [];
-            }
-            $data["@graph"] = $filtered_graph;
-            return $data;
-        }
-
-        // Handle flat array of nodes
-        if (isset($data[0]) && is_array($data[0])) {
-            $filtered = [];
-            foreach ($data as $node) {
-                if (!$this->is_conflicting_node($node, $external_types)) {
-                    $filtered[] = $node;
-                }
-            }
-            return $filtered;
-        }
-
-        // Handle single node
-        if ($this->is_conflicting_node($data, $external_types)) {
-            return [];
-        }
-
-        return $data;
-    }
-
-    /**
-     * Check if a JSON-LD node conflicts with externally detected @types.
-     *
-     * Only suppresses nodes with a #locus- @id prefix (our own nodes).
-     *
-     * @since    1.2.0
-     * @access   private
-     * @param    array    $node              A JSON-LD node.
-     * @param    array    $external_types    Lowercased external @type values.
-     * @return   bool                        True if this node conflicts and should be suppressed.
-     */
-    private function is_conflicting_node($node, $external_types)
-    {
-        if (!is_array($node) || !isset($node["@type"])) {
-            return false;
-        }
-
-        // Only filter our own nodes (identified by #locus- @id prefix)
-        $node_id = isset($node["@id"]) ? $node["@id"] : "";
-        if (strpos($node_id, "#locus-") === false) {
-            return false;
-        }
-
-        $node_types = (array) $node["@type"];
-        foreach ($node_types as $type) {
-            if (in_array(strtolower($type), $external_types, true)) {
-                $this->log_debug(sprintf(
-                    "Suppressing JSON-LD node @id=%s (@type=%s) -- conflicts with other SEO plugin",
-                    $node_id,
-                    $type
-                ));
-                return true;
-            }
-        }
-
-        return false;
+        $this->log_debug("JSON-LD injected into wp_head (standalone, no SEO plugin detected)");
     }
 
     /**
@@ -348,9 +402,18 @@ class BotDot_WP_Content_Injector
         }
 
         $path = $this->get_current_url_path();
+        $this->log_debug(sprintf("Fetching appendix for path: %s", $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
         if (!$data || $data["html"] === null) {
+            $api_status = ($data && isset($data["status"])) ? $data["status"] : "no_response";
+            $api_reason = ($data && isset($data["reason"])) ? $data["reason"] : "unknown";
+            $this->log_debug(sprintf(
+                "No appendix HTML for path '%s' (api_status=%s, reason=%s)",
+                $path,
+                $api_status,
+                $api_reason
+            ));
             return $content;
         }
 
@@ -404,9 +467,18 @@ class BotDot_WP_Content_Injector
         }
 
         $path = $this->get_current_url_path();
+        $this->log_debug(sprintf("Fetching appendix for footer injection, path: %s", $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
         if (!$data || $data["html"] === null) {
+            $api_status = ($data && isset($data["status"])) ? $data["status"] : "no_response";
+            $api_reason = ($data && isset($data["reason"])) ? $data["reason"] : "unknown";
+            $this->log_debug(sprintf(
+                "No appendix HTML for path '%s' (api_status=%s, reason=%s)",
+                $path,
+                $api_status,
+                $api_reason
+            ));
             return;
         }
 
@@ -495,16 +567,28 @@ class BotDot_WP_Content_Injector
     {
         // Don't inject in admin
         if (is_admin()) {
+            $this->log_debug("Injection blocked: is_admin()=true");
             return false;
         }
 
         // Don't inject on 404 or search
-        if (is_404() || is_search()) {
+        if (is_404()) {
+            $this->log_debug("Injection blocked: is_404()=true");
+            return false;
+        }
+        if (is_search()) {
+            $this->log_debug("Injection blocked: is_search()=true");
             return false;
         }
 
         // Check valid page type
         if (!$this->is_valid_page_type()) {
+            $this->log_debug(sprintf(
+                "Injection blocked: invalid page type (is_front_page=%s, is_home=%s, is_singular=%s)",
+                is_front_page() ? "true" : "false",
+                is_home() ? "true" : "false",
+                is_singular() ? "true" : "false"
+            ));
             return false;
         }
 
@@ -515,6 +599,11 @@ class BotDot_WP_Content_Injector
             if (!in_array($post_type, $allowed_types)) {
                 // Allow front page even if post type doesn't match
                 if (!is_front_page()) {
+                    $this->log_debug(sprintf(
+                        "Injection blocked: post_type '%s' not in allowed types [%s]",
+                        $post_type,
+                        implode(", ", $allowed_types)
+                    ));
                     return false;
                 }
             }
@@ -525,7 +614,14 @@ class BotDot_WP_Content_Injector
         if ($current_id) {
             $inject_meta = get_post_meta($current_id, "_botdot_inject_enabled", true);
             if ($inject_meta !== "") {
-                return (bool) $inject_meta;
+                $enabled = (bool) $inject_meta;
+                if (!$enabled) {
+                    $this->log_debug(sprintf(
+                        "Injection blocked: per-page meta _botdot_inject_enabled=false (post_id=%d)",
+                        $current_id
+                    ));
+                }
+                return $enabled;
             }
         }
 

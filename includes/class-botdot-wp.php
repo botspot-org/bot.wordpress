@@ -188,9 +188,9 @@ class BotDot_WP
         $content_injector = new BotDot_WP_Content_Injector($this->get_plugin_name(), $this->get_version());
         $public = new BotDot_WP_Public($this->get_plugin_name(), $this->get_version(), $content_injector);
 
-        // Detect existing JSON-LD from other SEO plugins (before our injection)
-        $this->loader->add_filter("wpseo_json_ld_output", $content_injector, "detect_yoast_jsonld", 10);
-        $this->loader->add_filter("rank_math/json_ld", $content_injector, "detect_rankmath_jsonld", 10);
+        // Merge locus JSON-LD into SEO plugin output (priority 99: run after they build their graph)
+        $this->loader->add_filter("wpseo_json_ld_output", $content_injector, "merge_into_yoast_jsonld", 99);
+        $this->loader->add_filter("rank_math/json_ld", $content_injector, "merge_into_rankmath_jsonld", 99);
 
         // JSON-LD injection via wp_head (priority 99, after other SEO plugins)
         $this->loader->add_action("wp_head", $content_injector, "inject_jsonld", 99);
