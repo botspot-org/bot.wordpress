@@ -106,14 +106,110 @@ class BotDot_WP_Content_Injector
     }
 
     /**
-     * Merge locus JSON-LD into Yoast SEO's @graph output.
+     * Merge locus JSON-LD into Yoast SEO's @graph array (modern Yoast 14.0+).
+     *
+     * Filter: wpseo_schema_graph (priority 99)
+     *
+     * This filter receives the @graph array directly (not the full JSON-LD wrapper).
+     *
+     * @since    1.3.0
+     * @param    array    $graph    Yoast @graph array of nodes.
+     * @return   array              Modified @graph array with locus nodes merged in.
+     */
+    public function merge_into_yoast_graph($graph)
+    {
+        if (!is_array($graph)) {
+            return $graph;
+        }
+
+        // Already merged via this hook
+        if ($this->jsonld_merged_into_seo_plugin) {
+            return $graph;
+        }
+
+        $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
+        if ($conflict_mode === "off") {
+            $this->log_debug("JSON-LD conflict mode is 'off', skipping Yoast graph merge");
+            return $graph;
+        }
+
+        $locus_jsonld = $this->get_locus_jsonld();
+        if ($locus_jsonld === null) {
+            $this->log_debug("No locus JSON-LD available for Yoast graph merge");
+            return $graph;
+        }
+
+        $locus_nodes = $this->extract_graph_nodes($locus_jsonld);
+        if (empty($locus_nodes)) {
+            $this->log_debug("No locus @graph nodes to merge");
+            return $graph;
+        }
+
+        // Build a map of existing @types in Yoast's graph (lowercased)
+        $seo_type_index = [];
+        foreach ($graph as $idx => $node) {
+            if (!is_array($node) || !isset($node["@type"])) {
+                continue;
+            }
+            $types = (array) $node["@type"];
+            foreach ($types as $type) {
+                $seo_type_index[strtolower($type)] = $idx;
+            }
+        }
+
+        foreach ($locus_nodes as $locus_node) {
+            if (!is_array($locus_node) || !isset($locus_node["@type"])) {
+                $graph[] = $locus_node;
+                continue;
+            }
+
+            $locus_types = (array) $locus_node["@type"];
+            $collision_idx = null;
+
+            if ($conflict_mode === "merge") {
+                foreach ($locus_types as $type) {
+                    $key = strtolower($type);
+                    if (isset($seo_type_index[$key])) {
+                        $collision_idx = $seo_type_index[$key];
+                        break;
+                    }
+                }
+            }
+
+            if ($collision_idx !== null) {
+                foreach ($locus_node as $prop => $value) {
+                    if (!isset($graph[$collision_idx][$prop])) {
+                        $graph[$collision_idx][$prop] = $value;
+                    }
+                }
+                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
+                $this->log_debug(sprintf(
+                    "Merged locus node @id=%s into Yoast node @type=%s (additive)",
+                    $node_id,
+                    implode(",", $locus_types)
+                ));
+            } else {
+                $graph[] = $locus_node;
+                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
+                $this->log_debug(sprintf(
+                    "Appended locus node @id=%s (@type=%s) to Yoast @graph",
+                    $node_id,
+                    implode(",", $locus_types)
+                ));
+            }
+        }
+
+        $this->jsonld_merged_into_seo_plugin = true;
+        $this->log_debug(sprintf("JSON-LD merge into Yoast graph complete (%d locus nodes processed)", count($locus_nodes)));
+
+        return $graph;
+    }
+
+    /**
+     * Merge locus JSON-LD into Yoast SEO's full output (legacy fallback).
      *
      * Filter: wpseo_json_ld_output (priority 99)
-     *
-     * In "merge" mode: merges locus properties into colliding @type nodes (additive only),
-     * appends non-colliding nodes to Yoast's @graph.
-     * In "replace" mode: appends all locus nodes unconditionally.
-     * In "off" mode: returns data unmodified.
+     * Only runs if wpseo_schema_graph didn't fire (old Yoast versions).
      *
      * @since    1.3.0
      * @param    array    $data    Yoast JSON-LD data.
@@ -121,6 +217,9 @@ class BotDot_WP_Content_Injector
      */
     public function merge_into_yoast_jsonld($data)
     {
+        if ($this->jsonld_merged_into_seo_plugin) {
+            return $data;
+        }
         return $this->merge_into_seo_jsonld($data, "Yoast");
     }
 

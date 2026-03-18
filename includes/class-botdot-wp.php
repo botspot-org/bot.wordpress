@@ -189,6 +189,9 @@ class BotDot_WP
         $public = new BotDot_WP_Public($this->get_plugin_name(), $this->get_version(), $content_injector);
 
         // Merge locus JSON-LD into SEO plugin output (priority 99: run after they build their graph)
+        // wpseo_schema_graph: modern Yoast (14.0+) — receives @graph array directly
+        // wpseo_json_ld_output: legacy Yoast fallback — receives full JSON-LD object
+        $this->loader->add_filter("wpseo_schema_graph", $content_injector, "merge_into_yoast_graph", 99);
         $this->loader->add_filter("wpseo_json_ld_output", $content_injector, "merge_into_yoast_jsonld", 99);
         $this->loader->add_filter("rank_math/json_ld", $content_injector, "merge_into_rankmath_jsonld", 99);
 
