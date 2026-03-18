@@ -122,11 +122,17 @@ if ($active_tab === "sync") {
 
     <?php settings_errors(); ?>
 
-    <?php if (BotDot_WP_Logger::has_errors()): ?>
+    <?php
+    $all_entries = BotDot_WP_Logger::get_recent_errors();
+    $errors = array_filter($all_entries, function ($e) { return $e["type"] !== "debug"; });
+    $debug_entries = array_filter($all_entries, function ($e) { return $e["type"] === "debug"; });
+    ?>
+
+    <?php if (!empty($errors)): ?>
         <div class="notice notice-warning">
             <h3><?php _e("Recent Errors", "botdot-wp"); ?></h3>
             <ul style="list-style: disc; margin-left: 20px;">
-                <?php foreach (BotDot_WP_Logger::get_recent_errors(5) as $error): ?>
+                <?php foreach (array_slice($errors, 0, 5) as $error): ?>
                     <li>
                         <strong><?php echo esc_html(ucfirst($error["type"])); ?>:</strong>
                         <?php echo esc_html($error["message"]); ?>
@@ -137,6 +143,25 @@ if ($active_tab === "sync") {
             <p>
                 <button type="button" id="botdot-wp-clear-errors" class="button">
                     <?php _e("Clear Errors", "botdot-wp"); ?>
+                </button>
+            </p>
+        </div>
+    <?php endif; ?>
+
+    <?php if (BotDot_WP_Options::get("debug_mode") && !empty($debug_entries)): ?>
+        <div class="notice notice-info">
+            <h3><?php _e("Debug Log", "botdot-wp"); ?></h3>
+            <ul style="list-style: none; margin-left: 0; font-family: monospace; font-size: 12px;">
+                <?php foreach (array_slice($debug_entries, 0, 20) as $entry): ?>
+                    <li style="padding: 2px 0; border-bottom: 1px solid #eee;">
+                        <span style="color: #999;"><?php echo esc_html(date("H:i:s", $entry["timestamp"])); ?></span>
+                        <?php echo esc_html($entry["message"]); ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <p>
+                <button type="button" id="botdot-wp-clear-errors" class="button">
+                    <?php _e("Clear Log", "botdot-wp"); ?>
                 </button>
             </p>
         </div>

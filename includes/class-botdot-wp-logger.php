@@ -34,7 +34,7 @@ class BotDot_WP_Logger
      * @access   private
      * @var      int    $max_errors    Maximum number of errors to keep.
      */
-    private static $max_errors = 10;
+    private static $max_errors = 50;
 
     /**
      * Transient expiration time (in seconds)
@@ -81,11 +81,14 @@ class BotDot_WP_Logger
             return;
         }
 
-        // Always log when plugin debug_mode is on — don't require WP_DEBUG
+        // Write to PHP error_log
         error_log("[BotSpot WP] DEBUG: " . $message);
         if (!empty($context)) {
             error_log("[BotSpot WP] Context: " . print_r($context, true));
         }
+
+        // Store in transient for display in plugin dashboard
+        self::store_error($message, "debug", $context);
     }
 
     /**
