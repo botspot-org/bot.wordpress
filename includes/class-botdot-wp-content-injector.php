@@ -871,11 +871,22 @@ class BotDot_WP_Content_Injector
     private function sanitize_html($html)
     {
         $allowed = wp_kses_allowed_html("post");
-        $allowed["details"] = ["class" => true, "open" => true, "id" => true];
+
+        // Appendix-specific elements
+        $allowed["section"] = ["id" => true, "class" => true, "style" => true, "role" => true, "aria-label" => true];
+        $allowed["details"] = ["class" => true, "open" => true, "id" => true, "data-type" => true];
         $allowed["summary"] = ["class" => true, "id" => true];
         $allowed["dl"] = ["class" => true, "id" => true];
         $allowed["dt"] = ["class" => true, "id" => true];
         $allowed["dd"] = ["class" => true, "id" => true];
+        $allowed["svg"] = ["width" => true, "height" => true, "viewbox" => true, "fill" => true, "xmlns" => true, "class" => true];
+        $allowed["path"] = ["d" => true, "stroke" => true, "stroke-width" => true, "stroke-linecap" => true, "stroke-linejoin" => true, "fill" => true];
+        $allowed["style"] = ["id" => true, "type" => true];
+
+        // Allow style attribute on span/div (for CSS custom property wrappers)
+        $allowed["span"]["style"] = true;
+        $allowed["div"]["style"] = true;
+
         return wp_kses($html, $allowed);
     }
 
