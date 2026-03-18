@@ -500,6 +500,13 @@ class BotDot_WP_Content_Injector
             return $content;
         }
 
+        // Detect page builders that discard the_content output.
+        // In those cases, skip injection here and let wp_footer handle it.
+        if ($this->is_page_builder_active()) {
+            $this->log_debug("Page builder detected, deferring appendix to footer fallback");
+            return $content;
+        }
+
         $path = $this->get_current_url_path();
         $this->log_debug(sprintf("Fetching appendix for path: %s", $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
@@ -531,9 +538,66 @@ class BotDot_WP_Content_Injector
     }
 
     /**
-     * Inject appendix above footer
+     * Detect if a page builder is actively rendering the current page.
+     *
+     * Page builders like Elementor, Divi, WPBakery, Beaver Builder, and Bricks
+     * call the_content filter but discard its output, so injecting there is futile.
+     *
+     * @since    1.3.0
+     * @access   private
+     * @return   bool    True if a page builder is rendering.
+     */
+    private function is_page_builder_active()
+    {
+        // Elementor
+        if (defined("ELEMENTOR_VERSION")) {
+            $post_id = get_the_ID();
+            if ($post_id && get_post_meta($post_id, "_elementor_edit_mode", true) === "builder") {
+                return true;
+            }
+        }
+
+        // Divi Builder
+        if (defined("ET_BUILDER_VERSION")) {
+            $post_id = get_the_ID();
+            if ($post_id && get_post_meta($post_id, "_et_pb_use_builder", true) === "on") {
+                return true;
+            }
+        }
+
+        // WPBakery (Visual Composer)
+        if (defined("WPB_VC_VERSION")) {
+            return true;
+        }
+
+        // Beaver Builder
+        if (class_exists("FLBuilderModel")) {
+            $post_id = get_the_ID();
+            if ($post_id && get_post_meta($post_id, "_fl_builder_enabled", true)) {
+                return true;
+            }
+        }
+
+        // Bricks Builder
+        if (defined("BRICKS_VERSION")) {
+            $post_id = get_the_ID();
+            if ($post_id && get_post_meta($post_id, "_bricks_editor_mode", true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Inject appendix via wp_footer as fallback or primary method.
      *
      * Hook: wp_footer (priority 5)
+     *
+     * Fires as a universal fallback: if the_content filter ran but a page builder
+     * (Elementor, Divi, WPBakery, etc.) discarded the output, $appendix_injected
+     * will still be false and we inject here instead. Also fires as primary method
+     * when injection_position is 'above_footer'.
      *
      * @since    1.0.0
      */
@@ -544,13 +608,6 @@ class BotDot_WP_Content_Injector
         }
 
         if (!$this->should_inject_appendix()) {
-            return;
-        }
-
-        $position = BotDot_WP_Options::get("injection_position", "bottom");
-
-        // Only inject via footer for 'above_footer' position
-        if ($position !== "above_footer") {
             return;
         }
 
@@ -566,7 +623,7 @@ class BotDot_WP_Content_Injector
         }
 
         $path = $this->get_current_url_path();
-        $this->log_debug(sprintf("Fetching appendix for footer injection, path: %s", $path));
+        $this->log_debug(sprintf("Fetching appendix for footer injection (fallback), path: %s", $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
         if (!$data || $data["html"] === null) {
@@ -589,7 +646,7 @@ class BotDot_WP_Content_Injector
         if (!empty($html)) {
             $this->appendix_injected = true;
             echo $html;
-            $this->log_debug(sprintf("Appendix injected via footer hook (%d bytes)", strlen($html)));
+            $this->log_debug(sprintf("Appendix injected via footer fallback (%d bytes)", strlen($html)));
         }
     }
 
