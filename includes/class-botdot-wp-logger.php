@@ -76,17 +76,15 @@ class BotDot_WP_Logger
      */
     public static function log_debug($message, $context = [])
     {
-        // Only log if debug mode is enabled
+        // Only log if debug mode is enabled in plugin settings
         if (!BotDot_WP_Options::get("debug_mode")) {
             return;
         }
 
-        // Log to WordPress debug log if WP_DEBUG is enabled
-        if (defined("WP_DEBUG") && WP_DEBUG) {
-            error_log("[BotSpot WP] DEBUG: " . $message);
-            if (!empty($context)) {
-                error_log("[BotSpot WP] Context: " . print_r($context, true));
-            }
+        // Always log when plugin debug_mode is on — don't require WP_DEBUG
+        error_log("[BotSpot WP] DEBUG: " . $message);
+        if (!empty($context)) {
+            error_log("[BotSpot WP] Context: " . print_r($context, true));
         }
     }
 
