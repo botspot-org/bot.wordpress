@@ -1,12 +1,34 @@
 /**
  * BotSpot WP Appendix Styles
  *
- * Overrides the API-provided ba-* styles to inherit from the parent theme.
- * Uses WordPress theme.json CSS custom properties where available.
+ * Provides full structural CSS for the appendix widget. The API returns an
+ * inline <style> block, but wp_kses strips it — so all layout/structure rules
+ * must live here. Theme-inheriting overrides (colors, fonts) use WP
+ * theme.json custom properties where available.
  *
  * @package BotDot_WP
- * @version 2.0.4
+ * @version 2.1.0
  */
+
+/* ── Structural: box-sizing & marker reset ── */
+.ba-root *,
+.ba-root *::before,
+.ba-root *::after {
+    box-sizing: border-box;
+}
+
+.ba-root details > summary {
+    list-style: none;
+}
+
+.ba-root details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ba-root details > summary::marker {
+    display: none;
+    content: "";
+}
 
 /* ── Root: inherit everything from theme ── */
 .ba-root {
@@ -19,6 +41,7 @@
     margin: 2rem auto 0;
     padding: 0;
     border-top: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.08));
+    box-sizing: border-box;
 }
 
 /* ── Master accordion (outer wrapper) ── */
@@ -29,6 +52,9 @@
 }
 
 .ba-master > .ba-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 0.75rem 0;
     font-size: 0.95em;
     font-weight: 600;
@@ -37,6 +63,7 @@
     border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.08));
     cursor: pointer;
     user-select: none;
+    -webkit-user-select: none;
 }
 
 .ba-master > .ba-summary .ba-icon {
@@ -57,12 +84,19 @@
     border-bottom: none;
 }
 
+/* ── Summary (shared for master + items) ── */
 .ba-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 0.6rem 0;
     font-size: 0.9em;
     font-weight: 600;
     color: inherit;
     background: transparent;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .ba-summary:hover {
@@ -70,9 +104,22 @@
     opacity: 0.7;
 }
 
+/* ── Icon (chevron / toggle) ── */
 .ba-icon {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+    display: inline-flex;
+    align-items: center;
     color: inherit;
     opacity: 0.4;
+}
+
+details[open] > .ba-summary .ba-icon {
+    transform: rotate(180deg);
+}
+
+details[open] > .ba-summary .ba-icon-plus {
+    transform: none;
 }
 
 /* ── Body content ── */
@@ -88,10 +135,18 @@
     line-height: 1.65;
 }
 
+.ba-body p:last-child {
+    margin-bottom: 0;
+}
+
 /* ── FAQ ── */
 .ba-faq-item {
     border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.05));
     padding: 0.5rem 0;
+}
+
+.ba-faq-item:last-child {
+    border-bottom: none;
 }
 
 .ba-q {
@@ -104,6 +159,14 @@
     font-size: 0.85em;
     line-height: 1.6;
     padding-left: 0;
+}
+
+.ba-a p {
+    margin: 0 0 0.5em;
+}
+
+.ba-a p:last-child {
+    margin-bottom: 0;
 }
 
 /* ── Key Facts ── */
@@ -124,8 +187,9 @@
 .ba-facts .ba-source-quote {
     font-size: 0.8em;
     font-style: italic;
-    opacity: 0.6;
+    opacity: 0.55;
     margin: 0.15rem 0 0;
+    padding-left: 0;
 }
 
 /* ── Entities ── */
@@ -145,12 +209,13 @@
 
 .ba-entity-type {
     display: inline-block;
-    font-size: 0.7em;
-    font-weight: 400;
+    font-size: 0.65em;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    opacity: 0.5;
-    margin-left: 0.5em;
+    opacity: 0.45;
+    margin-left: 0.4em;
+    vertical-align: middle;
 }
 
 .ba-entities dd {
