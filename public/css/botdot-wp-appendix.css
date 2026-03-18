@@ -1,177 +1,182 @@
 /**
  * BotSpot WP Appendix Styles
  *
- * Inherits theme styles while providing clean structural CSS
+ * Overrides the API-provided ba-* styles to inherit from the parent theme.
+ * Uses WordPress theme.json CSS custom properties where available.
  *
  * @package BotDot_WP
- * @version 0.7.0
+ * @version 2.0.4
  */
 
-/* Main appendix content container - edge-to-edge */
-.botdot-appendix-content {
-    margin: 0;
+/* ── Root: inherit everything from theme ── */
+.ba-root {
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: inherit;
+    background: transparent;
+    max-width: none;
+    margin: 2rem auto 0;
     padding: 0;
-    clear: both;
-    width: 100%;
+    border-top: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.08));
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Appendix items */
-.botdot-appendix-item {
-    margin: 0;
-    padding: 1rem;
-    background-color: var(--wp--preset--color--background, rgba(0, 0, 0, 0.01));
+/* ── Master accordion (outer wrapper) ── */
+.ba-master {
+    border: none;
     border-radius: 0;
-    border-left: none;
-    border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.1));
+    overflow: visible;
 }
 
-.botdot-appendix-item:last-child {
+.ba-master > .ba-summary {
+    padding: 0.75rem 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--wp--preset--color--foreground, inherit);
+    background: transparent;
+    border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.08));
+    cursor: pointer;
+    user-select: none;
+}
+
+.ba-master > .ba-summary .ba-icon {
+    color: inherit;
+    opacity: 0.5;
+}
+
+/* ── Inner items ── */
+.ba-item {
+    border: none;
+    border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.06));
+    border-radius: 0;
+    margin-bottom: 0;
+    overflow: visible;
+}
+
+.ba-item:last-child {
     border-bottom: none;
 }
 
-.botdot-appendix-item-type {
-    margin-top: 0;
-    margin-bottom: 0.75rem;
-    font-size: 1.1em;
-    font-weight: 700;
-    color: var(--wp--preset--color--primary, #0073aa);
-    text-transform: capitalize;
-}
-
-/* Properties list */
-.botdot-appendix-properties {
-    margin: 0;
-    display: grid;
-    grid-template-columns: minmax(120px, auto) 1fr;
-    gap: 0.75rem 1.5rem;
-}
-
-.botdot-appendix-properties dt {
+.ba-summary {
+    padding: 0.6rem 0;
+    font-size: 0.9em;
     font-weight: 600;
-    color: var(--wp--preset--color--foreground, #333);
-    align-self: start;
-    padding-top: 0.25rem;
+    color: inherit;
+    background: transparent;
 }
 
-.botdot-appendix-properties dd {
-    margin: 0;
-    color: var(--wp--preset--color--foreground, #666);
-    word-break: break-word;
+.ba-summary:hover {
+    background: transparent;
+    opacity: 0.7;
 }
 
-/* Mobile: stack properties vertically */
-@media (max-width: 640px) {
-    .botdot-appendix-properties {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-
-    .botdot-appendix-properties dt {
-        font-size: 0.9em;
-        margin-bottom: -0.25rem;
-    }
+.ba-icon {
+    color: inherit;
+    opacity: 0.4;
 }
 
-/* Nested content */
-.botdot-appendix-nested {
-    margin-top: 0.75rem;
-    padding: 0.75rem;
-    padding-left: 1rem;
-    border-left: 3px solid var(--wp--preset--color--secondary, rgba(0, 0, 0, 0.15));
-    background-color: var(--wp--preset--color--background, rgba(0, 0, 0, 0.02));
-    border-radius: 3px;
-}
-
-/* Lists */
-.botdot-appendix-list {
-    margin: 0.5rem 0;
-    padding-left: 1.5rem;
-    list-style-type: circle;
-}
-
-.botdot-appendix-list li {
-    margin-bottom: 0.25rem;
-}
-
-/* Links */
-.botdot-appendix-link {
-    word-break: break-all;
-    color: var(--wp--preset--color--link, #0073aa);
-    text-decoration: underline;
-    text-decoration-style: dotted;
-    transition: all 0.2s ease;
-}
-
-.botdot-appendix-link:hover {
-    text-decoration-style: solid;
-    opacity: 0.8;
-}
-
-/* Metadata */
-.botdot-appendix-metadata {
-    margin-top: 0.75rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.1));
-    text-align: right;
-}
-
-.botdot-appendix-meta-text {
-    color: var(--wp--preset--color--foreground, #666);
+/* ── Body content ── */
+.ba-body {
+    padding: 0 0 0.75rem;
     font-size: 0.85em;
-    font-style: italic;
+    color: inherit;
+    opacity: 0.85;
 }
 
-/* Generic data */
-.botdot-appendix-data {
-    display: grid;
-    grid-template-columns: minmax(120px, auto) 1fr;
-    gap: 0.75rem 1.5rem;
+.ba-body p {
+    margin: 0 0 0.5em;
+    line-height: 1.65;
 }
 
-.botdot-appendix-data dt {
+/* ── FAQ ── */
+.ba-faq-item {
+    border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.05));
+    padding: 0.5rem 0;
+}
+
+.ba-q {
+    font-size: 0.85em;
     font-weight: 600;
-    color: var(--wp--preset--color--foreground, #333);
+    margin: 0 0 0.25em;
 }
 
-.botdot-appendix-data dd {
-    margin: 0;
-    color: var(--wp--preset--color--foreground, #666);
+.ba-a {
+    font-size: 0.85em;
+    line-height: 1.6;
+    padding-left: 0;
 }
 
+/* ── Key Facts ── */
+.ba-facts .ba-fact-item {
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.04));
+}
+
+.ba-facts .ba-fact-item:last-child {
+    border-bottom: none;
+}
+
+.ba-facts dt {
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.ba-facts .ba-source-quote {
+    font-size: 0.8em;
+    font-style: italic;
+    opacity: 0.6;
+    margin: 0.15rem 0 0;
+}
+
+/* ── Entities ── */
+.ba-entities .ba-entity-item {
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--wp--preset--color--border, rgba(0, 0, 0, 0.04));
+}
+
+.ba-entities .ba-entity-item:last-child {
+    border-bottom: none;
+}
+
+.ba-entities dt {
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.ba-entity-type {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.5;
+    margin-left: 0.5em;
+}
+
+.ba-entities dd {
+    font-size: 0.8em;
+    margin: 0.15rem 0 0;
+    opacity: 0.75;
+}
+
+/* ── Mobile ── */
 @media (max-width: 640px) {
-    .botdot-appendix-data {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
+    .ba-root {
+        font-size: 0.85rem;
+    }
+
+    .ba-body {
+        font-size: 0.8em;
     }
 }
 
-/* Text content */
-.botdot-appendix-text {
-    line-height: 1.7;
-    color: var(--wp--preset--color--foreground, #444);
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .botdot-appendix-item {
-        background-color: rgba(255, 255, 255, 0.02);
-    }
-}
-
-/* Print styles */
+/* ── Print ── */
 @media print {
-    .botdot-appendix-content {
+    .ba-root {
+        page-break-inside: avoid;
+    }
+
+    .ba-master[open] .ba-item {
         page-break-inside: avoid;
     }
 }

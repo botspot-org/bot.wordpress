@@ -870,6 +870,9 @@ class BotDot_WP_Content_Injector
      */
     private function sanitize_html($html)
     {
+        // Strip the injection config script tag (not for rendering)
+        $html = preg_replace('/<script[^>]*id="locus-injection-config"[^>]*>.*?<\/script>/s', '', $html);
+
         $allowed = wp_kses_allowed_html("post");
 
         // Appendix-specific elements
