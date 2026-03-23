@@ -72,10 +72,6 @@ class BotDot_WP_Activator {
         if (!BotDot_WP_Options::exists('inject_on_post_types')) {
             BotDot_WP_Options::set('inject_on_post_types', array('post', 'page'));
         }
-        if (!BotDot_WP_Options::exists('page_injection_status')) {
-            BotDot_WP_Options::set('page_injection_status', array());
-        }
-
         // Cache defaults
         if (!BotDot_WP_Options::exists('cache_ttl')) {
             BotDot_WP_Options::set('cache_ttl', 3600);

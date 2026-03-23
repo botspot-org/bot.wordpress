@@ -90,6 +90,7 @@ class BotDot_WP_Public
     public function register_shortcode()
     {
         add_shortcode("botdot_appendix", [$this, "render_appendix_shortcode"]);
+        add_shortcode("botspot_appendix", [$this, "render_appendix_shortcode"]);
     }
 
     /**

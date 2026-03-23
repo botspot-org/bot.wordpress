@@ -285,6 +285,7 @@ class BotDot_WP_Sync
         delete_post_meta($post_id, "_botdot_sync_hash");
         delete_post_meta($post_id, "_botdot_last_synced_at");
         delete_post_meta($post_id, "_botdot_sync_status");
+        delete_post_meta($post_id, "_botspot_pre_enrich_jsonld");
     }
 
     /**
@@ -312,6 +313,14 @@ class BotDot_WP_Sync
         }
 
         $payload = self::build_ingest_payload($post);
+
+        // Snapshot source JSON-LD before enrichment (schema versioning)
+        $source_jsonld = $payload["structured_data"]["data"]["source_jsonld"] ?? null;
+        if ($source_jsonld !== null) {
+            update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", wp_json_encode($source_jsonld));
+        } elseif (!get_post_meta($post->ID, "_botspot_pre_enrich_jsonld", true)) {
+            update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", "");
+        }
 
         // Apply filter to allow payload modification
         $payload = apply_filters("botdot_wp_sync_payload", $payload, $post, $event);
@@ -401,6 +410,9 @@ class BotDot_WP_Sync
         $excerpt = $post->post_excerpt ? mb_substr($post->post_excerpt, 0, 2000) : null;
         $url = mb_substr($permalink, 0, 2048);
 
+        // Extract existing page JSON-LD from SEO plugins (source layer for merge)
+        $source_jsonld = self::extract_page_jsonld($post->ID);
+
         $payload = [
             "source_type" => "wordpress",
             "identifier" => [
@@ -421,6 +433,16 @@ class BotDot_WP_Sync
                 "content" => $post->post_content,
                 "excerpt" => $excerpt,
             ],
+            "structured_data" => [
+                "schema_type" => "wordpress_" . $post->post_type,
+                "data" => [
+                    "post_id" => $post->ID,
+                    "post_type" => $post->post_type,
+                    "status" => $post->post_status,
+                    "featured_image" => $featured_image ?: null,
+                    "source_jsonld" => $source_jsonld,
+                ],
+            ],
             "media" => $media,
         ];
 
@@ -429,6 +451,132 @@ class BotDot_WP_Sync
         }
 
         return $payload;
+    }
+
+    /**
+     * Extract existing JSON-LD from SEO plugins for a post
+     *
+     * Checks Yoast SEO and RankMath for schema output. Filters out
+     * locus-generated nodes (containing #locus- in @id) to prevent
+     * circular re-ingestion.
+     *
+     * @since    2.2.0
+     * @param    int    $post_id    The post ID.
+     * @return   array|null         JSON-LD data or null if none found.
+     */
+    private static function extract_page_jsonld($post_id)
+    {
+        $jsonld = null;
+
+        // Try Yoast SEO first
+        if (defined("WPSEO_VERSION")) {
+            $permalink = get_permalink($post_id);
+            if ($permalink) {
+                $response = wp_remote_get(
+                    rest_url("yoast/v1/get_head") . "?url=" . urlencode($permalink),
+                    ["timeout" => 5],
+                );
+                if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+                    $body = json_decode(wp_remote_retrieve_body($response), true);
+                    if (isset($body["json"]) && is_array($body["json"])) {
+                        $jsonld = $body["json"];
+                    }
+                }
+            }
+        }
+
+        // Try RankMath if no Yoast data
+        if ($jsonld === null && class_exists("RankMath\\Schema\\DB")) {
+            $schemas = \RankMath\Schema\DB::get_schemas($post_id);
+            if (!empty($schemas) && is_array($schemas)) {
+                $jsonld = array_values($schemas);
+                if (count($jsonld) === 1) {
+                    $jsonld = $jsonld[0];
+                }
+            }
+        }
+
+        // Fallback: check Yoast post meta
+        if ($jsonld === null) {
+            $schema_meta = get_post_meta($post_id, "_yoast_wpseo_schema_page_type", true);
+            if (!empty($schema_meta)) {
+                // Only a type hint, not full JSON-LD - skip
+                $jsonld = null;
+            }
+        }
+
+        if ($jsonld === null) {
+            return null;
+        }
+
+        // Filter out locus-generated nodes to prevent circular re-ingestion
+        $jsonld = self::filter_locus_nodes($jsonld);
+
+        /**
+         * Filter extracted source JSON-LD before including in ingest payload.
+         *
+         * @since 2.2.0
+         * @param array|null $jsonld    The extracted JSON-LD data.
+         * @param int        $post_id   The post ID.
+         */
+        return apply_filters("botdot_wp_source_jsonld", $jsonld, $post_id);
+    }
+
+    /**
+     * Filter out locus-generated nodes from JSON-LD
+     *
+     * Removes any nodes with @id containing #locus- to prevent
+     * re-ingesting our own enrichment output.
+     *
+     * @since    2.2.0
+     * @param    array    $jsonld    JSON-LD data (single node, array, or @graph wrapper).
+     * @return   array|null          Filtered JSON-LD or null if empty after filtering.
+     */
+    private static function filter_locus_nodes($jsonld)
+    {
+        if (!is_array($jsonld)) {
+            return $jsonld;
+        }
+
+        // Handle @graph wrapper
+        if (isset($jsonld["@graph"]) && is_array($jsonld["@graph"])) {
+            $filtered = array_values(
+                array_filter($jsonld["@graph"], function ($node) {
+                    if (!is_array($node)) {
+                        return true;
+                    }
+                    $id = isset($node["@id"]) ? (string) $node["@id"] : "";
+                    return strpos($id, "#locus-") === false && strpos($id, "#botspot-") === false;
+                }),
+            );
+            if (empty($filtered)) {
+                return null;
+            }
+            $jsonld["@graph"] = $filtered;
+            return $jsonld;
+        }
+
+        // Handle flat array of nodes
+        if (isset($jsonld[0])) {
+            $filtered = array_values(
+                array_filter($jsonld, function ($node) {
+                    if (!is_array($node)) {
+                        return true;
+                    }
+                    $id = isset($node["@id"]) ? (string) $node["@id"] : "";
+                    return strpos($id, "#locus-") === false && strpos($id, "#botspot-") === false;
+                }),
+            );
+            return empty($filtered) ? null : $filtered;
+        }
+
+        // Single node
+        $id = isset($jsonld["@id"]) ? (string) $jsonld["@id"] : "";
+        if (strpos($id, "#locus-") !== false) {
+            return null;
+        }
+
+        return $jsonld;
     }
 
     /**
@@ -502,7 +650,16 @@ class BotDot_WP_Sync
             $items = [];
             $post_hashes = [];
             foreach ($posts as $post) {
-                $items[] = self::build_ingest_payload($post);
+                $payload = self::build_ingest_payload($post);
+                $items[] = $payload;
+
+                // Snapshot source JSON-LD before enrichment (schema versioning)
+                $source_jsonld = $payload["structured_data"]["data"]["source_jsonld"] ?? null;
+                if ($source_jsonld !== null) {
+                    update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", wp_json_encode($source_jsonld));
+                } elseif (!get_post_meta($post->ID, "_botspot_pre_enrich_jsonld", true)) {
+                    update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", "");
+                }
 
                 $post_hashes[$post->ID] = [
                     "hash" => self::compute_content_hash($post),

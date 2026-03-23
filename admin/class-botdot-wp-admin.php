@@ -119,8 +119,6 @@ class BotDot_WP_Admin
             "sanitize_callback" => [$this, "sanitize_post_types"],
             "default" => ["post", "page"],
         ]);
-        // page_injection_status is now stored as post_meta (_botdot_inject_enabled)
-
         // Cache settings
         register_setting("botdot_wp_settings", "botdot_wp_cache_ttl", [
             "sanitize_callback" => "absint",
@@ -133,7 +131,6 @@ class BotDot_WP_Admin
             "default" => false,
         ]);
 
-        // page_injection_status_json is no longer needed (migrated to post_meta)
     }
 
     /**
@@ -199,7 +196,7 @@ class BotDot_WP_Admin
         foreach ($sync_post_types as $post_type) {
             add_meta_box(
                 "botdot-wp-sync",
-                __("BotDot Sync", "botdot-wp"),
+                __("BotSpot Sync", "botdot-wp"),
                 [$this, "render_sync_meta_box"],
                 $post_type,
                 "side",
@@ -294,7 +291,7 @@ class BotDot_WP_Admin
      */
     public function add_sync_column($columns)
     {
-        $columns["botdot_sync"] = __("BotDot", "botdot-wp");
+        $columns["botdot_sync"] = __("BotSpot", "botdot-wp");
         return $columns;
     }
 
@@ -353,7 +350,7 @@ class BotDot_WP_Admin
      */
     public function add_bulk_sync_action($actions)
     {
-        $actions["botdot_sync"] = __("Sync with BotDot", "botdot-wp");
+        $actions["botdot_sync"] = __("Sync with BotSpot", "botdot-wp");
         return $actions;
     }
 
@@ -473,70 +470,6 @@ class BotDot_WP_Admin
     }
 
     /**
-     * Handle AJAX toggle page injection status
-     *
-     * @since    0.3.0
-     */
-    public function handle_toggle_page_injection()
-    {
-        check_ajax_referer("botdot_wp_toggle_page", "nonce");
-
-        if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
-            return;
-        }
-
-        $page_id = isset($_POST["page_id"]) ? absint($_POST["page_id"]) : 0;
-        $enabled = isset($_POST["enabled"]) ? (bool) $_POST["enabled"] : false;
-
-        if (!$page_id) {
-            wp_send_json_error(["message" => __("Invalid page ID", "botdot-wp")]);
-            return;
-        }
-
-        update_post_meta($page_id, "_botdot_inject_enabled", $enabled ? "1" : "0");
-
-        wp_send_json_success([
-            "page_id" => $page_id,
-            "enabled" => $enabled,
-        ]);
-    }
-
-    /**
-     * Handle AJAX bulk update page injection status
-     *
-     * @since    0.3.0
-     */
-    public function handle_bulk_update_pages()
-    {
-        check_ajax_referer("botdot_wp_bulk_pages", "nonce");
-
-        if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
-            return;
-        }
-
-        $page_ids = isset($_POST["page_ids"]) ? array_map("absint", (array) $_POST["page_ids"]) : [];
-        $enabled = isset($_POST["enabled"]) ? (bool) $_POST["enabled"] : false;
-
-        if (empty($page_ids)) {
-            wp_send_json_error(["message" => __("No pages selected", "botdot-wp")]);
-            return;
-        }
-
-        foreach ($page_ids as $page_id) {
-            if ($page_id > 0) {
-                update_post_meta($page_id, "_botdot_inject_enabled", $enabled ? "1" : "0");
-            }
-        }
-
-        wp_send_json_success([
-            "count" => count($page_ids),
-            "enabled" => $enabled,
-        ]);
-    }
-
-    /**
      * Handle AJAX manual sync for single post
      *
      * @since    1.0.0
@@ -564,71 +497,6 @@ class BotDot_WP_Admin
         } else {
             wp_send_json_error(["message" => __("Sync failed. Check error log for details.", "botdot-wp")]);
         }
-    }
-
-    /**
-     * Handle AJAX bulk sync
-     *
-     * @since    1.0.0
-     */
-    public function handle_bulk_sync()
-    {
-        check_ajax_referer("botdot_wp_bulk_sync", "nonce");
-
-        if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
-            return;
-        }
-
-        $result = BotDot_WP_Sync::bulk_sync();
-
-        if ($result !== false) {
-            wp_send_json_success([
-                "message" => __("Bulk sync initiated", "botdot-wp"),
-                "status" => $result,
-            ]);
-        } else {
-            wp_send_json_error(["message" => __("Bulk sync failed. Check connection settings.", "botdot-wp")]);
-        }
-    }
-
-    /**
-     * Handle AJAX sync status poll
-     *
-     * @since    1.0.0
-     */
-    public function handle_sync_status()
-    {
-        check_ajax_referer("botdot_wp_sync_status", "nonce");
-
-        if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
-            return;
-        }
-
-        $connector_url = BotDot_WP_Options::get_connector_url();
-        $api_key = BotDot_WP_Options::get("api_key");
-        $connection_id = BotDot_WP_Options::get("connection_id");
-
-        if (empty($connection_id)) {
-            wp_send_json_error(["message" => __("Connection not configured", "botdot-wp")]);
-            return;
-        }
-
-        $endpoint = rtrim($connector_url, "/") . "/sync/wordpress/" . $connection_id . "/status";
-
-        $response = wp_remote_get($endpoint, [
-            "headers" => ["X-API-Key" => $api_key],
-            "timeout" => 10,
-        ]);
-
-        if (is_wp_error($response)) {
-            wp_send_json_error(["message" => $response->get_error_message()]);
-            return;
-        }
-
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-        wp_send_json_success($body);
     }
 
     // ---- Sanitization helpers ----

@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin settings view with 3-tab interface
+ * Admin settings view with 2-tab interface
  *
  * @link       https://bot.spot
  * @since      1.0.0
@@ -20,101 +20,8 @@ $active_tab = isset($_GET["tab"]) ? sanitize_text_field($_GET["tab"]) : "connect
 // Common data
 $post_types = get_post_types(["public" => true], "objects");
 
-// Migrate legacy page_injection_status option to post_meta on first load
-$legacy_injection_status = get_option("botdot_wp_page_injection_status");
-if (is_array($legacy_injection_status) && !empty($legacy_injection_status)) {
-    foreach ($legacy_injection_status as $pid => $enabled) {
-        $pid = absint($pid);
-        if ($pid > 0) {
-            update_post_meta($pid, "_botdot_inject_enabled", $enabled ? "1" : "0");
-        }
-    }
-    delete_option("botdot_wp_page_injection_status");
-}
-
 // Migrate legacy injection_enabled to split appendix_enabled + jsonld_enabled
 BotDot_WP_Options::migrate_injection_toggles();
-
-// Pagination for display tab
-$per_page = 20;
-$current_page = isset($_GET["paged"]) ? max(1, intval($_GET["paged"])) : 1;
-$search = isset($_GET["s"]) ? sanitize_text_field($_GET["s"]) : "";
-$query = null;
-$total_pages = 0;
-
-if ($active_tab === "display") {
-    $selected_post_types = BotDot_WP_Options::get("inject_on_post_types", ["post", "page"]);
-    $args = [
-        "post_type" => !empty($selected_post_types) ? $selected_post_types : "post",
-        "posts_per_page" => $per_page,
-        "paged" => $current_page,
-        "post_status" => ["publish", "draft", "pending", "future"],
-        "orderby" => "modified",
-        "order" => "DESC",
-    ];
-    if (!empty($search)) {
-        $args["s"] = $search;
-    }
-    $query = new WP_Query($args);
-    $total_pages = $query->max_num_pages;
-}
-
-// Sync stats for sync tab
-$sync_stats = null;
-if ($active_tab === "sync") {
-    $sync_post_types = BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
-    global $wpdb;
-
-    // Single consolidated query for all sync status counts
-    $results = $wpdb->get_results(
-        $wpdb->prepare(
-            "SELECT pm.meta_value AS status, COUNT(DISTINCT pm.post_id) AS cnt
-         FROM {$wpdb->postmeta} pm
-         INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
-         WHERE pm.meta_key = '_botdot_sync_status'
-         AND pm.meta_value IN (%s, %s, %s)
-         AND p.post_status = 'publish'
-         GROUP BY pm.meta_value",
-            "synced",
-            "pending",
-            "error",
-        ),
-    );
-
-    $sync_stats = ["synced" => 0, "pending" => 0, "error" => 0];
-    if (is_array($results)) {
-        foreach ($results as $row) {
-            $sync_stats[$row->status] = (int) $row->cnt;
-        }
-    }
-
-    $total_published = 0;
-    foreach ($sync_post_types as $pt) {
-        $total_published += (int) wp_count_posts($pt)->publish;
-    }
-    $sync_stats["never"] = max(
-        0,
-        $total_published - $sync_stats["synced"] - $sync_stats["pending"] - $sync_stats["error"],
-    );
-    $sync_stats["total"] = $total_published;
-
-    // Enrichment status breakdown
-    $enrichment_results = $wpdb->get_results(
-        "SELECT pm.meta_value AS status, COUNT(DISTINCT pm.post_id) AS cnt
-         FROM {$wpdb->postmeta} pm
-         WHERE pm.meta_key = '_botdot_enrichment_status'
-         GROUP BY pm.meta_value",
-    );
-
-    $enrichment_stats = ["indexed" => 0, "enriching" => 0, "enriched" => 0];
-    if (is_array($enrichment_results)) {
-        foreach ($enrichment_results as $row) {
-            if (isset($enrichment_stats[$row->status])) {
-                $enrichment_stats[$row->status] = (int) $row->cnt;
-            }
-        }
-    }
-}
 ?>
 
 <div class="wrap">
@@ -177,12 +84,7 @@ if ($active_tab === "sync") {
         <a href="?page=botdot-wp&tab=sync" class="nav-tab <?php echo $active_tab === "sync"
             ? "nav-tab-active"
             : ""; ?>">
-            <?php _e("Content Sync", "botdot-wp"); ?>
-        </a>
-        <a href="?page=botdot-wp&tab=display" class="nav-tab <?php echo $active_tab === "display"
-            ? "nav-tab-active"
-            : ""; ?>">
-            <?php _e("Display & Injection", "botdot-wp"); ?>
+            <?php _e("Sync & Injection", "botdot-wp"); ?>
         </a>
     </h2>
 
@@ -198,8 +100,6 @@ if ($active_tab === "sync") {
             "sync" => [
                 "botdot_wp_auto_sync_enabled" => BotDot_WP_Options::get("auto_sync_enabled") ? "1" : "0",
                 "botdot_wp_sync_sensitivity" => BotDot_WP_Options::get("sync_sensitivity", "medium"),
-            ],
-            "display" => [
                 "botdot_wp_appendix_enabled" => BotDot_WP_Options::get("appendix_enabled") ? "1" : "0",
                 "botdot_wp_jsonld_enabled" => BotDot_WP_Options::get("jsonld_enabled") ? "1" : "0",
                 "botdot_wp_jsonld_conflict_mode" => BotDot_WP_Options::get("jsonld_conflict_mode", "merge"),
@@ -225,8 +125,6 @@ if ($active_tab === "sync") {
             foreach ($sync_post_types as $pt) {
                 echo '<input type="hidden" name="botdot_wp_sync_post_types[]" value="' . esc_attr($pt) . '">';
             }
-        }
-        if ($active_tab !== "display") {
             $inject_post_types = BotDot_WP_Options::get("inject_on_post_types", ["post", "page"]);
             foreach ($inject_post_types as $pt) {
                 echo '<input type="hidden" name="botdot_wp_inject_on_post_types[]" value="' . esc_attr($pt) . '">';
@@ -303,7 +201,7 @@ if ($active_tab === "sync") {
         </div>
         <?php endif; ?>
 
-        <!-- Tab 2: Content Sync -->
+        <!-- Tab 2: Sync & Injection -->
         <?php if ($active_tab === "sync"): ?>
         <div class="tab-content">
             <table class="form-table">
@@ -371,81 +269,8 @@ if ($active_tab === "sync") {
                 </tr>
             </table>
 
-            <?php if ($sync_stats): ?>
             <hr>
-            <div class="botdot-section">
-                <h2><?php _e("Sync Status", "botdot-wp"); ?></h2>
-                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-                    <div style="padding: 15px; background: #edfaef; border-radius: 4px; min-width: 100px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 600; color: #00a32a;"><?php echo esc_html(
-                            $sync_stats["synced"],
-                        ); ?></div>
-                        <div style="font-size: 12px; color: #555;"><?php _e("Synced", "botdot-wp"); ?></div>
-                    </div>
-                    <div style="padding: 15px; background: #fcf9e8; border-radius: 4px; min-width: 100px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 600; color: #dba617;"><?php echo esc_html(
-                            $sync_stats["pending"],
-                        ); ?></div>
-                        <div style="font-size: 12px; color: #555;"><?php _e("Pending", "botdot-wp"); ?></div>
-                    </div>
-                    <div style="padding: 15px; background: #fcf0f1; border-radius: 4px; min-width: 100px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 600; color: #d63638;"><?php echo esc_html(
-                            $sync_stats["error"],
-                        ); ?></div>
-                        <div style="font-size: 12px; color: #555;"><?php _e("Errors", "botdot-wp"); ?></div>
-                    </div>
-                    <div style="padding: 15px; background: #f0f0f1; border-radius: 4px; min-width: 100px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 600; color: #999;"><?php echo esc_html(
-                            $sync_stats["never"],
-                        ); ?></div>
-                        <div style="font-size: 12px; color: #555;"><?php _e("Never Synced", "botdot-wp"); ?></div>
-                    </div>
-                </div>
 
-                <?php if (array_sum($enrichment_stats) > 0): ?>
-                <h3 style="margin-top: 20px;"><?php _e("Enrichment Status", "botdot-wp"); ?></h3>
-                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-                    <div style="padding: 15px; background: #e8f0fe; border-radius: 4px; min-width: 100px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 600; color: #2271b1;"><?php echo esc_html(
-                            $enrichment_stats["indexed"],
-                        ); ?></div>
-                        <div style="font-size: 12px; color: #555;"><?php _e("Indexed", "botdot-wp"); ?></div>
-                    </div>
-                    <div style="padding: 15px; background: #fef3e0; border-radius: 4px; min-width: 100px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 600; color: #dba617;"><?php echo esc_html(
-                            $enrichment_stats["enriching"],
-                        ); ?></div>
-                        <div style="font-size: 12px; color: #555;"><?php _e("Enriching", "botdot-wp"); ?></div>
-                    </div>
-                    <div style="padding: 15px; background: #edfaef; border-radius: 4px; min-width: 100px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 600; color: #00a32a;"><?php echo esc_html(
-                            $enrichment_stats["enriched"],
-                        ); ?></div>
-                        <div style="font-size: 12px; color: #555;"><?php _e("Enriched", "botdot-wp"); ?></div>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <p>
-                    <button type="button" id="botdot-wp-bulk-sync" class="button button-primary">
-                        <?php _e("Full Resync", "botdot-wp"); ?>
-                    </button>
-                    <span id="botdot-wp-bulk-sync-result" style="margin-left: 10px;"></span>
-                </p>
-                <p class="description"><?php _e(
-                    "Re-sync all published content to locus-connectors. This may take a few minutes for large sites.",
-                    "botdot-wp",
-                ); ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php submit_button(); ?>
-        </div>
-        <?php endif; ?>
-
-        <!-- Tab 3: Display & Injection -->
-        <?php if ($active_tab === "display"): ?>
-        <div class="tab-content">
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php _e("HTML Appendix", "botdot-wp"); ?></th>
@@ -540,7 +365,7 @@ if ($active_tab === "sync") {
                             ); ?>>
                             <?php _e("Manual Placement Only", "botdot-wp"); ?>
                             <span class="description">&mdash; <?php _e(
-                                "Use [botdot_appendix] shortcode or Gutenberg block",
+                                "Use [botdot_appendix] or [botspot_appendix] shortcode or Gutenberg block",
                                 "botdot-wp",
                             ); ?></span>
                         </label>
@@ -590,134 +415,6 @@ if ($active_tab === "sync") {
                 </tr>
             </table>
 
-            <hr>
-
-            <!-- Per-Page Injection Table -->
-            <div class="botdot-section">
-                <h2><?php _e("Per-Page Injection", "botdot-wp"); ?></h2>
-                <p class="description"><?php _e("Enable or disable injection for specific pages.", "botdot-wp"); ?></p>
-
-                <div class="tablenav top">
-                    <div class="alignleft actions bulkactions">
-                        <select name="bulk-action" id="bulk-action-selector-top">
-                            <option value="-1"><?php _e("Bulk Actions", "botdot-wp"); ?></option>
-                            <option value="enable"><?php _e("Enable Injection", "botdot-wp"); ?></option>
-                            <option value="disable"><?php _e("Disable Injection", "botdot-wp"); ?></option>
-                        </select>
-                        <button type="button" id="doaction" class="button action"><?php _e(
-                            "Apply",
-                            "botdot-wp",
-                        ); ?></button>
-                    </div>
-
-                    <div class="alignleft actions" style="margin-left: 10px;">
-                        <form method="get" style="display: inline-block; margin: 0;">
-                            <input type="hidden" name="page" value="botdot-wp">
-                            <input type="hidden" name="tab" value="display">
-                            <input type="search" name="s" value="<?php echo esc_attr(
-                                $search,
-                            ); ?>" placeholder="<?php esc_attr_e("Search pages...", "botdot-wp"); ?>">
-                            <button type="submit" class="button"><?php _e("Search", "botdot-wp"); ?></button>
-                        </form>
-                    </div>
-
-                    <?php if ($total_pages > 1): ?>
-                        <div class="tablenav-pages">
-                            <span class="displaying-num"><?php printf(
-                                _n("%s item", "%s items", $query->found_posts, "botdot-wp"),
-                                number_format_i18n($query->found_posts),
-                            ); ?></span>
-                            <?php
-                            $page_links = paginate_links([
-                                "base" => add_query_arg(["paged" => "%#%", "tab" => "display"]),
-                                "format" => "",
-                                "prev_text" => "&laquo;",
-                                "next_text" => "&raquo;",
-                                "total" => $total_pages,
-                                "current" => $current_page,
-                            ]);
-                            echo wp_kses_post($page_links);
-                            ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-                <table class="wp-list-table widefat fixed striped" id="botdot-pages-table">
-                    <thead>
-                        <tr>
-                            <td class="manage-column column-cb check-column">
-                                <input type="checkbox" id="cb-select-all-1">
-                            </td>
-                            <th scope="col" class="manage-column column-title column-primary"><?php _e(
-                                "Title",
-                                "botdot-wp",
-                            ); ?></th>
-                            <th scope="col" class="manage-column"><?php _e("Type", "botdot-wp"); ?></th>
-                            <th scope="col" class="manage-column"><?php _e("Status", "botdot-wp"); ?></th>
-                            <th scope="col" class="manage-column"><?php _e("Last Modified", "botdot-wp"); ?></th>
-                            <th scope="col" class="manage-column"><?php _e("Injection", "botdot-wp"); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if ($query && $query->have_posts()): ?>
-                            <?php while ($query->have_posts()):
-                                $query->the_post(); ?>
-                                <?php
-                                $post_id = get_the_ID();
-                                $inject_meta = get_post_meta($post_id, "_botdot_inject_enabled", true);
-                                $is_enabled = $inject_meta !== "" ? (bool) $inject_meta : true;
-                                $post_type_obj = get_post_type_object(get_post_type());
-                                ?>
-                                <tr>
-                                    <th scope="row" class="check-column">
-                                        <input type="checkbox" name="page_ids[]" value="<?php echo esc_attr(
-                                            $post_id,
-                                        ); ?>" class="page-checkbox">
-                                    </th>
-                                    <td class="title column-title column-primary">
-                                        <strong>
-                                            <a href="<?php echo esc_url(get_edit_post_link($post_id)); ?>">
-                                                <?php echo esc_html(get_the_title()); ?>
-                                            </a>
-                                        </strong>
-                                        <div class="row-actions">
-                                            <span class="view">
-                                                <a href="<?php echo esc_url(
-                                                    get_permalink($post_id),
-                                                ); ?>" target="_blank"><?php _e("View", "botdot-wp"); ?></a>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td><?php echo esc_html($post_type_obj->labels->singular_name); ?></td>
-                                    <td><?php echo esc_html(get_post_status()); ?></td>
-                                    <td><?php echo esc_html(get_the_modified_date()); ?></td>
-                                    <td>
-                                        <label class="botdot-toggle-switch">
-                                            <input type="checkbox" class="botdot-page-toggle" data-page-id="<?php echo esc_attr(
-                                                $post_id,
-                                            ); ?>" <?php checked($is_enabled, true); ?>>
-                                            <span class="botdot-toggle-slider"></span>
-                                        </label>
-                                    </td>
-                                </tr>
-                            <?php
-                            endwhile; ?>
-                            <?php wp_reset_postdata(); ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="6"><?php _e("No pages found.", "botdot-wp"); ?></td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-
-                <?php if ($total_pages > 1): ?>
-                    <div class="tablenav bottom">
-                        <div class="tablenav-pages"><?php echo wp_kses_post($page_links); ?></div>
-                    </div>
-                <?php endif; ?>
-            </div>
-
             <?php submit_button(); ?>
         </div>
         <?php endif; ?>
@@ -726,12 +423,6 @@ if ($active_tab === "sync") {
 
 <style>
 .tab-content { padding-top: 20px; }
-.botdot-toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-.botdot-toggle-switch input { opacity: 0; width: 0; height: 0; }
-.botdot-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
-.botdot-toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-.botdot-toggle-switch input:checked + .botdot-toggle-slider { background-color: #2271b1; }
-.botdot-toggle-switch input:checked + .botdot-toggle-slider:before { transform: translateX(20px); }
 .botdot-section { margin-bottom: 30px; }
 .botdot-section h2 { margin-top: 0; }
 </style>
@@ -879,116 +570,6 @@ if ($active_tab === "sync") {
                 error: function() {
                     alert('<?php _e("Failed to clear errors", "botdot-wp"); ?>');
                     button.prop('disabled', false);
-                }
-            });
-        });
-
-        // Bulk sync
-        $('#botdot-wp-bulk-sync').on('click', function(e) {
-            e.preventDefault();
-            if (!confirm('<?php _e("This will re-sync all published content. Continue?", "botdot-wp"); ?>')) return;
-            var button = $(this);
-            var result = $('#botdot-wp-bulk-sync-result');
-            button.prop('disabled', true).text('<?php _e("Syncing...", "botdot-wp"); ?>');
-            result.html('');
-
-            $.ajax({
-                url: ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'botdot_wp_bulk_sync',
-                    nonce: '<?php echo wp_create_nonce("botdot_wp_bulk_sync"); ?>'
-                },
-                success: function(response) {
-                    if (response.success) {
-                        result.html('<span style="color: #00a32a;">&#10003; ' + response.data.message + '</span>');
-                    } else {
-                        result.html('<span style="color: #d63638;">&#10007; ' + (response.data.message || '<?php _e(
-                            "Sync failed",
-                            "botdot-wp",
-                        ); ?>') + '</span>');
-                    }
-                },
-                error: function() {
-                    result.html('<span style="color: #d63638;">&#10007; <?php _e(
-                        "Request failed",
-                        "botdot-wp",
-                    ); ?></span>');
-                },
-                complete: function() {
-                    button.prop('disabled', false).text('<?php _e("Full Resync", "botdot-wp"); ?>');
-                }
-            });
-        });
-
-        // Page toggle switches
-        $('.botdot-page-toggle').on('change', function() {
-            var checkbox = $(this);
-            var pageId = checkbox.data('page-id');
-            var enabled = checkbox.is(':checked');
-
-            $.ajax({
-                url: ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'botdot_wp_toggle_page_injection',
-                    nonce: '<?php echo wp_create_nonce("botdot_wp_toggle_page"); ?>',
-                    page_id: pageId,
-                    enabled: enabled ? 1 : 0
-                },
-                success: function(response) {
-                    if (response.success) {
-
-                    } else {
-                        checkbox.prop('checked', !enabled);
-                        alert(response.data.message || '<?php _e("Failed to update", "botdot-wp"); ?>');
-                    }
-                },
-                error: function() {
-                    checkbox.prop('checked', !enabled);
-                    alert('<?php _e("Request failed", "botdot-wp"); ?>');
-                }
-            });
-        });
-
-        // Select all checkbox
-        $('#cb-select-all-1').on('change', function() {
-            $('.page-checkbox').prop('checked', $(this).is(':checked'));
-        });
-
-        // Bulk actions
-        $('#doaction').on('click', function(e) {
-            e.preventDefault();
-            var action = $('#bulk-action-selector-top').val();
-            if (action === '-1') {
-                alert('<?php _e("Please select an action", "botdot-wp"); ?>');
-                return;
-            }
-            var selectedPages = [];
-            $('.page-checkbox:checked').each(function() { selectedPages.push($(this).val()); });
-            if (selectedPages.length === 0) {
-                alert('<?php _e("Please select at least one page", "botdot-wp"); ?>');
-                return;
-            }
-            var enabled = action === 'enable';
-            $.ajax({
-                url: ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'botdot_wp_bulk_update_pages',
-                    nonce: '<?php echo wp_create_nonce("botdot_wp_bulk_pages"); ?>',
-                    page_ids: selectedPages,
-                    enabled: enabled ? 1 : 0
-                },
-                success: function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert(response.data.message || '<?php _e("Bulk update failed", "botdot-wp"); ?>');
-                    }
-                },
-                error: function() {
-                    alert('<?php _e("Request failed", "botdot-wp"); ?>');
                 }
             });
         });

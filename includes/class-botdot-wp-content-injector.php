@@ -389,6 +389,24 @@ class BotDot_WP_Content_Injector
             return null;
         }
 
+        // Annotate with BotSpot sdPublisher attribution
+        $nodes = $this->extract_graph_nodes($jsonld);
+        if (!empty($nodes)) {
+            $nodes = $this->annotate_nodes_with_botspot($nodes);
+
+            // Append BotSpot org node if not already present
+            $existing_ids = array_filter(array_map(function ($n) {
+                return is_array($n) && isset($n["@id"]) ? $n["@id"] : null;
+            }, $nodes));
+            if (!in_array("https://bot.spot/#botspot", $existing_ids)) {
+                $nodes[] = $this->get_botspot_org_node();
+            }
+
+            // Re-wrap as @graph structure
+            $context = isset($jsonld["@context"]) ? $jsonld["@context"] : "https://schema.org";
+            $jsonld = ["@context" => $context, "@graph" => $nodes];
+        }
+
         $this->locus_jsonld_cache = $jsonld;
         return $jsonld;
     }
@@ -765,22 +783,6 @@ class BotDot_WP_Content_Injector
             }
         }
 
-        // Check per-page override via post_meta
-        $current_id = get_the_ID();
-        if ($current_id) {
-            $inject_meta = get_post_meta($current_id, "_botdot_inject_enabled", true);
-            if ($inject_meta !== "") {
-                $enabled = (bool) $inject_meta;
-                if (!$enabled) {
-                    $this->log_debug(sprintf(
-                        "Injection blocked: per-page meta _botdot_inject_enabled=false (post_id=%d)",
-                        $current_id
-                    ));
-                }
-                return $enabled;
-            }
-        }
-
         // Apply filter
         return apply_filters("botdot_wp_should_inject", true);
     }
@@ -815,7 +817,7 @@ class BotDot_WP_Content_Injector
             return true;
         }
 
-        if (has_shortcode($content, "botdot_appendix")) {
+        if (has_shortcode($content, "botdot_appendix") || has_shortcode($content, "botspot_appendix")) {
             return true;
         }
 
@@ -891,6 +893,58 @@ class BotDot_WP_Content_Injector
         $allowed["div"]["style"] = true;
 
         return wp_kses($html, $allowed);
+    }
+
+    /**
+     * Annotate JSON-LD nodes with BotSpot sdPublisher attribution.
+     *
+     * Adds sdPublisher property to each node and renames #locus- to #botspot-
+     * in @id values for public-facing output.
+     *
+     * @since    2.3.0
+     * @access   private
+     * @param    array    $nodes    Array of JSON-LD nodes.
+     * @return   array              Annotated nodes.
+     */
+    private function annotate_nodes_with_botspot($nodes)
+    {
+        $botspot_ref = ["@id" => "https://bot.spot/#botspot"];
+
+        return array_map(function ($node) use ($botspot_ref) {
+            if (!is_array($node)) {
+                return $node;
+            }
+
+            // Rename #locus- to #botspot- in @id for public-facing output
+            if (isset($node["@id"]) && strpos($node["@id"], "#locus-") !== false) {
+                $node["@id"] = str_replace("#locus-", "#botspot-", $node["@id"]);
+            }
+
+            // Add sdPublisher if not already set
+            if (!isset($node["sdPublisher"])) {
+                $node["sdPublisher"] = $botspot_ref;
+            }
+
+            return $node;
+        }, $nodes);
+    }
+
+    /**
+     * Get the BotSpot Organization node for schema attribution.
+     *
+     * @since    2.3.0
+     * @access   private
+     * @return   array    BotSpot Organization JSON-LD node.
+     */
+    private function get_botspot_org_node()
+    {
+        return [
+            "@type" => "Organization",
+            "@id" => "https://bot.spot/#botspot",
+            "name" => "BotSpot",
+            "url" => "https://bot.spot",
+            "description" => "AI-powered content enrichment and structured data.",
+        ];
     }
 
     /**
