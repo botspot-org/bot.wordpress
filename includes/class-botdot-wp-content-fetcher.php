@@ -63,7 +63,8 @@ class BotDot_WP_Content_Fetcher
             return null;
         }
 
-        $cache_key = "botdot_content_" . md5($url_path);
+        $lang = substr(get_locale(), 0, 2);
+        $cache_key = "botdot_content_" . md5($url_path . "_" . $lang);
 
         // Check transient cache
         $cached = get_transient($cache_key);
@@ -84,6 +85,7 @@ class BotDot_WP_Content_Fetcher
         // Fetch from locus-core
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/render";
         $endpoint = add_query_arg("path", $url_path, $endpoint);
+        $endpoint = add_query_arg("lang", $lang, $endpoint);
 
         self::log_debug(sprintf("Fetching from: %s", $endpoint));
 
@@ -165,7 +167,8 @@ class BotDot_WP_Content_Fetcher
      */
     public static function fetch_jsonld($url_path)
     {
-        $cache_key_jsonld = "botdot_jsonld_" . md5($url_path);
+        $lang = substr(get_locale(), 0, 2);
+        $cache_key_jsonld = "botdot_jsonld_" . md5($url_path . "_" . $lang);
 
         // Check per-request cache first
         if (isset(self::$request_cache[$cache_key_jsonld])) {
@@ -191,6 +194,7 @@ class BotDot_WP_Content_Fetcher
         // Fetch from locus-core /appendix/jsonld
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/jsonld";
         $endpoint = add_query_arg("path", $url_path, $endpoint);
+        $endpoint = add_query_arg("lang", $lang, $endpoint);
 
         self::log_debug(sprintf("Fetching JSON-LD from: %s", $endpoint));
 
