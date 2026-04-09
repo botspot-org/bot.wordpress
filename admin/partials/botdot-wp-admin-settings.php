@@ -23,9 +23,9 @@ BotDot_WP_Options::migrate_injection_toggles();
 $bsa_site_domain = wp_parse_url(home_url(), PHP_URL_HOST);
 $bsa_post_types = get_post_types(["public" => true], "objects");
 $bsa_has_api_key = !empty(BotDot_WP_Options::get("api_key"));
-$bsa_connection_id = BotDot_WP_Options::get("connection_id");
+$bsa_webhook_id = BotDot_WP_Options::get("webhook_id");
 $bsa_tenant_id = BotDot_WP_Options::get("tenant_id");
-$bsa_is_connected = !empty($bsa_connection_id);
+$bsa_is_connected = !empty($bsa_webhook_id);
 
 // WooCommerce detection
 $bsa_woocommerce_active = class_exists("WooCommerce");

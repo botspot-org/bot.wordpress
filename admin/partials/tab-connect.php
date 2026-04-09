@@ -9,7 +9,7 @@
  * Variables from parent partial:
  * - $bsa_has_api_key (bool)
  * - $bsa_is_connected (bool)
- * - $bsa_connection_id (string)
+ * - $bsa_webhook_id (string)
  * - $bsa_tenant_id (string)
  */
 
@@ -82,8 +82,8 @@ if (!defined("WPINC")) {
             <?php if ($bsa_is_connected && !empty($bsa_tenant_id)): ?>
             <div class="bsa-connection-info">
                 <div class="bsa-kv">
-                    <span class="bsa-kv__key"><?php _e("Connection ID", "botdot-wp"); ?></span>
-                    <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_connection_id); ?></code>
+                    <span class="bsa-kv__key"><?php _e("Webhook ID", "botdot-wp"); ?></span>
+                    <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_webhook_id); ?></code>
                 </div>
                 <div class="bsa-kv">
                     <span class="bsa-kv__key"><?php _e("Tenant ID", "botdot-wp"); ?></span>

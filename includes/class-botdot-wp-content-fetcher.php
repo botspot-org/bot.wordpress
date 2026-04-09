@@ -270,6 +270,11 @@ class BotDot_WP_Content_Fetcher
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/check";
         $endpoint = add_query_arg("path", $url_path, $endpoint);
 
+        $lang = substr(get_locale(), 0, 2);
+        if (!empty($lang)) {
+            $endpoint = add_query_arg("lang", $lang, $endpoint);
+        }
+
         $response = wp_remote_get($endpoint, [
             "headers" => [
                 "X-API-Key" => $api_key,

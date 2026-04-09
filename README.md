@@ -159,6 +159,17 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.3.0
+- **Fix**: Cache freshness check against `/api/v1/appendix/check` was silently broken. The plugin read a `content_hash` field from the response, but locus-core returned `hash`. The plugin fell through to "treat cache as fresh" on every call, masking the bug. Fixed on the core side by renaming the field; the plugin already reads the correct name.
+- **Fix**: Pass `lang` query parameter to `/api/v1/appendix/check` for consistency with the render and jsonld fetchers. Uses `substr(get_locale(), 0, 2)` to match the existing pattern.
+- **New**: Plugin reads `cache_ttl` from render/jsonld responses when provided, falling back to the local `cache_ttl` option otherwise. locus-core now suggests a default TTL of 3600 seconds.
+- **Change**: Deprecated the plugin's dependency on the `locus-connectors` service. The Connect tab now registers webhooks directly with `locus-core` via `POST /api/v1/webhooks`, which returns `id`, `secret`, and `org_id` in a single call. Two old call sites removed:
+  - `handle_register_connection()` no longer POSTs to `{connector_url}/api/v1/connections/register`
+  - `handle_test_connection()` no longer probes `{connector_url}/health`
+- **Internal**: `connection_id` option is now an alias for `webhook_id` (same UUID), preserved for backwards-compat with call sites that check `connection_id` as the "is connected" signal. Both options are set by `handle_register_connection()`.
+- **Note**: The `get_connector_url()` helper and `BOTDOT_WP_CONNECTOR_URL` constant are retained in this release for backwards-compat but are no longer called by the plugin. Plan to remove in a future major release.
+- **Compat**: This release requires locus-core with the corresponding `content_hash` / `cache_ttl` / tenant-self-service-webhooks fix. Upgrading the plugin against an older core will leave the cache freshness path still broken (same as before).
+
 ### 2.2.2
 - **Fix**: Admin UI was still visually off-center on wide WP content areas (the 1200px container was centered in a wider content area, appearing shifted right due to the WP sidebar on the left).
 - **Change**: The dark chrome (header bar, tab nav, panel backgrounds) now fills the entire WP content area edge-to-edge. Inner content is centered via `padding-inline: max(24px, calc((100% - 1200px) / 2))` — a single-selector CSS trick that expands padding symmetrically on wide screens without adding HTML wrappers.

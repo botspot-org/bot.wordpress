@@ -463,58 +463,21 @@ class BotDot_WP_Admin
             return;
         }
 
-        $results = [];
+        $result = BotDot_WP_Content_Fetcher::test_connection();
 
-        // Test locus-core connection
-        $core_result = BotDot_WP_Content_Fetcher::test_connection();
-        $results["locus_core"] = $core_result;
-
-        // Test locus-connectors connection
-        $connector_url = BotDot_WP_Options::get_connector_url();
-        $api_key = BotDot_WP_Options::get("api_key");
-
-        if (!empty($api_key)) {
-            $response = wp_remote_get(rtrim($connector_url, "/") . "/health", [
-                "headers" => ["X-API-Key" => $api_key],
-                "timeout" => 10,
-            ]);
-
-            if (is_wp_error($response)) {
-                $results["connector"] = [
-                    "success" => false,
-                    "message" => sprintf(
-                        __("Connector connection failed: %s", "botdot-wp"),
-                        $response->get_error_message(),
-                    ),
-                ];
-            } else {
-                $status = wp_remote_retrieve_response_code($response);
-                $results["connector"] = [
-                    "success" => $status >= 200 && $status < 300,
-                    "message" =>
-                        $status >= 200 && $status < 300
-                            ? __("Connected to locus-connectors successfully", "botdot-wp")
-                            : sprintf(__("Connector returned HTTP %d", "botdot-wp"), $status),
-                ];
-            }
-        } else {
-            $results["connector"] = [
-                "success" => false,
-                "message" => __("API key not configured", "botdot-wp"),
-            ];
-        }
-
-        $all_success = $results["locus_core"]["success"] && $results["connector"]["success"];
-
-        if ($all_success) {
+        if (!empty($result["success"])) {
             wp_send_json_success([
-                "message" => __("Both connections successful", "botdot-wp"),
-                "details" => $results,
+                "message" => isset($result["message"])
+                    ? $result["message"]
+                    : __("Connected to locus-core successfully.", "botdot-wp"),
+                "details" => ["locus_core" => $result],
             ]);
         } else {
             wp_send_json_error([
-                "message" => __("One or more connections failed", "botdot-wp"),
-                "details" => $results,
+                "message" => isset($result["message"])
+                    ? $result["message"]
+                    : __("Connection failed.", "botdot-wp"),
+                "details" => ["locus_core" => $result],
             ]);
         }
     }
@@ -674,8 +637,8 @@ class BotDot_WP_Admin
     /**
      * Handle AJAX connection registration
      *
-     * POST to connectors /api/v1/connections/register with API key + site info,
-     * store returned connection_id and webhook_secret.
+     * POST directly to core /api/v1/webhooks with API key + site info,
+     * store returned webhook_id, webhook_secret, and tenant_id (org_id).
      *
      * @since    1.1.0
      */
@@ -694,30 +657,33 @@ class BotDot_WP_Admin
             return;
         }
 
-        $connector_url = BotDot_WP_Options::get_connector_url();
-        $endpoint = rtrim($connector_url, "/") . "/api/v1/connections/register";
+        // Register webhook directly with locus-core.
+        // The WebhookRead response includes id, secret, and org_id, so we get
+        // everything we need in a single call - no locus-connectors dependency.
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
+        $webhook_url = home_url("/wp-json/botdot-wp/v1/webhook");
 
-        $payload = [
-            "site_url" => home_url(),
-            "site_name" => get_bloginfo("name"),
-            "wp_version" => get_bloginfo("version"),
-            "plugin_version" => BOTDOT_WP_VERSION,
-        ];
-
-        $response = wp_remote_post($endpoint, [
-            "headers" => [
-                "Content-Type" => "application/json",
-                "X-API-Key" => $api_key,
-            ],
-            "body" => wp_json_encode($payload),
-            "timeout" => 15,
-        ]);
+        $response = wp_remote_post(
+            rtrim($locus_api_url, "/") . "/api/v1/webhooks",
+            [
+                "headers" => [
+                    "Content-Type" => "application/json",
+                    "X-API-Key" => $api_key,
+                ],
+                "body" => wp_json_encode([
+                    "url" => $webhook_url,
+                    "events" => ["content.indexed", "content.enriched"],
+                    "name" => "WordPress - " . get_bloginfo("name"),
+                ]),
+                "timeout" => 15,
+            ]
+        );
 
         if (is_wp_error($response)) {
             wp_send_json_error([
                 "message" => sprintf(
-                    __("Registration failed: %s", "botdot-wp"),
-                    $response->get_error_message(),
+                    __("Webhook registration failed: %s", "botdot-wp"),
+                    $response->get_error_message()
                 ),
             ]);
             return;
@@ -727,53 +693,32 @@ class BotDot_WP_Admin
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
         if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
-            $error_msg = is_array($body) && isset($body["error"]) ? $body["error"] : sprintf("HTTP %d", $status_code);
+            $error_msg = is_array($body) && isset($body["detail"])
+                ? $body["detail"]
+                : sprintf("HTTP %d", $status_code);
             wp_send_json_error([
-                "message" => sprintf(__("Registration failed: %s", "botdot-wp"), $error_msg),
+                "message" => sprintf(__("Webhook registration failed: %s", "botdot-wp"), $error_msg),
             ]);
             return;
         }
 
-        // Store provisioned credentials
-        if (isset($body["connection_id"])) {
-            BotDot_WP_Options::set("connection_id", $body["connection_id"]);
+        // Store everything from the webhook create response
+        if (!empty($body["id"])) {
+            BotDot_WP_Options::set("webhook_id", $body["id"]);
+            // Also alias as connection_id for backwards compat with existing
+            // code that checks connection_id as the "is connected" signal
+            BotDot_WP_Options::set("connection_id", $body["id"]);
         }
-        if (isset($body["webhook_secret"])) {
-            BotDot_WP_Options::set("webhook_secret", $body["webhook_secret"]);
+        if (!empty($body["secret"])) {
+            BotDot_WP_Options::set("webhook_secret", $body["secret"]);
         }
-        if (isset($body["org_id"])) {
+        if (!empty($body["org_id"])) {
             BotDot_WP_Options::set("tenant_id", $body["org_id"]);
         }
 
-        // Auto-register webhook for enrichment status updates
-        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $webhook_url = home_url("/wp-json/botdot-wp/v1/webhook");
-        $webhook_response = wp_remote_post(
-            rtrim($locus_api_url, "/") . "/api/v1/webhooks",
-            [
-                "headers" => ["Content-Type" => "application/json", "X-API-Key" => $api_key],
-                "body" => wp_json_encode([
-                    "url" => $webhook_url,
-                    "events" => ["content.indexed", "content.enriched"],
-                    "name" => "WordPress - " . get_bloginfo("name"),
-                ]),
-                "timeout" => 15,
-            ],
-        );
-
-        if (!is_wp_error($webhook_response) && wp_remote_retrieve_response_code($webhook_response) < 300) {
-            $wh_body = json_decode(wp_remote_retrieve_body($webhook_response), true);
-            if (!empty($wh_body["id"])) {
-                BotDot_WP_Options::set("webhook_id", $wh_body["id"]);
-            }
-            if (!empty($wh_body["secret"])) {
-                BotDot_WP_Options::set("webhook_secret", $wh_body["secret"]);
-            }
-        }
-
         wp_send_json_success([
-            "message" => __("Connection registered successfully.", "botdot-wp"),
-            "connection_id" => isset($body["connection_id"]) ? $body["connection_id"] : "",
+            "message" => __("Connected successfully.", "botdot-wp"),
+            "connection_id" => isset($body["id"]) ? $body["id"] : "",
         ]);
     }
 
