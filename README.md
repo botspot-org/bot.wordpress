@@ -159,6 +159,11 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.2.2
+- **Fix**: Admin UI was still visually off-center on wide WP content areas (the 1200px container was centered in a wider content area, appearing shifted right due to the WP sidebar on the left).
+- **Change**: The dark chrome (header bar, tab nav, panel backgrounds) now fills the entire WP content area edge-to-edge. Inner content is centered via `padding-inline: max(24px, calc((100% - 1200px) / 2))` — a single-selector CSS trick that expands padding symmetrically on wide screens without adding HTML wrappers.
+- **Change**: Developer tab content now centers at `max-width: 1400px` (wider than the other tabs) to give logs more horizontal space before wrapping.
+
 ### 2.2.1
 - **Fix**: Layout centering — header, tabs, and form panels now share a single max-width and auto-center within WP's content area (was flush-left / right-pushed depending on tab).
 - **Fix**: Settings tab body was left-aligned within its 1200px container; now centered at `max-width: 760px` with `margin-inline: auto`.

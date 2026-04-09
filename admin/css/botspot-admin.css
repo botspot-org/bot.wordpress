@@ -217,21 +217,28 @@
 
 /* ============================================================
    CONTAINER CONSTRAINTS
-   Single centered column, fluid down to mobile.
-   Header / tabs / form share the same max-width so the vertical
-   border runs edge-to-edge without a jog between sections.
+
+   The chrome (header, tabs, form wrapper) fills the full WP
+   content area. The CONTENT inside each panel is constrained to
+   a readable max-width and centered. This way the dark background
+   and borders run edge-to-edge (matching the design's feel of a
+   dedicated workspace) while text/forms stay at a comfortable
+   reading width.
    ============================================================ */
 .botspot-admin-root .bsa-header,
 .botspot-admin-root .bsa-tabs,
 .botspot-admin-root .bsa-form {
     width: 100%;
-    max-width: 1200px;
-    margin-inline: auto;
-    border-inline: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* Panels center content via their padding-inline max() trick
+   (see .bsa-panel below). No inner max-width wrapper needed. */
 
 /* ============================================================
    HEADER
+   Full-width background, inner content constrained to 1200px.
+   The padding-inline uses max() so on wide screens the content
+   is centered via padding rather than an inner wrapper div.
    ============================================================ */
 .botspot-admin-root .bsa-header {
     height: 57px;
@@ -240,7 +247,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-inline: 24px;
+    padding-inline: max(24px, calc((100% - 1200px) / 2));
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -358,7 +365,7 @@
     border-bottom: 1px solid var(--bsa-border);
     display: flex;
     align-items: center;
-    padding-inline: 24px;
+    padding-inline: max(24px, calc((100% - 1200px) / 2));
 }
 
 .botspot-admin-root .bsa-tabs__group {
@@ -428,13 +435,17 @@
 
 .botspot-admin-root .bsa-panel {
     display: block;
-    padding: 32px;
+    padding-block: 32px;
+    padding-inline: max(32px, calc((100% - 1200px) / 2));
 }
 
 /* Developer panel: no outer padding so the log viewer
-   and sidebar sit flush against the form borders. */
+   and sidebar sit flush against the form borders. Inner content
+   (log list + sidebar) handles its own centering via the
+   `.bsa-panel > *` rule above. */
 .botspot-admin-root .bsa-panel[data-bsa-panel="developer"] {
-    padding: 0;
+    padding-block: 0;
+    padding-inline: max(0px, calc((100% - 1400px) / 2));
 }
 
 /* ============================================================
