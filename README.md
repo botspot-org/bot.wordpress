@@ -159,6 +159,19 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.2.1
+- **Fix**: Layout centering — header, tabs, and form panels now share a single max-width and auto-center within WP's content area (was flush-left / right-pushed depending on tab).
+- **Fix**: Settings tab body was left-aligned within its 1200px container; now centered at `max-width: 760px` with `margin-inline: auto`.
+- **Fix**: Developer tab log viewer no longer appears pushed to the right on wider screens.
+- **Change**: Removed hard `min-width: 900px` on header / tabs / form so the UI now adapts to narrower WP content areas (collapsed sidebar, secondary monitors, etc.).
+- **New**: Proper responsive breakpoints for screen adaptation:
+  - ≥ 1120px — default 2-column layout
+  - < 1120px — tightened Connect sidebar (320px) + Settings label column (160px)
+  - < 960px — stack Connect and Developer grids to single column
+  - < 820px — stack Settings row labels above controls; wrap header to two rows
+  - < 782px — WP mobile breakpoint tweaks (reduced padding, narrower margins)
+  - < 640px — hide status-pill text labels (dots only), wrap action rows
+
 ### 2.2.0
 - **New admin UI**: Dark-themed 3-tab interface (Connect / Settings / Developer) matching the BotSpot brand. Ports the bot.optimizer design to WordPress's admin shell while preserving the sidebar and admin bar.
 - **New**: Header status indicators for Connection / Sync / Runtime, fetched live via `wp_ajax_botdot_wp_get_status`. Cached for 5 minutes per admin page load.

@@ -64,6 +64,8 @@
     margin-bottom: -20px;
     position: relative;
     overflow-x: hidden;
+    /* Everything inside is centered via a single flow column below */
+    display: block;
 }
 
 /* Ambient background layers */
@@ -215,16 +217,15 @@
 
 /* ============================================================
    CONTAINER CONSTRAINTS
+   Single centered column, fluid down to mobile.
+   Header / tabs / form share the same max-width so the vertical
+   border runs edge-to-edge without a jog between sections.
    ============================================================ */
-.botspot-admin-root {
-    /* Constrain width like the reference design */
-}
-
 .botspot-admin-root .bsa-header,
 .botspot-admin-root .bsa-tabs,
 .botspot-admin-root .bsa-form {
+    width: 100%;
     max-width: 1200px;
-    min-width: 900px;
     margin-inline: auto;
     border-inline: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -430,6 +431,8 @@
     padding: 32px;
 }
 
+/* Developer panel: no outer padding so the log viewer
+   and sidebar sit flush against the form borders. */
 .botspot-admin-root .bsa-panel[data-bsa-panel="developer"] {
     padding: 0;
 }
@@ -1014,6 +1017,7 @@
    ============================================================ */
 .botspot-admin-root .bsa-settings {
     max-width: 760px;
+    margin-inline: auto;
 }
 
 .botspot-admin-root .bsa-settings-row {
@@ -1677,22 +1681,45 @@
 }
 
 /* ============================================================
-   RESPONSIVE: stack grids below 1000px
+   RESPONSIVE
+   Tiered breakpoints tuned for WP admin content widths:
+   - ≥ 1120px: default 2-column grids (Connect 1fr/380px, Developer 1fr/320px, Settings 200px/1fr)
+   - < 1120px: narrower Connect sidebar (320px) and Settings label column (160px)
+   - < 960px:  stack Connect + Developer grids to single column
+   - < 820px:  stack Settings row, compress header, reduce panel padding
+   - < 640px:  drop status-pill labels, keep only dots
    ============================================================ */
-@media (max-width: 1000px) {
-    .botspot-admin-root .bsa-header,
-    .botspot-admin-root .bsa-tabs,
-    .botspot-admin-root .bsa-form {
-        min-width: 0;
-    }
 
+/* Between 960px and 1120px: tighten sidebars but keep 2-column layout */
+@media (max-width: 1120px) {
     .botspot-admin-root .bsa-connect__grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr) 320px;
         gap: 24px;
     }
 
     .botspot-admin-root .bsa-developer__grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr) 280px;
+    }
+
+    .botspot-admin-root .bsa-settings-row {
+        grid-template-columns: 160px minmax(0, 1fr);
+        gap: 24px;
+    }
+
+    .botspot-admin-root .bsa-panel {
+        padding: 24px;
+    }
+}
+
+/* Stack 2-column grids to single column */
+@media (max-width: 960px) {
+    .botspot-admin-root .bsa-connect__grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+    }
+
+    .botspot-admin-root .bsa-developer__grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .botspot-admin-root .bsa-developer__grid > section {
@@ -1700,16 +1727,39 @@
         border-bottom: 1px solid var(--bsa-border);
     }
 
-    .botspot-admin-root .bsa-settings-row {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-
     .botspot-admin-root .bsa-header__status {
         gap: 10px;
     }
 }
 
+/* Stack Settings row labels above their controls, compress header */
+@media (max-width: 820px) {
+    .botspot-admin-root .bsa-settings-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .botspot-admin-root .bsa-header {
+        height: auto;
+        min-height: 57px;
+        flex-wrap: wrap;
+        padding-block: 8px;
+        gap: 8px;
+    }
+
+    .botspot-admin-root .bsa-header__status {
+        width: 100%;
+        justify-content: flex-start;
+        padding-top: 4px;
+        border-top: 1px solid var(--bsa-border-faint);
+    }
+
+    .botspot-admin-root .bsa-header__domain {
+        margin-inline-start: auto;
+    }
+}
+
+/* WP mobile admin breakpoint + very narrow screens */
 @media (max-width: 782px) {
     .botspot-admin-root {
         margin-left: -10px;
@@ -1717,11 +1767,49 @@
     }
 
     .botspot-admin-root .bsa-panel {
-        padding: 20px;
+        padding: 20px 16px;
     }
 
     .botspot-admin-root .bsa-header,
     .botspot-admin-root .bsa-tabs {
         padding-inline: 16px;
+    }
+
+    .botspot-admin-root .bsa-log-head,
+    .botspot-admin-root .bsa-sidebar-head,
+    .botspot-admin-root .bsa-sidebar-body {
+        padding-inline: 16px;
+    }
+
+    .botspot-admin-root .bsa-log-entry {
+        padding-inline: 16px;
+        flex-wrap: wrap;
+    }
+
+    .botspot-admin-root .bsa-h1 {
+        font-size: 20px;
+    }
+}
+
+/* Hide status-pill labels on very narrow screens; keep dots */
+@media (max-width: 640px) {
+    .botspot-admin-root .bsa-status-pill__label,
+    .botspot-admin-root .bsa-header__domain {
+        display: none;
+    }
+
+    .botspot-admin-root .bsa-header__divider--tiny {
+        display: none;
+    }
+
+    .botspot-admin-root .bsa-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .botspot-admin-root .bsa-save-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
     }
 }
