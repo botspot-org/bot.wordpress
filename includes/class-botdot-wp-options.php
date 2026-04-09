@@ -415,4 +415,15 @@ class BotDot_WP_Options
     {
         return BOTDOT_WP_CONNECTOR_URL;
     }
+
+    /**
+     * Whether WooCommerce is active on this install.
+     *
+     * @since    2.2.0
+     * @return   bool
+     */
+    public static function is_woocommerce_active()
+    {
+        return class_exists("WooCommerce");
+    }
 }

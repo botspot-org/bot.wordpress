@@ -1,0 +1,1727 @@
+/*!
+ * BotSpot WordPress Admin UI
+ * Scoped under .botspot-admin-root
+ *
+ * NOTE: This plugin hard-overrides to a dark theme regardless of the user's
+ * WP admin color scheme. This is an intentional brand-consistency choice.
+ */
+
+/* ============================================================
+   HIDE WP CHROME within our settings page
+   ============================================================ */
+.toplevel_page_botdot-wp .wrap > h1:first-of-type,
+.toplevel_page_botdot-wp .wrap > .notice,
+.toplevel_page_botdot-wp #wpbody-content > .notice {
+    display: none !important;
+}
+
+.toplevel_page_botdot-wp #wpbody-content {
+    padding-top: 0;
+}
+
+.toplevel_page_botdot-wp .wrap {
+    margin: 0;
+    padding: 0;
+}
+
+/* ============================================================
+   ROOT / TOKENS
+   ============================================================ */
+.botspot-admin-root {
+    --bsa-void: #050208;
+    --bsa-abyss: #0f0d1a;
+    --bsa-mint: #d1fef6;
+    --bsa-sky: #b6d5fe;
+    --bsa-violet: #743fe2;
+    --bsa-amber: #fbbf24;
+    --bsa-red: #f87171;
+
+    --bsa-border: rgba(255, 255, 255, 0.1);
+    --bsa-border-strong: rgba(255, 255, 255, 0.2);
+    --bsa-border-faint: rgba(255, 255, 255, 0.05);
+
+    --bsa-text: #fff;
+    --bsa-text-muted: rgba(255, 255, 255, 0.6);
+    --bsa-text-faint: rgba(255, 255, 255, 0.4);
+    --bsa-text-faintest: rgba(255, 255, 255, 0.3);
+
+    --bsa-bg-soft: rgba(255, 255, 255, 0.02);
+    --bsa-bg-softer: rgba(255, 255, 255, 0.01);
+
+    --bsa-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --bsa-font-mono: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
+
+    background: var(--bsa-void);
+    color: var(--bsa-text);
+    font-family: var(--bsa-font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01", "ss03";
+
+    min-height: calc(100vh - 32px);
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: -20px;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Ambient background layers */
+.botspot-admin-root::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 60% 40% at 20% 0%, rgba(209, 254, 246, 0.05), transparent 60%),
+        radial-gradient(ellipse 50% 40% at 100% 100%, rgba(116, 63, 226, 0.07), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.botspot-admin-root::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 4rem 4rem;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 60%, transparent 100%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 60%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.botspot-admin-root > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* ============================================================
+   SCOPED RESET (neutralize WP admin defaults)
+   ============================================================ */
+.botspot-admin-root,
+.botspot-admin-root * {
+    box-sizing: border-box;
+}
+
+.botspot-admin-root input[type="text"],
+.botspot-admin-root input[type="password"],
+.botspot-admin-root input[type="email"],
+.botspot-admin-root input[type="url"],
+.botspot-admin-root input[type="number"],
+.botspot-admin-root select,
+.botspot-admin-root textarea {
+    background: transparent;
+    border: 1px solid var(--bsa-border);
+    color: var(--bsa-text);
+    font-family: inherit;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 8px 12px;
+    min-height: auto;
+    line-height: 1.4;
+}
+
+.botspot-admin-root input[type="text"]:focus,
+.botspot-admin-root input[type="password"]:focus,
+.botspot-admin-root input[type="number"]:focus,
+.botspot-admin-root select:focus {
+    outline: none;
+    border-color: rgba(209, 254, 246, 0.4);
+    box-shadow: none;
+}
+
+.botspot-admin-root button,
+.botspot-admin-root .button,
+.botspot-admin-root .button-primary,
+.botspot-admin-root .button-secondary {
+    background: transparent;
+    border: 1px solid var(--bsa-border);
+    color: var(--bsa-text);
+    box-shadow: none;
+    text-shadow: none;
+    border-radius: 0;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.botspot-admin-root a {
+    color: var(--bsa-mint);
+    text-decoration: none;
+}
+
+.botspot-admin-root h1,
+.botspot-admin-root h2,
+.botspot-admin-root h3,
+.botspot-admin-root h4,
+.botspot-admin-root p {
+    margin: 0;
+    color: inherit;
+    font-weight: inherit;
+}
+
+.botspot-admin-root ul,
+.botspot-admin-root ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.botspot-admin-root .bsa-hidden {
+    display: none !important;
+}
+
+.botspot-admin-root .bsa-tabular-nums {
+    font-variant-numeric: tabular-nums;
+}
+
+.botspot-admin-root .bsa-mono {
+    font-family: var(--bsa-font-mono);
+}
+
+.botspot-admin-root .bsa-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.botspot-admin-root .bsa-icon--faint {
+    color: var(--bsa-text-faintest);
+}
+
+.botspot-admin-root .bsa-divider-v {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    background: var(--bsa-border);
+    margin-inline: 4px;
+    flex-shrink: 0;
+}
+
+.botspot-admin-root .bsa-code {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    color: var(--bsa-text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1px 4px;
+}
+
+/* ============================================================
+   CONTAINER CONSTRAINTS
+   ============================================================ */
+.botspot-admin-root {
+    /* Constrain width like the reference design */
+}
+
+.botspot-admin-root .bsa-header,
+.botspot-admin-root .bsa-tabs,
+.botspot-admin-root .bsa-form {
+    max-width: 1200px;
+    min-width: 900px;
+    margin-inline: auto;
+    border-inline: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.botspot-admin-root .bsa-header {
+    height: 57px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--bsa-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.botspot-admin-root .bsa-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.botspot-admin-root .bsa-header__mark {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.botspot-admin-root .bsa-header__subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    letter-spacing: -0.01em;
+}
+
+.botspot-admin-root .bsa-header__divider {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+
+.botspot-admin-root .bsa-header__divider--tiny {
+    height: 12px;
+    background: var(--bsa-border);
+}
+
+.botspot-admin-root .bsa-header__status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.botspot-admin-root .bsa-header__domain {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-inline-start: 8px;
+}
+
+/* ============================================================
+   STATUS PILLS
+   ============================================================ */
+.botspot-admin-root .bsa-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+    transition: color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-status-pill__label {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-muted);
+    transition: color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-status-pill:hover .bsa-status-pill__label {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.botspot-admin-root .bsa-dot {
+    position: relative;
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.botspot-admin-root .bsa-dot--pending {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.botspot-admin-root .bsa-dot--ok {
+    background: var(--bsa-mint);
+    animation: bsa-pulse-mint 2.4s ease-in-out infinite;
+}
+
+.botspot-admin-root .bsa-dot--warn {
+    background: var(--bsa-amber);
+}
+
+.botspot-admin-root .bsa-dot--error {
+    background: var(--bsa-red);
+}
+
+@keyframes bsa-pulse-mint {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(209, 254, 246, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(209, 254, 246, 0);
+    }
+}
+
+/* ============================================================
+   TAB NAV
+   ============================================================ */
+.botspot-admin-root .bsa-tabs {
+    height: 42px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--bsa-border);
+    display: flex;
+    align-items: center;
+    padding-inline: 24px;
+}
+
+.botspot-admin-root .bsa-tabs__group {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.botspot-admin-root .bsa-tabs__spacer {
+    flex: 1;
+}
+
+.botspot-admin-root .bsa-tabs__group--right {
+    margin-inline-start: auto;
+}
+
+.botspot-admin-root .bsa-tab {
+    position: relative;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-tab:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.botspot-admin-root .bsa-tab[aria-selected="true"],
+.botspot-admin-root .bsa-tab--active {
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-tab__underline {
+    position: absolute;
+    bottom: 0;
+    inset-inline: 0;
+    height: 1px;
+    background: var(--bsa-mint);
+    box-shadow: 0 0 10px rgba(209, 254, 246, 0.8);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.botspot-admin-root .bsa-tab[aria-selected="true"] .bsa-tab__underline,
+.botspot-admin-root .bsa-tab--active .bsa-tab__underline {
+    opacity: 1;
+}
+
+/* ============================================================
+   FORM + PANELS
+   ============================================================ */
+.botspot-admin-root .bsa-form {
+    margin: 0;
+    padding: 0;
+}
+
+.botspot-admin-root .bsa-panel {
+    display: block;
+    padding: 32px;
+}
+
+.botspot-admin-root .bsa-panel[data-bsa-panel="developer"] {
+    padding: 0;
+}
+
+/* ============================================================
+   SECTION HEADINGS
+   ============================================================ */
+.botspot-admin-root .bsa-section-head {
+    margin-bottom: 32px;
+}
+
+.botspot-admin-root .bsa-h1 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-h1__accent {
+    background: linear-gradient(to right, var(--bsa-mint), rgba(182, 213, 254, 0.8));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    filter: drop-shadow(0 2px 10px rgba(209, 254, 246, 0.2));
+}
+
+.botspot-admin-root .bsa-description {
+    margin-top: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.6;
+    max-width: 28rem;
+}
+
+/* ============================================================
+   REVEAL ANIMATIONS
+   ============================================================ */
+.botspot-admin-root .bsa-reveal {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: bsa-reveal 0.5s ease forwards;
+}
+
+.botspot-admin-root .bsa-reveal--1 { animation-delay: 0.05s; }
+.botspot-admin-root .bsa-reveal--2 { animation-delay: 0.12s; }
+.botspot-admin-root .bsa-reveal--3 { animation-delay: 0.20s; }
+.botspot-admin-root .bsa-reveal--4 { animation-delay: 0.28s; }
+
+@keyframes bsa-reveal {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================================
+   CONNECT TAB
+   ============================================================ */
+.botspot-admin-root .bsa-connect {
+    display: block;
+}
+
+.botspot-admin-root .bsa-connect__grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 32px;
+    align-items: start;
+}
+
+.botspot-admin-root .bsa-connect__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ============================================================
+   FIELDS
+   ============================================================ */
+.botspot-admin-root .bsa-field {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.botspot-admin-root .bsa-label {
+    display: block;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.botspot-admin-root .bsa-help {
+    font-size: 10px;
+    color: var(--bsa-text-faintest);
+    margin-top: 4px;
+    font-family: var(--bsa-font-mono);
+}
+
+/* ============================================================
+   INPUT GROUP (prefix icon + input + affix button)
+   ============================================================ */
+.botspot-admin-root .bsa-input-group {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--bsa-border);
+    background: var(--bsa-bg-soft);
+    transition: border-color 0.3s ease;
+}
+
+.botspot-admin-root .bsa-input-group:hover {
+    border-color: var(--bsa-border-strong);
+}
+
+.botspot-admin-root .bsa-input-group:focus-within {
+    border-color: rgba(209, 254, 246, 0.4);
+}
+
+.botspot-admin-root .bsa-input-group__prefix {
+    padding-inline: 12px;
+    display: flex;
+    align-items: center;
+    border-inline-end: 1px solid var(--bsa-border);
+    color: var(--bsa-text-faint);
+}
+
+.botspot-admin-root .bsa-input-group__prefix .bsa-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.botspot-admin-root .bsa-input-group__input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 12px;
+    font-family: var(--bsa-font-mono);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    outline: none;
+    min-width: 0;
+}
+
+.botspot-admin-root .bsa-input-group__input::placeholder {
+    color: var(--bsa-text-faintest);
+}
+
+.botspot-admin-root .bsa-input-group__input:focus {
+    outline: none;
+    border: none;
+}
+
+.botspot-admin-root .bsa-input-group__affix {
+    padding-inline: 12px;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faint);
+    background: transparent;
+    border: none;
+    border-inline-start: 1px solid var(--bsa-border);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.botspot-admin-root .bsa-input-group__affix:hover {
+    color: var(--bsa-text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================================
+   ACTIONS + BUTTONS + LINKS
+   ============================================================ */
+.botspot-admin-root .bsa-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.botspot-admin-root .bsa-btn {
+    height: 36px;
+    padding-inline: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--bsa-border);
+    color: rgba(255, 255, 255, 0.7);
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    border-radius: 0;
+}
+
+.botspot-admin-root .bsa-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-btn:disabled,
+.botspot-admin-root .bsa-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.botspot-admin-root .bsa-btn--primary {
+    height: 36px;
+    padding-inline: 20px;
+    border: 1px solid rgba(209, 254, 246, 0.4);
+    background: rgba(209, 254, 246, 0.06);
+    color: var(--bsa-mint);
+    filter: drop-shadow(0 0 12px rgba(209, 254, 246, 0.15));
+}
+
+.botspot-admin-root .bsa-btn--primary:hover {
+    background: rgba(209, 254, 246, 0.1);
+    border-color: rgba(209, 254, 246, 0.7);
+    color: var(--bsa-mint);
+    filter: drop-shadow(0 0 16px rgba(209, 254, 246, 0.35));
+}
+
+.botspot-admin-root .bsa-btn--ghost {
+    height: 32px;
+    padding-inline: 16px;
+    background: var(--bsa-void);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 16px;
+}
+
+.botspot-admin-root .bsa-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-link,
+.botspot-admin-root .bsa-link-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faint);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-link:hover,
+.botspot-admin-root .bsa-link-sm:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ============================================================
+   RESULT + CONNECTION INFO
+   ============================================================ */
+.botspot-admin-root .bsa-result {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--bsa-border);
+    background: var(--bsa-bg-soft);
+    font-family: var(--bsa-font-mono);
+    font-size: 11px;
+    color: var(--bsa-text-muted);
+}
+
+.botspot-admin-root .bsa-connection-info {
+    margin-top: 24px;
+    padding: 16px;
+    border: 1px solid var(--bsa-border);
+    background: var(--bsa-bg-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.botspot-admin-root .bsa-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-size: 10px;
+}
+
+.botspot-admin-root .bsa-kv__key {
+    font-family: var(--bsa-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faint);
+}
+
+.botspot-admin-root .bsa-kv__value {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.75);
+    word-break: break-all;
+    text-align: right;
+}
+
+/* ============================================================
+   CARDS (sidebar: setup guide + next step)
+   ============================================================ */
+.botspot-admin-root .bsa-card {
+    border: 1px solid var(--bsa-border);
+    background: var(--bsa-bg-softer);
+    position: relative;
+    overflow: hidden;
+}
+
+.botspot-admin-root .bsa-card__head {
+    height: 42px;
+    border-bottom: 1px solid var(--bsa-border);
+    display: flex;
+    align-items: center;
+    padding-inline: 16px;
+}
+
+.botspot-admin-root .bsa-card__title {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.botspot-admin-root .bsa-card__body {
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.botspot-admin-root .bsa-card__foot {
+    border-top: 1px solid var(--bsa-border);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.botspot-admin-root .bsa-card__foot-label {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faintest);
+}
+
+.botspot-admin-root .bsa-card--accent {
+    border-color: rgba(209, 254, 246, 0.25);
+    background: var(--bsa-bg-soft);
+}
+
+.botspot-admin-root .bsa-card__grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(209, 254, 246, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(209, 254, 246, 0.025) 1px, transparent 1px);
+    background-size: 1.5rem 1.5rem;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 30% 50%, #000 50%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 30% 50%, #000 50%, transparent 100%);
+    pointer-events: none;
+}
+
+/* ============================================================
+   STEPS (Setup guide list)
+   ============================================================ */
+.botspot-admin-root .bsa-steps {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    list-style: none;
+    margin: 0;
+}
+
+.botspot-admin-root .bsa-step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.botspot-admin-root .bsa-step__num {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.7);
+    font-variant-numeric: tabular-nums;
+}
+
+.botspot-admin-root .bsa-step--active .bsa-step__num {
+    border-color: rgba(209, 254, 246, 0.4);
+    background: rgba(209, 254, 246, 0.05);
+    color: var(--bsa-mint);
+}
+
+.botspot-admin-root .bsa-step__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.botspot-admin-root .bsa-step__title {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.botspot-admin-root .bsa-step__desc {
+    font-size: 10px;
+    color: var(--bsa-text-faint);
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+/* ============================================================
+   NEXT STEP CARD
+   ============================================================ */
+.botspot-admin-root .bsa-next-step__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.botspot-admin-root .bsa-next-step__icon {
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(209, 254, 246, 0.4);
+    background: rgba(209, 254, 246, 0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bsa-mint);
+    filter: drop-shadow(0 0 10px rgba(209, 254, 246, 0.25));
+}
+
+.botspot-admin-root .bsa-next-step__label {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-mint);
+}
+
+.botspot-admin-root .bsa-next-step__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+}
+
+.botspot-admin-root .bsa-next-step__desc {
+    margin-top: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.6;
+}
+
+/* ============================================================
+   FORM CONTROLS (checkbox, radio, toggle)
+   ============================================================ */
+.botspot-admin-root input[type="checkbox"],
+.botspot-admin-root input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    min-height: auto;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: transparent;
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+    box-shadow: none;
+}
+
+.botspot-admin-root input[type="checkbox"]:hover,
+.botspot-admin-root input[type="radio"]:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.botspot-admin-root input[type="checkbox"]:focus,
+.botspot-admin-root input[type="radio"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(209, 254, 246, 0.3);
+}
+
+.botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle) {
+    background: var(--bsa-mint);
+    border-color: var(--bsa-mint);
+    box-shadow: 0 0 10px rgba(209, 254, 246, 0.35);
+}
+
+.botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle)::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0;
+    width: 4px;
+    height: 8px;
+    border: solid var(--bsa-void);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.botspot-admin-root input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: var(--bsa-mint);
+    box-shadow: 0 0 8px rgba(209, 254, 246, 0.7);
+}
+
+.botspot-admin-root input[type="checkbox"].bsa-toggle {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 28px;
+    height: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.botspot-admin-root input[type="checkbox"].bsa-toggle::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+}
+
+.botspot-admin-root input[type="checkbox"].bsa-toggle:checked {
+    border-color: var(--bsa-mint);
+    background: rgba(209, 254, 246, 0.08);
+    box-shadow: none;
+}
+
+.botspot-admin-root input[type="checkbox"].bsa-toggle:checked::after {
+    left: 15px;
+    background: var(--bsa-mint);
+    box-shadow: 0 0 8px rgba(209, 254, 246, 0.7);
+}
+
+/* ============================================================
+   SETTINGS TAB
+   ============================================================ */
+.botspot-admin-root .bsa-settings {
+    max-width: 760px;
+}
+
+.botspot-admin-root .bsa-settings-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 32px;
+    padding-block: 24px;
+    border-top: 1px solid var(--bsa-border);
+}
+
+.botspot-admin-root .bsa-settings-row__meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.botspot-admin-root .bsa-settings-row__title {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+.botspot-admin-root .bsa-settings-row__desc {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--bsa-text-faint);
+    line-height: 1.6;
+}
+
+.botspot-admin-root .bsa-settings-row__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ============================================================
+   CHECK LISTS / CHECK LABELS
+   ============================================================ */
+.botspot-admin-root .bsa-check-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.botspot-admin-root .bsa-check-list--nested {
+    padding-inline-start: 22px;
+    padding-block-start: 10px;
+    gap: 10px;
+    border-inline-start: 1px solid var(--bsa-border);
+    margin-inline-start: 6px;
+    margin-block-start: 8px;
+}
+
+.botspot-admin-root .bsa-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-check:hover {
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-check--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.botspot-admin-root .bsa-check--disabled:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.botspot-admin-root .bsa-check > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.botspot-admin-root .bsa-check-group {
+    display: block;
+}
+
+.botspot-admin-root .bsa-check-group > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    list-style: none;
+    padding: 0;
+}
+
+.botspot-admin-root .bsa-check-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.botspot-admin-root .bsa-check-group > summary::before {
+    content: "▸";
+    display: inline-block;
+    font-size: 9px;
+    color: var(--bsa-text-faint);
+    transition: transform 0.2s ease;
+    width: 10px;
+    text-align: center;
+}
+
+.botspot-admin-root .bsa-check-group[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.botspot-admin-root .bsa-check__tag {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faintest);
+    padding-inline-start: 4px;
+}
+
+.botspot-admin-root .bsa-check__tag::before {
+    content: "· ";
+}
+
+.botspot-admin-root .bsa-check__tag--active {
+    color: var(--bsa-text-faint);
+}
+
+/* ============================================================
+   RADIO LIST
+   ============================================================ */
+.botspot-admin-root .bsa-radio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.botspot-admin-root .bsa-radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.botspot-admin-root .bsa-radio > input[type="radio"] {
+    margin-top: 2px;
+}
+
+.botspot-admin-root .bsa-radio > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.botspot-admin-root .bsa-radio__title {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.4;
+    transition: color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-radio:hover .bsa-radio__title {
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-radio__hint {
+    color: var(--bsa-text-faintest);
+    margin-inline-start: 4px;
+}
+
+.botspot-admin-root .bsa-radio__desc {
+    font-size: 10px;
+    color: var(--bsa-text-faint);
+    line-height: 1.5;
+}
+
+/* ============================================================
+   TOGGLE ROW (full-width toggle labels)
+   ============================================================ */
+.botspot-admin-root .bsa-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    transition: color 0.2s ease;
+    padding-block: 2px;
+}
+
+.botspot-admin-root .bsa-toggle-row:hover {
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-toggle-row > span {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ============================================================
+   ADVANCED (collapsible details/summary)
+   ============================================================ */
+.botspot-admin-root .bsa-advanced {
+    border-top: 1px solid var(--bsa-border);
+    margin-top: 0;
+}
+
+.botspot-admin-root .bsa-advanced__summary {
+    list-style: none;
+    padding-block: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.6);
+    transition: color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-advanced__summary::-webkit-details-marker {
+    display: none;
+}
+
+.botspot-admin-root .bsa-advanced__summary:hover {
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-advanced__chevron {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    font-size: 12px;
+}
+
+.botspot-admin-root .bsa-advanced[open] .bsa-advanced__chevron {
+    transform: rotate(90deg);
+}
+
+.botspot-admin-root .bsa-advanced .bsa-settings-row:first-of-type {
+    border-top: 1px solid var(--bsa-border);
+}
+
+/* ============================================================
+   SAVE BAR
+   ============================================================ */
+.botspot-admin-root .bsa-save-bar {
+    border-top: 1px solid var(--bsa-border);
+    padding-top: 24px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.botspot-admin-root .bsa-save-bar__status {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faintest);
+}
+
+.botspot-admin-root .bsa-save-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.botspot-admin-root .bsa-save-bar .bsa-btn {
+    height: 32px;
+    padding-inline: 16px;
+}
+
+/* ============================================================
+   DEVELOPER TAB
+   ============================================================ */
+.botspot-admin-root .bsa-developer {
+    display: block;
+}
+
+.botspot-admin-root .bsa-developer__grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+    align-items: stretch;
+}
+
+.botspot-admin-root .bsa-developer__grid > section {
+    border-inline-end: 1px solid var(--bsa-border);
+    min-width: 0;
+}
+
+/* ============================================================
+   LOG HEAD
+   ============================================================ */
+.botspot-admin-root .bsa-log-head {
+    height: 42px;
+    border-bottom: 1px solid var(--bsa-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 24px;
+}
+
+.botspot-admin-root .bsa-log-head__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.botspot-admin-root .bsa-log-head__title {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.botspot-admin-root .bsa-log-head__count {
+    font-size: 10px;
+    color: var(--bsa-text-faint);
+}
+
+.botspot-admin-root .bsa-log-head__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ============================================================
+   SELECT + ICON BUTTON
+   ============================================================ */
+.botspot-admin-root .bsa-select {
+    height: 24px;
+    border: 1px solid var(--bsa-border);
+    background: var(--bsa-void);
+    color: var(--bsa-text-muted);
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 24px 0 8px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    border-radius: 0;
+    min-height: 24px;
+    line-height: 22px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'><path stroke-linecap='square' d='M6 9l6 6 6-6'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 10px;
+    transition: border-color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-select:hover {
+    border-color: var(--bsa-border-strong);
+}
+
+.botspot-admin-root .bsa-select:focus {
+    outline: none;
+    border-color: rgba(209, 254, 246, 0.4);
+}
+
+.botspot-admin-root .bsa-select option {
+    background: var(--bsa-void);
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-icon-btn {
+    height: 24px;
+    width: 24px;
+    border: 1px solid var(--bsa-border);
+    background: var(--bsa-void);
+    color: var(--bsa-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+    border-radius: 0;
+}
+
+.botspot-admin-root .bsa-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--bsa-text);
+}
+
+/* ============================================================
+   LOG LIST + ENTRIES
+   ============================================================ */
+.botspot-admin-root .bsa-log-list {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    line-height: 1.7;
+    max-height: 640px;
+    overflow-y: auto;
+}
+
+.botspot-admin-root .bsa-log-empty {
+    padding: 24px;
+    text-align: center;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faintest);
+}
+
+.botspot-admin-root .bsa-log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 6px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s ease;
+}
+
+.botspot-admin-root .bsa-log-entry:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.botspot-admin-root .bsa-log-entry__time {
+    color: var(--bsa-text-faintest);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.botspot-admin-root .bsa-log-entry__level {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+    width: 48px;
+}
+
+.botspot-admin-root .bsa-log-entry__level--info {
+    color: var(--bsa-mint);
+}
+
+.botspot-admin-root .bsa-log-entry__level--warn {
+    color: var(--bsa-amber);
+}
+
+.botspot-admin-root .bsa-log-entry__level--error {
+    color: var(--bsa-red);
+}
+
+.botspot-admin-root .bsa-log-entry__source {
+    color: var(--bsa-text-faintest);
+    flex-shrink: 0;
+    width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.botspot-admin-root .bsa-log-entry__message {
+    color: rgba(255, 255, 255, 0.7);
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+}
+
+/* ============================================================
+   SIDEBAR (Developer controls)
+   ============================================================ */
+.botspot-admin-root .bsa-sidebar-head {
+    height: 42px;
+    border-bottom: 1px solid var(--bsa-border);
+    display: flex;
+    align-items: center;
+    padding-inline: 24px;
+}
+
+.botspot-admin-root .bsa-sidebar-head__label {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.botspot-admin-root .bsa-sidebar-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.botspot-admin-root .bsa-sidebar-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.botspot-admin-root .bsa-sidebar-section--env {
+    border-top: 1px solid var(--bsa-border);
+    padding-top: 20px;
+}
+
+.botspot-admin-root .bsa-sidebar-section__title {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faint);
+    margin: 0 0 12px 0;
+}
+
+.botspot-admin-root .bsa-sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.botspot-admin-root .bsa-sidebar-btn {
+    width: 100%;
+    height: 32px;
+    padding-inline: 12px;
+    border: 1px solid var(--bsa-border);
+    background: var(--bsa-void);
+    color: rgba(255, 255, 255, 0.8);
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 0;
+}
+
+.botspot-admin-root .bsa-sidebar-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--bsa-text);
+}
+
+.botspot-admin-root .bsa-sidebar-btn:disabled,
+.botspot-admin-root .bsa-sidebar-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.botspot-admin-root .bsa-sidebar-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ============================================================
+   TTL INPUT
+   ============================================================ */
+.botspot-admin-root .bsa-ttl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.botspot-admin-root .bsa-ttl-input {
+    width: 96px;
+    border: 1px solid var(--bsa-border);
+    background: transparent;
+    padding: 8px 12px;
+    font-family: var(--bsa-font-mono);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    transition: border-color 0.2s ease;
+    border-radius: 0;
+    min-height: auto;
+}
+
+.botspot-admin-root .bsa-ttl-input:hover {
+    border-color: var(--bsa-border-strong);
+}
+
+.botspot-admin-root .bsa-ttl-input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.botspot-admin-root .bsa-ttl-label {
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bsa-text-faint);
+}
+
+.botspot-admin-root .bsa-ttl-help {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--bsa-text-faintest);
+    line-height: 1.6;
+}
+
+/* ============================================================
+   ENVIRONMENT KV LIST
+   ============================================================ */
+.botspot-admin-root .bsa-env {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    margin: 0;
+}
+
+.botspot-admin-root .bsa-env__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.botspot-admin-root .bsa-env__row > dt {
+    color: var(--bsa-text-faint);
+    margin: 0;
+}
+
+.botspot-admin-root .bsa-env__row > dd {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    text-align: right;
+    word-break: break-all;
+}
+
+/* ============================================================
+   SCROLLBARS (scoped)
+   ============================================================ */
+.botspot-admin-root ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.botspot-admin-root ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.botspot-admin-root ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.botspot-admin-root ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ============================================================
+   RESPONSIVE: stack grids below 1000px
+   ============================================================ */
+@media (max-width: 1000px) {
+    .botspot-admin-root .bsa-header,
+    .botspot-admin-root .bsa-tabs,
+    .botspot-admin-root .bsa-form {
+        min-width: 0;
+    }
+
+    .botspot-admin-root .bsa-connect__grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .botspot-admin-root .bsa-developer__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .botspot-admin-root .bsa-developer__grid > section {
+        border-inline-end: none;
+        border-bottom: 1px solid var(--bsa-border);
+    }
+
+    .botspot-admin-root .bsa-settings-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .botspot-admin-root .bsa-header__status {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 782px) {
+    .botspot-admin-root {
+        margin-left: -10px;
+        margin-right: -10px;
+    }
+
+    .botspot-admin-root .bsa-panel {
+        padding: 20px;
+    }
+
+    .botspot-admin-root .bsa-header,
+    .botspot-admin-root .bsa-tabs {
+        padding-inline: 16px;
+    }
+}

@@ -144,6 +144,74 @@ class BotDot_WP_Admin
     }
 
     /**
+     * Enqueue admin-specific assets on the plugin settings page only.
+     *
+     * @since    2.2.0
+     * @param    string    $hook    The current admin page hook.
+     */
+    public function enqueue_admin_assets($hook)
+    {
+        // Only load on our settings page (top-level menu registers as toplevel_page_{slug})
+        if ($hook !== "toplevel_page_botdot-wp") {
+            return;
+        }
+
+        // Google Fonts (Inter + JetBrains Mono)
+        wp_enqueue_style(
+            "botspot-admin-fonts",
+            "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
+            [],
+            null
+        );
+
+        wp_enqueue_style(
+            "botspot-admin",
+            BOTDOT_WP_PLUGIN_URL . "admin/css/botspot-admin.css",
+            [],
+            $this->version
+        );
+
+        wp_enqueue_script(
+            "botspot-admin",
+            BOTDOT_WP_PLUGIN_URL . "admin/js/botspot-admin.js",
+            [],
+            $this->version,
+            true
+        );
+
+        // Localized data + nonces for all AJAX handlers the JS will call
+        wp_localize_script("botspot-admin", "botspotAdmin", [
+            "ajaxurl" => admin_url("admin-ajax.php"),
+            "restUrl" => rest_url("botdot-wp/v1/"),
+            "siteDomain" => wp_parse_url(home_url(), PHP_URL_HOST),
+            "pluginVersion" => $this->version,
+            "wpVersion" => get_bloginfo("version"),
+            "phpVersion" => phpversion(),
+            "apiVersion" => "v1 (stable)",
+            "nonces" => [
+                "testConnection" => wp_create_nonce("botdot_wp_test_connection"),
+                "clearErrors" => wp_create_nonce("botdot_wp_clear_errors"),
+                "manualSync" => wp_create_nonce("botdot_wp_manual_sync"),
+                "registerConnection" => wp_create_nonce("botdot_wp_register_connection"),
+                "disconnect" => wp_create_nonce("botdot_wp_disconnect"),
+                "getLogs" => wp_create_nonce("botdot_wp_get_logs"),
+                "getStatus" => wp_create_nonce("botdot_wp_get_status"),
+                "forceResync" => wp_create_nonce("botdot_wp_force_resync"),
+                "clearCache" => wp_create_nonce("botdot_wp_clear_cache"),
+            ],
+            "strings" => [
+                "allSaved" => __("All changes saved", "botdot-wp"),
+                "unsaved" => __("Unsaved changes", "botdot-wp"),
+                "testing" => __("Testing...", "botdot-wp"),
+                "testSuccess" => __("Connection successful", "botdot-wp"),
+                "testFailed" => __("Connection failed", "botdot-wp"),
+                "copied" => __("Copied to clipboard", "botdot-wp"),
+                "confirmDisconnect" => __("Disconnect this site from BotSpot?", "botdot-wp"),
+            ],
+        ]);
+    }
+
+    /**
      * Display admin notices
      *
      * @since    0.1.0
@@ -810,5 +878,288 @@ class BotDot_WP_Admin
             default:
                 return "&#8212;"; // em dash
         }
+    }
+
+    // ============================================================
+    // New AJAX handlers (2.2.0) — Developer tab + status probe
+    // ============================================================
+
+    /**
+     * Return recent log entries shaped for the Developer tab log viewer.
+     *
+     * Response:
+     *   { success: true, data: { entries: [...], count: int } }
+     *
+     * @since    2.2.0
+     */
+    public function handle_get_logs()
+    {
+        check_ajax_referer("botdot_wp_get_logs", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
+        }
+
+        $level_filter = isset($_POST["level"]) ? sanitize_text_field($_POST["level"]) : "all";
+        $entries = BotDot_WP_Logger::get_logs_for_viewer($level_filter);
+
+        wp_send_json_success([
+            "entries" => $entries,
+            "count" => count($entries),
+        ]);
+    }
+
+    /**
+     * Return current connection / sync / runtime status for header indicators.
+     *
+     * Response shape (each status is one of: "ok", "warn", "error", "unknown"):
+     *   { success: true, data: {
+     *     connection: { status, label, detail },
+     *     sync: { status, label, detail },
+     *     runtime: { status, label, detail }
+     *   }}
+     *
+     * @since    2.2.0
+     */
+    public function handle_get_status()
+    {
+        check_ajax_referer("botdot_wp_get_status", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
+        }
+
+        wp_send_json_success($this->get_status_snapshot());
+    }
+
+    /**
+     * Probe connection / sync / runtime state. Called by handle_get_status
+     * and cached briefly via transient to avoid repeated HTTP calls on
+     * every admin page load.
+     *
+     * @since    2.2.0
+     * @return   array
+     */
+    protected function get_status_snapshot()
+    {
+        $cached = get_transient("botdot_wp_status_snapshot");
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        // ---------- Connection ----------
+        $api_key = BotDot_WP_Options::get("api_key");
+        $connection_id = BotDot_WP_Options::get("connection_id");
+
+        if (empty($api_key)) {
+            $connection = [
+                "status" => "error",
+                "label" => __("No API key", "botdot-wp"),
+                "detail" => __("Paste your BotSpot API key on the Connect tab.", "botdot-wp"),
+            ];
+        } elseif (empty($connection_id)) {
+            $connection = [
+                "status" => "warn",
+                "label" => __("Not registered", "botdot-wp"),
+                "detail" => __("API key present but site is not yet registered with BotSpot.", "botdot-wp"),
+            ];
+        } else {
+            // Quick health probe via content fetcher (has its own short timeout)
+            $probe = BotDot_WP_Content_Fetcher::test_connection();
+            $connection = [
+                "status" => !empty($probe["success"]) ? "ok" : "error",
+                "label" => !empty($probe["success"])
+                    ? __("Connected", "botdot-wp")
+                    : __("Unreachable", "botdot-wp"),
+                "detail" => isset($probe["message"]) ? (string) $probe["message"] : "",
+            ];
+        }
+
+        // ---------- Sync ----------
+        // Look for any post synced in the last 24h without a current error
+        $recent_synced = get_posts([
+            "post_type" => "any",
+            "post_status" => "publish",
+            "posts_per_page" => 1,
+            "fields" => "ids",
+            "meta_query" => [
+                [
+                    "key" => "_botdot_sync_status",
+                    "value" => "synced",
+                    "compare" => "=",
+                ],
+                [
+                    "key" => "_botdot_last_synced_at",
+                    "value" => gmdate("Y-m-d H:i:s", time() - DAY_IN_SECONDS),
+                    "compare" => ">=",
+                    "type" => "DATETIME",
+                ],
+            ],
+        ]);
+        $recent_errors = get_posts([
+            "post_type" => "any",
+            "post_status" => "publish",
+            "posts_per_page" => 1,
+            "fields" => "ids",
+            "meta_query" => [
+                [
+                    "key" => "_botdot_sync_status",
+                    "value" => "error",
+                    "compare" => "=",
+                ],
+            ],
+        ]);
+
+        if (!empty($recent_synced)) {
+            $sync = [
+                "status" => empty($recent_errors) ? "ok" : "warn",
+                "label" => empty($recent_errors)
+                    ? __("Sync healthy", "botdot-wp")
+                    : __("Sync has recent errors", "botdot-wp"),
+                "detail" => __("Last successful sync within 24 hours.", "botdot-wp"),
+            ];
+        } elseif (!empty($recent_errors)) {
+            $sync = [
+                "status" => "error",
+                "label" => __("Sync failing", "botdot-wp"),
+                "detail" => __("Recent sync attempts have errored.", "botdot-wp"),
+            ];
+        } else {
+            $sync = [
+                "status" => "warn",
+                "label" => __("No recent sync", "botdot-wp"),
+                "detail" => __("No posts synced in the last 24 hours.", "botdot-wp"),
+            ];
+        }
+
+        // ---------- Runtime ----------
+        // Presence of any fetcher transient indicates appendix was served recently.
+        global $wpdb;
+        $fetcher_hits = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s",
+                "_transient_botdot_wp_appendix_%"
+            )
+        );
+        if ($fetcher_hits > 0) {
+            $runtime = [
+                "status" => "ok",
+                "label" => __("Runtime active", "botdot-wp"),
+                "detail" => sprintf(
+                    /* translators: %d: cached entries */
+                    _n("%d cached appendix entry.", "%d cached appendix entries.", $fetcher_hits, "botdot-wp"),
+                    $fetcher_hits
+                ),
+            ];
+        } else {
+            $runtime = [
+                "status" => "warn",
+                "label" => __("Runtime idle", "botdot-wp"),
+                "detail" => __("No frontend requests have cached appendix content yet.", "botdot-wp"),
+            ];
+        }
+
+        $snapshot = [
+            "connection" => $connection,
+            "sync" => $sync,
+            "runtime" => $runtime,
+            "checked_at" => gmdate("c"),
+        ];
+
+        set_transient("botdot_wp_status_snapshot", $snapshot, 5 * MINUTE_IN_SECONDS);
+
+        return $snapshot;
+    }
+
+    /**
+     * Force a full re-sync of all tracked posts.
+     *
+     * @since    2.2.0
+     */
+    public function handle_force_resync()
+    {
+        check_ajax_referer("botdot_wp_force_resync", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
+        }
+
+        $post_types = BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $post_ids = get_posts([
+            "post_type" => $post_types,
+            "post_status" => "publish",
+            "posts_per_page" => -1,
+            "fields" => "ids",
+        ]);
+
+        if (empty($post_ids)) {
+            wp_send_json_success([
+                "queued" => 0,
+                "message" => __("No posts to sync.", "botdot-wp"),
+            ]);
+            return;
+        }
+
+        $queued = 0;
+        $errors = 0;
+        foreach ($post_ids as $post_id) {
+            $result = BotDot_WP_Sync::manual_sync($post_id);
+            if ($result) {
+                $queued++;
+            } else {
+                $errors++;
+            }
+        }
+
+        // Invalidate status snapshot cache so the UI reflects the change.
+        delete_transient("botdot_wp_status_snapshot");
+
+        wp_send_json_success([
+            "queued" => $queued,
+            "errors" => $errors,
+            "total" => count($post_ids),
+            "message" => sprintf(
+                /* translators: 1: successful count, 2: error count */
+                __("Re-sync complete: %1$d succeeded, %2$d failed.", "botdot-wp"),
+                $queued,
+                $errors
+            ),
+        ]);
+    }
+
+    /**
+     * Clear all fetcher transients (cached appendix HTML + JSON-LD).
+     *
+     * @since    2.2.0
+     */
+    public function handle_clear_cache()
+    {
+        check_ajax_referer("botdot_wp_clear_cache", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
+        }
+
+        global $wpdb;
+        $deleted = $wpdb->query(
+            "DELETE FROM {$wpdb->options}
+             WHERE option_name LIKE '_transient_botdot_wp_appendix_%'
+                OR option_name LIKE '_transient_timeout_botdot_wp_appendix_%'"
+        );
+
+        delete_transient("botdot_wp_status_snapshot");
+
+        wp_send_json_success([
+            "cleared" => (int) $deleted,
+            "message" => sprintf(
+                /* translators: %d: cleared entries */
+                _n("Cleared %d cached entry.", "Cleared %d cached entries.", max(0, (int) $deleted), "botdot-wp"),
+                max(0, (int) $deleted)
+            ),
+        ]);
     }
 }

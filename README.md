@@ -159,6 +159,17 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.2.0
+- **New admin UI**: Dark-themed 3-tab interface (Connect / Settings / Developer) matching the BotSpot brand. Ports the bot.optimizer design to WordPress's admin shell while preserving the sidebar and admin bar.
+- **New**: Header status indicators for Connection / Sync / Runtime, fetched live via `wp_ajax_botdot_wp_get_status`. Cached for 5 minutes per admin page load.
+- **New**: Developer tab with live log viewer (filterable by level, refreshable, downloadable) backed by `BotDot_WP_Logger::get_logs_for_viewer()`.
+- **New**: Developer actions — Test connection, Force re-sync, Clear cache, Copy diagnostics (collects environment + recent logs to clipboard).
+- **New**: WooCommerce detection — the `product` checkbox is auto-labeled "Products · WooCommerce" when WC is active, disabled otherwise.
+- **New**: "Advanced" collapsible in the Settings tab exposes sync sensitivity, auto-sync toggle, inject-on post type list, and output toggles for power users.
+- **New**: AJAX handlers — `botdot_wp_get_logs`, `botdot_wp_get_status`, `botdot_wp_force_resync`, `botdot_wp_clear_cache`.
+- **New**: Scoped admin CSS (`admin/css/botspot-admin.css`) and vanilla JS module (`admin/js/botspot-admin.js`) with no build step and no external JS framework.
+- **Change**: Note — the new UI hard-overrides to a dark theme regardless of the user's WP admin color scheme. This is an intentional brand-consistency choice.
+
 ### 1.0.1
 - **Security**: Sanitize all external HTML through `wp_kses` with extended allowlist (S1)
 - **Security**: Prevent JSON-LD script-tag breakout via re-encoding (S2)

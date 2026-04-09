@@ -142,6 +142,7 @@ class BotDot_WP
 
         $this->loader->add_action("admin_menu", $plugin_admin, "add_admin_menu");
         $this->loader->add_action("admin_init", $plugin_admin, "init_settings");
+        $this->loader->add_action("admin_enqueue_scripts", $plugin_admin, "enqueue_admin_assets");
 
         // AJAX handlers
         $this->loader->add_action("wp_ajax_botdot_wp_test_connection", $plugin_admin, "handle_test_connection");
@@ -149,6 +150,10 @@ class BotDot_WP
         $this->loader->add_action("wp_ajax_botdot_wp_manual_sync", $plugin_admin, "handle_manual_sync");
         $this->loader->add_action("wp_ajax_botdot_wp_register_connection", $plugin_admin, "handle_register_connection");
         $this->loader->add_action("wp_ajax_botdot_wp_disconnect", $plugin_admin, "handle_disconnect");
+        $this->loader->add_action("wp_ajax_botdot_wp_get_logs", $plugin_admin, "handle_get_logs");
+        $this->loader->add_action("wp_ajax_botdot_wp_get_status", $plugin_admin, "handle_get_status");
+        $this->loader->add_action("wp_ajax_botdot_wp_force_resync", $plugin_admin, "handle_force_resync");
+        $this->loader->add_action("wp_ajax_botdot_wp_clear_cache", $plugin_admin, "handle_clear_cache");
 
         // Admin notices for errors
         $this->loader->add_action("admin_notices", $plugin_admin, "display_admin_notices");

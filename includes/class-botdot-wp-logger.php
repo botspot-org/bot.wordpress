@@ -220,4 +220,81 @@ class BotDot_WP_Logger
         $errors = self::get_recent_errors(1);
         return !empty($errors) ? $errors[0] : null;
     }
+
+    /**
+     * Get logs shaped for the Developer tab log viewer.
+     *
+     * Returns entries sorted newest-first with:
+     * - timestamp: ISO 8601 string
+     * - time_display: HH:MM:SS.mmm for the viewer column
+     * - level: "info" | "warn" | "error"
+     * - source: inferred short tag (sync, runtime, api, cache, auth, etc.)
+     * - message: the log message
+     *
+     * @since    2.2.0
+     * @param    string    $level_filter    "all" | "info" | "warning" | "error"
+     * @return   array
+     */
+    public static function get_logs_for_viewer($level_filter = "all")
+    {
+        $raw = self::get_recent_errors();
+        $result = [];
+
+        foreach ($raw as $entry) {
+            // Normalize level
+            $type = isset($entry["type"]) ? $entry["type"] : "debug";
+            if ($type === "error") {
+                $level = "error";
+            } elseif ($type === "warning" || $type === "warn") {
+                $level = "warn";
+            } else {
+                $level = "info";
+            }
+
+            // Apply filter
+            if ($level_filter !== "all") {
+                $requested = $level_filter === "warning" ? "warn" : $level_filter;
+                if ($level !== $requested) {
+                    continue;
+                }
+            }
+
+            // Infer source tag from context or message prefix
+            $source = "system";
+            $context = isset($entry["context"]) && is_array($entry["context"]) ? $entry["context"] : [];
+            if (isset($context["source"]) && is_string($context["source"])) {
+                $source = $context["source"];
+            } else {
+                // Best-effort guess from message
+                $msg_lower = strtolower((string) $entry["message"]);
+                if (strpos($msg_lower, "sync") !== false || strpos($msg_lower, "push") !== false) {
+                    $source = "sync";
+                } elseif (strpos($msg_lower, "appendix") !== false || strpos($msg_lower, "inject") !== false || strpos($msg_lower, "runtime") !== false) {
+                    $source = "runtime";
+                } elseif (strpos($msg_lower, "http") !== false || strpos($msg_lower, "api") !== false || strpos($msg_lower, "endpoint") !== false) {
+                    $source = "api";
+                } elseif (strpos($msg_lower, "cache") !== false || strpos($msg_lower, "transient") !== false) {
+                    $source = "cache";
+                } elseif (strpos($msg_lower, "auth") !== false || strpos($msg_lower, "key") !== false || strpos($msg_lower, "token") !== false) {
+                    $source = "auth";
+                } elseif (strpos($msg_lower, "webhook") !== false) {
+                    $source = "webhook";
+                } elseif (strpos($msg_lower, "seo") !== false || strpos($msg_lower, "yoast") !== false || strpos($msg_lower, "rankmath") !== false) {
+                    $source = "seo";
+                }
+            }
+
+            $ts = isset($entry["timestamp"]) ? (int) $entry["timestamp"] : time();
+
+            $result[] = [
+                "timestamp" => gmdate("c", $ts),
+                "time_display" => gmdate("H:i:s", $ts) . sprintf(".%03d", 0),
+                "level" => $level,
+                "source" => $source,
+                "message" => isset($entry["message"]) ? (string) $entry["message"] : "",
+            ];
+        }
+
+        return $result;
+    }
 }
