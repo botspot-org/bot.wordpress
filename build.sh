@@ -21,6 +21,16 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}Building BotSpot WP Plugin v${VERSION}${NC}"
 echo "========================================"
 
+# Install Composer dependencies (production + Strauss-prefixed vendor)
+echo -e "${YELLOW}==> Installing Composer dependencies (production + Strauss)${NC}"
+composer install --no-dev --optimize-autoloader --classmap-authoritative
+composer run strauss
+
+if [ ! -d "vendor/botspot-prefixed" ]; then
+  echo -e "${RED}ERROR: vendor/botspot-prefixed not created. Strauss run failed.${NC}"
+  exit 1
+fi
+
 # Clean up old build directory (keep dist for archive history)
 echo -e "${YELLOW}Cleaning up old build files...${NC}"
 rm -rf "${BUILD_DIR}"
@@ -56,6 +66,10 @@ cp -r admin "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
 # Copy public directory
 cp -r public "${BUILD_DIR}/${PLUGIN_SLUG}/"
+
+# Copy Strauss-prefixed vendor (runtime dependency: crawler-detect + crawler-user-agents)
+mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/vendor"
+cp -r vendor/botspot-prefixed "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed"
 
 # Create languages directory (even if empty, for i18n readiness)
 mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/languages"
