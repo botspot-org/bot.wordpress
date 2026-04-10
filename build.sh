@@ -21,15 +21,22 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}Building BotSpot WP Plugin v${VERSION}${NC}"
 echo "========================================"
 
-# Install Composer dependencies (production + Strauss-prefixed vendor)
-echo -e "${YELLOW}==> Installing Composer dependencies (production + Strauss)${NC}"
-composer install --no-dev --optimize-autoloader --classmap-authoritative
+# Install Composer dependencies — three-step install so Strauss (a dev dep)
+# is available during prefixing, then dev deps are pruned from the vendor
+# that actually ships in the zip.
+echo -e "${YELLOW}==> Installing Composer dependencies with dev (for Strauss)${NC}"
+composer install --optimize-autoloader
+
+echo -e "${YELLOW}==> Running Strauss to prefix third-party packages${NC}"
 composer run strauss
 
 if [ ! -d "vendor/botspot-prefixed" ]; then
   echo -e "${RED}ERROR: vendor/botspot-prefixed not created. Strauss run failed.${NC}"
   exit 1
 fi
+
+echo -e "${YELLOW}==> Pruning dev dependencies (production-only install)${NC}"
+composer install --no-dev --optimize-autoloader --classmap-authoritative
 
 # Clean up old build directory (keep dist for archive history)
 echo -e "${YELLOW}Cleaning up old build files...${NC}"
