@@ -36,7 +36,10 @@ if [ ! -d "vendor/botspot-prefixed" ]; then
 fi
 
 echo -e "${YELLOW}==> Pruning dev dependencies (production-only install)${NC}"
-composer install --no-dev --optimize-autoloader --classmap-authoritative
+# --no-scripts skips the post-install-cmd @strauss hook from composer.json;
+# Strauss was already run in the previous step and we're now pruning dev deps
+# (including strauss itself), so re-running it here would fail with 127.
+composer install --no-dev --optimize-autoloader --classmap-authoritative --no-scripts
 
 # Clean up old build directory (keep dist for archive history)
 echo -e "${YELLOW}Cleaning up old build files...${NC}"
