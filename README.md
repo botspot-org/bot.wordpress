@@ -159,6 +159,24 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.4.0
+- **New**: Analytics tab in the admin UI with three cards: sync health, enrichment lifecycle, and impressions (including per-bot breakdown for AI crawlers like GPTBot, ClaudeBot, PerplexityBot, etc.).
+- **New**: Visitor impressions (including AI crawler hits) are counted in post meta on the hot path via `BotDot_WP_Bot_Classifier`. Classification uses an explicit `monperrus/crawler-user-agents`–derived pattern map for named AI bots and falls back to `jaybizzle/crawler-detect` for any other crawler. Human visitors classify as `human`.
+- **New**: Hourly `wp-cron` event `botspot_flush_analytics` flushes pending counters to `locus-core` `/api/v1/analytics/impressions/batch` with a UUID batch_id, single-flight locked, with orphan recovery for crashed flush runs.
+- **New**: "Flush now" button and opportunistic flush (fires when Analytics tab opens and `last_flush_at` is older than 2h).
+- **Internal**: Added Composer + [Strauss](https://github.com/BrianHenryIE/strauss) to vendor and namespace-scope `jaybizzle/crawler-detect` and `monperrus/crawler-user-agents` under `BotSpot\Vendor\` so they cannot collide with other plugins on the same site.
+- **Build**: `build.sh` now runs `composer install --no-dev --optimize-autoloader` and `composer run strauss`, and the zip includes `vendor/botspot-prefixed/`.
+
+### Analytics & system cron
+
+The Analytics tab relies on an hourly wp-cron event (`botspot_flush_analytics`)
+to push impression counts to BotSpot. If wp-cron is disabled on your site,
+configure a system cron job:
+
+```
+*/15 * * * * curl -s https://example.com/wp-cron.php?doing_wp_cron > /dev/null
+```
+
 ### 2.3.0
 - **Fix**: Cache freshness check against `/api/v1/appendix/check` was silently broken. The plugin read a `content_hash` field from the response, but locus-core returned `hash`. The plugin fell through to "treat cache as fresh" on every call, masking the bug. Fixed on the core side by renaming the field; the plugin already reads the correct name.
 - **Fix**: Pass `lang` query parameter to `/api/v1/appendix/check` for consistency with the render and jsonld fetchers. Uses `substr(get_locale(), 0, 2)` to match the existing pattern.
