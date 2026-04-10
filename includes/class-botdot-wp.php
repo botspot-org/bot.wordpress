@@ -88,6 +88,19 @@ class BotDot_WP
     private function load_dependencies()
     {
         /**
+         * Strauss-prefixed vendor autoloader (jaybizzle/crawler-detect etc.)
+         */
+        if (file_exists(BOTDOT_WP_PLUGIN_PATH . "vendor/botspot-prefixed/autoload.php")) {
+            require_once BOTDOT_WP_PLUGIN_PATH . "vendor/botspot-prefixed/autoload.php";
+        }
+
+        /**
+         * Analytics: bot classifier + flusher (state machine + wp-cron handler).
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-bot-classifier.php";
+        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-analytics-flusher.php";
+
+        /**
          * The class responsible for orchestrating the actions and filters.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-loader.php";
@@ -154,6 +167,15 @@ class BotDot_WP
         $this->loader->add_action("wp_ajax_botdot_wp_get_status", $plugin_admin, "handle_get_status");
         $this->loader->add_action("wp_ajax_botdot_wp_force_resync", $plugin_admin, "handle_force_resync");
         $this->loader->add_action("wp_ajax_botdot_wp_clear_cache", $plugin_admin, "handle_clear_cache");
+
+        // Analytics AJAX handlers
+        $this->loader->add_action("wp_ajax_botdot_wp_get_sync_health", $plugin_admin, "handle_get_sync_health");
+        $this->loader->add_action("wp_ajax_botdot_wp_get_enrichment_lifecycle", $plugin_admin, "handle_get_enrichment_lifecycle");
+        $this->loader->add_action("wp_ajax_botdot_wp_get_impressions", $plugin_admin, "handle_get_impressions");
+        $this->loader->add_action("wp_ajax_botdot_wp_force_flush", $plugin_admin, "handle_force_flush");
+
+        // wp-cron handler for the hourly flush
+        $this->loader->add_action("botspot_flush_analytics", "BotDot_WP_Analytics_Flusher", "flush");
 
         // Admin notices for errors
         $this->loader->add_action("admin_notices", $plugin_admin, "display_admin_notices");

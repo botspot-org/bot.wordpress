@@ -96,6 +96,16 @@
             if (tabName === "developer" && !state.logsFetched) {
                 fetchLogs();
             }
+
+            // Broadcast tab change for lazily-initialized panels (e.g. Analytics).
+            try {
+                document.dispatchEvent(new CustomEvent("bsa:tab-change", {
+                    detail: { tab: tabName },
+                }));
+            } catch (err) {
+                // CustomEvent constructor unavailable — acceptable, analytics will
+                // still init via hash fallback in its own module.
+            }
         }
 
         tabs.forEach(function (btn) {
@@ -456,3 +466,153 @@
     // Expose for debugging
     window.bsaAjax = bsaAjax;
 })();
+
+/* =============================================================================
+   Analytics tab
+   ============================================================================= */
+
+(function (window, document) {
+    'use strict';
+
+    var AJAX = (window.botspotAdmin && window.botspotAdmin.ajaxurl) || '/wp-admin/admin-ajax.php';
+    var NONCES = (window.botspotAdmin && window.botspotAdmin.nonces) || {};
+    var currentWindow = '7d';
+    var initialized = false;
+
+    function postAjax(action, nonceKey, data) {
+        var body = new URLSearchParams();
+        body.append('action', action);
+        body.append('nonce', NONCES[nonceKey] || '');
+        Object.keys(data || {}).forEach(function (k) {
+            body.append(k, data[k]);
+        });
+        return fetch(AJAX, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body: body.toString(),
+        }).then(function (r) { return r.json(); });
+    }
+
+    function renderSync(data) {
+        var counts = (data && data.counts) || {};
+        var el = document.querySelector('[data-bsa-analytics="sync"] .bsa-analytics-card__body');
+        if (!el) return;
+        el.innerHTML =
+            '<ul class="bsa-analytics__list">' +
+                '<li>Synced: <strong>' + (counts.synced || 0) + '</strong></li>' +
+                '<li>Pending: <strong>' + (counts.pending || 0) + '</strong></li>' +
+                '<li>Errors: <strong>' + (counts.error || 0) + '</strong></li>' +
+                '<li>Never synced: <strong>' + (counts.never || 0) + '</strong></li>' +
+            '</ul>';
+    }
+
+    function renderEnrichment(data) {
+        var counts = (data && data.counts) || {};
+        var el = document.querySelector('[data-bsa-analytics="enrichment"] .bsa-analytics-card__body');
+        if (!el) return;
+        el.innerHTML =
+            '<ul class="bsa-analytics__list">' +
+                '<li>NONE: <strong>' + (counts.NONE || 0) + '</strong></li>' +
+                '<li>TIER0: <strong>' + (counts.TIER0 || 0) + '</strong></li>' +
+                '<li>TIER1: <strong>' + (counts.TIER1 || 0) + '</strong></li>' +
+                '<li>TIER2: <strong>' + (counts.TIER2 || 0) + '</strong></li>' +
+                '<li>FULL: <strong>' + (counts.FULL || 0) + '</strong></li>' +
+            '</ul>';
+    }
+
+    function renderImpressions(data) {
+        var el = document.querySelector('[data-bsa-analytics="impressions"] .bsa-analytics-card__body');
+        if (!el) return;
+        if (!data) {
+            el.innerHTML = '<p class="bsa-muted">No data yet.</p>';
+            return;
+        }
+        var totals = data.totals || { all: 0, by_bot_class: {} };
+        var rows = (data.by_artifact || []).map(function (a) {
+            var title = a.title || '(unknown)';
+            var link = a.permalink ? ('<a href="' + a.permalink + '" target="_blank" rel="noopener">' + title + '</a>') : title;
+            return '<tr><td>' + link + '</td><td>' + (a.total || 0) + '</td></tr>';
+        }).join('');
+        var classRows = Object.keys(totals.by_bot_class || {}).map(function (cls) {
+            return '<tr><td>' + cls + '</td><td>' + totals.by_bot_class[cls] + '</td></tr>';
+        }).join('');
+        el.innerHTML =
+            '<p><strong>' + (totals.all || 0) + '</strong> total impressions (' + currentWindow + ')</p>' +
+            '<table class="bsa-analytics__table"><thead><tr><th>Bot class</th><th>Count</th></tr></thead><tbody>' + classRows + '</tbody></table>' +
+            '<h4>Top content</h4>' +
+            '<table class="bsa-analytics__table"><thead><tr><th>Title</th><th>Hits</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+
+    function loadSyncHealth() {
+        return postAjax('botdot_wp_get_sync_health', 'getSyncHealth', {})
+            .then(function (resp) { if (resp.success) renderSync(resp.data); });
+    }
+
+    function loadEnrichmentLifecycle() {
+        return postAjax('botdot_wp_get_enrichment_lifecycle', 'getEnrichmentLifecycle', {})
+            .then(function (resp) { if (resp.success) renderEnrichment(resp.data); });
+    }
+
+    function loadImpressions() {
+        return postAjax('botdot_wp_get_impressions', 'getImpressions', { window: currentWindow })
+            .then(function (resp) { if (resp.success) renderImpressions(resp.data); });
+    }
+
+    function loadAll() {
+        loadSyncHealth();
+        loadEnrichmentLifecycle();
+        loadImpressions();
+    }
+
+    function initAnalyticsPanel() {
+        if (initialized) return;
+        initialized = true;
+
+        // Window selector
+        var selector = document.querySelector('.bsa-analytics__window-selector');
+        if (selector) {
+            selector.addEventListener('click', function (evt) {
+                var target = evt.target.closest('button[data-window]');
+                if (!target) return;
+                currentWindow = target.getAttribute('data-window');
+                [].slice.call(selector.querySelectorAll('button')).forEach(function (b) {
+                    b.classList.remove('is-active');
+                });
+                target.classList.add('is-active');
+                loadImpressions();
+            });
+        }
+
+        // Flush now button
+        var flushBtn = document.querySelector('[data-bsa-action="force-flush"]');
+        if (flushBtn) {
+            flushBtn.addEventListener('click', function () {
+                flushBtn.disabled = true;
+                postAjax('botdot_wp_force_flush', 'forceFlush', {}).then(function () {
+                    flushBtn.disabled = false;
+                    loadImpressions();
+                });
+            });
+        }
+    }
+
+    // Hook into the existing tab-change dispatcher. Existing tab code emits a
+    // 'bsa:tab-change' event whenever a panel is activated; we load on first
+    // activation of the analytics panel.
+    document.addEventListener('bsa:tab-change', function (evt) {
+        if (evt && evt.detail && evt.detail.tab === 'analytics') {
+            initAnalyticsPanel();
+            loadAll();
+        }
+    });
+
+    // Also support direct URL hash navigation (#analytics).
+    if (window.location.hash === '#analytics') {
+        document.addEventListener('DOMContentLoaded', function () {
+            initAnalyticsPanel();
+            loadAll();
+        });
+    }
+
+})(window, document);

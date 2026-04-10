@@ -550,6 +550,19 @@ class BotDot_WP_Content_Injector
             $this->appendix_injected = true;
             $content .= $html;
             $this->log_debug(sprintf("Appendix injected via content filter (%d bytes)", strlen($html)));
+
+            // --- Analytics: increment impression counters ---
+            try {
+                $ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+                $bot_class = BotDot_WP_Bot_Classifier::classify($ua);
+                $post_id = get_the_ID();
+                if ($post_id) {
+                    BotDot_WP_Analytics_Flusher::increment_post($post_id, $bot_class);
+                }
+            } catch (Throwable $e) {
+                // Analytics must NEVER break the render path.
+                BotDot_WP_Logger::log_error('Analytics increment failed: ' . $e->getMessage());
+            }
         }
 
         return $content;

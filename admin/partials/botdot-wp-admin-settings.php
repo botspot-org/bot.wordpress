@@ -81,6 +81,10 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
                     <?php _e("Settings", "botdot-wp"); ?>
                     <span class="bsa-tab__underline"></span>
                 </button>
+                <button type="button" class="bsa-tab" data-bsa-tab="analytics" aria-selected="false">
+                    <?php _e("Analytics", "botdot-wp"); ?>
+                    <span class="bsa-tab__underline"></span>
+                </button>
             </div>
             <div class="bsa-tabs__spacer"></div>
             <div class="bsa-tabs__group bsa-tabs__group--right">
@@ -106,6 +110,11 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
             <!-- Settings tab -->
             <main class="bsa-panel bsa-hidden" data-bsa-panel="settings">
                 <?php require BOTDOT_WP_PLUGIN_PATH . "admin/partials/tab-settings.php"; ?>
+            </main>
+
+            <!-- Analytics tab -->
+            <main class="bsa-panel bsa-hidden" data-bsa-panel="analytics">
+                <?php require BOTDOT_WP_PLUGIN_PATH . "admin/partials/tab-analytics.php"; ?>
             </main>
 
             <!-- Developer tab -->

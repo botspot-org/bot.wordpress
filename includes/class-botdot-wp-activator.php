@@ -85,6 +85,11 @@ class BotDot_WP_Activator {
         // Set activation notice
         set_transient('botdot_wp_activation_notice', true, 60);
 
+        // Schedule hourly analytics flush wp-cron event
+        if (!wp_next_scheduled('botspot_flush_analytics')) {
+            wp_schedule_event(time() + 3600, 'hourly', 'botspot_flush_analytics');
+        }
+
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug('BotSpot WP v1.0.1 activated.');
         }

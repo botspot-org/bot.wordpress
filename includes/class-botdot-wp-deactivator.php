@@ -38,6 +38,12 @@ class BotDot_WP_Deactivator {
         // Clear activation notice transient
         delete_transient('botdot_wp_activation_notice');
 
+        // Unschedule analytics flush wp-cron event
+        $timestamp = wp_next_scheduled('botspot_flush_analytics');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'botspot_flush_analytics');
+        }
+
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug('BotSpot WP deactivated.');
         }
