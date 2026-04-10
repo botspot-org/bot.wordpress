@@ -1,0 +1,39 @@
+{
+  "name": "botspot/botdot-wp",
+  "description": "BotSpot WordPress plugin",
+  "type": "wordpress-plugin",
+  "license": "proprietary",
+  "require": {
+    "php": ">=7.4",
+    "jaybizzle/crawler-detect": "^1.2",
+    "monperrus/crawler-user-agents": "dev-master"
+  },
+  "require-dev": {
+    "brianhenryie/strauss": "^0.19",
+    "phpunit/phpunit": "^9.6"
+  },
+  "scripts": {
+    "strauss": [
+      "vendor/bin/strauss"
+    ],
+    "post-install-cmd": [
+      "@strauss"
+    ],
+    "post-update-cmd": [
+      "@strauss"
+    ]
+  },
+  "extra": {
+    "strauss": {
+      "target_directory": "vendor/botspot-prefixed/",
+      "namespace_prefix": "BotSpot\\Vendor\\",
+      "classmap_prefix": "BotSpot_Vendor_",
+      "constant_prefix": "BOTSPOT_VENDOR_",
+      "packages": [
+        "jaybizzle/crawler-detect",
+        "monperrus/crawler-user-agents"
+      ],
+      "delete_vendor_files": false
+    }
+  }
+}
