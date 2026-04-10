@@ -10,7 +10,33 @@ PLUGIN_SLUG="botdot-wp"
 VERSION=$(grep "Version:" botdot-wp.php | awk '{print $3}' | head -1)
 BUILD_DIR="build"
 DIST_DIR="dist"
-ZIP_NAME="${PLUGIN_SLUG}-${VERSION}.zip"
+
+# Build target — defaults to staging, override with:
+#   TARGET=production ./build.sh
+#   or the alias flag: ./build.sh --production
+TARGET="${TARGET:-staging}"
+if [ "$1" = "--production" ] || [ "$1" = "--prod" ]; then
+    TARGET="production"
+fi
+
+# Per-target URLs — env-var overridable for anyone running a private locus.
+# Defaults are the real Cloud Run custom domains verified via gcloud.
+case "$TARGET" in
+    production)
+        LOCUS_API_URL="${LOCUS_API_URL:-https://locus-api.bot.spot}"
+        CONNECTOR_URL="${CONNECTOR_URL:-https://locus-connectors.bot.spot}"
+        ZIP_NAME="${PLUGIN_SLUG}-${VERSION}.zip"
+        ;;
+    staging)
+        LOCUS_API_URL="${LOCUS_API_URL:-https://locus-staging-api.bot.spot}"
+        CONNECTOR_URL="${CONNECTOR_URL:-https://staging-locus-connectors.bot.spot}"
+        ZIP_NAME="${PLUGIN_SLUG}-${VERSION}-staging.zip"
+        ;;
+    *)
+        echo "ERROR: TARGET must be 'staging' or 'production', got '$TARGET'"
+        exit 1
+        ;;
+esac
 
 # Colors for output
 RED='\033[0;31m'
@@ -18,7 +44,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Building BotSpot WP Plugin v${VERSION}${NC}"
+echo -e "${GREEN}Building BotSpot WP Plugin v${VERSION} [${TARGET}]${NC}"
+echo "  API:        ${LOCUS_API_URL}"
+echo "  Connectors: ${CONNECTOR_URL}"
 echo "========================================"
 
 # Install Composer dependencies — three-step install so Strauss (a dev dep)
@@ -60,6 +88,28 @@ echo -e "${YELLOW}Copying plugin files...${NC}"
 
 # Copy main plugin file
 cp botdot-wp.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
+
+# Rewrite build-time URLs in the copy (never touch the source tree).
+# Source tree always holds the staging URLs; production builds sed-rewrite
+# them to the production custom domains. Env-var overrides (LOCUS_API_URL,
+# CONNECTOR_URL) allow arbitrary targets without editing the script.
+echo -e "${YELLOW}==> Rewriting build-time URLs for target '${TARGET}'${NC}"
+sed -i.bak \
+    -e "s|https://locus-staging-api.bot.spot|${LOCUS_API_URL}|g" \
+    -e "s|https://staging-locus-connectors.bot.spot|${CONNECTOR_URL}|g" \
+    "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php"
+rm -f "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php.bak"
+
+# Sanity check: confirm the rewritten file still has both defines and they
+# point at the expected URLs.
+if ! grep -q "define('BOTDOT_WP_LOCUS_API_URL', '${LOCUS_API_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php"; then
+    echo -e "${RED}ERROR: BOTDOT_WP_LOCUS_API_URL rewrite failed${NC}"
+    exit 1
+fi
+if ! grep -q "define('BOTDOT_WP_CONNECTOR_URL', '${CONNECTOR_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php"; then
+    echo -e "${RED}ERROR: BOTDOT_WP_CONNECTOR_URL rewrite failed${NC}"
+    exit 1
+fi
 
 # Copy README and documentation
 cp README.md "${BUILD_DIR}/${PLUGIN_SLUG}/"

@@ -60,14 +60,20 @@ define('BOTDOT_WP_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('BOTDOT_WP_TEXT_DOMAIN', 'botdot-wp');
 
 /**
- * Locus API URL (overridable via wp-config.php)
+ * Locus API URL (overridable via wp-config.php).
+ *
+ * The URL is a build-time sentinel (@LOCUS_API_URL@) that build.sh rewrites
+ * to the appropriate staging or production URL based on the TARGET env var
+ * or the --production flag. Source-tree default is staging so that local
+ * development and zero-config builds work without any flags.
  */
 if (!defined('BOTDOT_WP_LOCUS_API_URL')) {
     define('BOTDOT_WP_LOCUS_API_URL', 'https://locus-staging-api.bot.spot');
 }
 
 /**
- * Connector URL (overridable via wp-config.php)
+ * Connector URL (overridable via wp-config.php).
+ * Same build-time rewrite rule as BOTDOT_WP_LOCUS_API_URL.
  */
 if (!defined('BOTDOT_WP_CONNECTOR_URL')) {
     define('BOTDOT_WP_CONNECTOR_URL', 'https://staging-locus-connectors.bot.spot');
