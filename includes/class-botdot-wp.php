@@ -116,6 +116,11 @@ class BotDot_WP
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-logger.php";
 
         /**
+         * The class responsible for multilingual plugin detection.
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-language.php";
+
+        /**
          * The class responsible for content sync (write path).
          */
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-sync.php";

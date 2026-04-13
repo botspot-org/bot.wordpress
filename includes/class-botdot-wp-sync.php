@@ -422,7 +422,7 @@ class BotDot_WP_Sync
             "metadata" => [
                 "title" => $title,
                 "author" => $author,
-                "language" => substr(get_locale(), 0, 2),
+                "language" => BotDot_WP_Language::get_post_language($post->ID),
                 "published_at" => $published_at,
                 "updated_at" => $updated_at,
                 "tags" => is_array($tags) ? array_values($tags) : [],
@@ -509,6 +509,11 @@ class BotDot_WP_Sync
             return null;
         }
 
+        // Strip SEO-plugin template-placeholder leaks (%%name%%, {search_term_string},
+        // whitespace-only values) before any further processing. Keeps our ingest
+        // wire clean even if the SEO plugin misbehaves upstream.
+        $jsonld = self::sanitize_template_placeholders($jsonld);
+
         // Filter out locus-generated nodes to prevent circular re-ingestion
         $jsonld = self::filter_locus_nodes($jsonld);
 
@@ -520,6 +525,69 @@ class BotDot_WP_Sync
          * @param int        $post_id   The post ID.
          */
         return apply_filters("botdot_wp_source_jsonld", $jsonld, $post_id);
+    }
+
+    /**
+     * Recursively strip SEO-plugin template placeholders from JSON-LD.
+     *
+     * Matches two real-world leak signatures (language-agnostic):
+     *   - Yoast replacement tokens: %%name%%, %%sitename%%, %%title%% ...
+     *   - Unresolved {bareword} tokens: {search_term_string}, {...}
+     * Also drops whitespace-only strings.
+     *
+     * Mirrors locus-core's schema_validators.sanitize_jsonld — keeping both
+     * is belt-and-suspenders: if either side fails, the other catches the leak.
+     *
+     * @since    2.5.0
+     * @param    mixed    $value    A JSON-LD fragment (dict, list, scalar).
+     * @return   mixed              Sanitized fragment, or null if fully reduced.
+     */
+    private static function sanitize_template_placeholders($value)
+    {
+        if (is_array($value)) {
+            $is_list = array_keys($value) === range(0, count($value) - 1);
+            if ($is_list) {
+                $out = [];
+                foreach ($value as $item) {
+                    $cleaned = self::sanitize_template_placeholders($item);
+                    if ($cleaned === null) {
+                        continue;
+                    }
+                    if (is_array($cleaned) && empty($cleaned)) {
+                        continue;
+                    }
+                    $out[] = $cleaned;
+                }
+                return $out;
+            }
+
+            $out = [];
+            foreach ($value as $key => $item) {
+                $cleaned = self::sanitize_template_placeholders($item);
+                if ($cleaned === null) {
+                    continue;
+                }
+                if (is_array($cleaned) && empty($cleaned)) {
+                    continue;
+                }
+                $out[$key] = $cleaned;
+            }
+            return $out;
+        }
+
+        if (is_string($value)) {
+            if (trim($value) === "") {
+                return null;
+            }
+            if (preg_match("/%%[^%]*%%/", $value)) {
+                return null;
+            }
+            if (preg_match("/\\{[A-Za-z_][A-Za-z0-9_]*\\}/", $value)) {
+                return null;
+            }
+        }
+
+        return $value;
     }
 
     /**

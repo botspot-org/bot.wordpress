@@ -63,7 +63,7 @@ class BotDot_WP_Content_Fetcher
             return null;
         }
 
-        $lang = substr(get_locale(), 0, 2);
+        $lang = BotDot_WP_Language::get_current_language();
         $cache_key = "botdot_content_" . md5($url_path . "_" . $lang);
 
         // Check transient cache
@@ -167,7 +167,7 @@ class BotDot_WP_Content_Fetcher
      */
     public static function fetch_jsonld($url_path)
     {
-        $lang = substr(get_locale(), 0, 2);
+        $lang = BotDot_WP_Language::get_current_language();
         $cache_key_jsonld = "botdot_jsonld_" . md5($url_path . "_" . $lang);
 
         // Check per-request cache first
@@ -270,7 +270,7 @@ class BotDot_WP_Content_Fetcher
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/check";
         $endpoint = add_query_arg("path", $url_path, $endpoint);
 
-        $lang = substr(get_locale(), 0, 2);
+        $lang = BotDot_WP_Language::get_current_language();
         if (!empty($lang)) {
             $endpoint = add_query_arg("lang", $lang, $endpoint);
         }

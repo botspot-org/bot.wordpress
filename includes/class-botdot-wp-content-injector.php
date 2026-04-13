@@ -66,15 +66,6 @@ class BotDot_WP_Content_Injector
     private $shortcode_used = false;
 
     /**
-     * Whether JSON-LD has been merged into an SEO plugin's output.
-     *
-     * @since    1.3.0
-     * @access   private
-     * @var      bool
-     */
-    private $jsonld_merged_into_seo_plugin = false;
-
-    /**
      * Per-request cache of locus JSON-LD data.
      *
      * @since    1.3.0
@@ -106,238 +97,49 @@ class BotDot_WP_Content_Injector
     }
 
     /**
-     * Merge locus JSON-LD into Yoast SEO's @graph array (modern Yoast 14.0+).
+     * Pass Yoast SEO's @graph array through unchanged (peer-schema model).
      *
      * Filter: wpseo_schema_graph (priority 99)
      *
-     * This filter receives the @graph array directly (not the full JSON-LD wrapper).
+     * Prior to 2.5.0 this hook merged locus nodes into Yoast's graph. The
+     * peer-schema model treats BotSpot and Yoast as independent publishers
+     * of JSON-LD — each emits its own <script> tag on the page. Locus
+     * nodes are injected separately via inject_jsonld() at wp_head:99.
      *
      * @since    1.3.0
      * @param    array    $graph    Yoast @graph array of nodes.
-     * @return   array              Modified @graph array with locus nodes merged in.
+     * @return   array              Unmodified graph.
      */
     public function merge_into_yoast_graph($graph)
     {
-        if (!is_array($graph)) {
-            return $graph;
-        }
-
-        // Already merged via this hook
-        if ($this->jsonld_merged_into_seo_plugin) {
-            return $graph;
-        }
-
-        $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
-        if ($conflict_mode === "off") {
-            $this->log_debug("JSON-LD conflict mode is 'off', skipping Yoast graph merge");
-            return $graph;
-        }
-
-        $locus_jsonld = $this->get_locus_jsonld();
-        if ($locus_jsonld === null) {
-            $this->log_debug("No locus JSON-LD available for Yoast graph merge");
-            return $graph;
-        }
-
-        $locus_nodes = $this->extract_graph_nodes($locus_jsonld);
-        if (empty($locus_nodes)) {
-            $this->log_debug("No locus @graph nodes to merge");
-            return $graph;
-        }
-
-        // Build a map of existing @types in Yoast's graph (lowercased)
-        $seo_type_index = [];
-        foreach ($graph as $idx => $node) {
-            if (!is_array($node) || !isset($node["@type"])) {
-                continue;
-            }
-            $types = (array) $node["@type"];
-            foreach ($types as $type) {
-                $seo_type_index[strtolower($type)] = $idx;
-            }
-        }
-
-        foreach ($locus_nodes as $locus_node) {
-            if (!is_array($locus_node) || !isset($locus_node["@type"])) {
-                $graph[] = $locus_node;
-                continue;
-            }
-
-            $locus_types = (array) $locus_node["@type"];
-            $collision_idx = null;
-
-            if ($conflict_mode === "merge") {
-                foreach ($locus_types as $type) {
-                    $key = strtolower($type);
-                    if (isset($seo_type_index[$key])) {
-                        $collision_idx = $seo_type_index[$key];
-                        break;
-                    }
-                }
-            }
-
-            if ($collision_idx !== null) {
-                foreach ($locus_node as $prop => $value) {
-                    if (!isset($graph[$collision_idx][$prop])) {
-                        $graph[$collision_idx][$prop] = $value;
-                    }
-                }
-                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
-                $this->log_debug(sprintf(
-                    "Merged locus node @id=%s into Yoast node @type=%s (additive)",
-                    $node_id,
-                    implode(",", $locus_types)
-                ));
-            } else {
-                $graph[] = $locus_node;
-                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
-                $this->log_debug(sprintf(
-                    "Appended locus node @id=%s (@type=%s) to Yoast @graph",
-                    $node_id,
-                    implode(",", $locus_types)
-                ));
-            }
-        }
-
-        $this->jsonld_merged_into_seo_plugin = true;
-        $this->log_debug(sprintf("JSON-LD merge into Yoast graph complete (%d locus nodes processed)", count($locus_nodes)));
-
         return $graph;
     }
 
     /**
-     * Merge locus JSON-LD into Yoast SEO's full output (legacy fallback).
+     * Pass Yoast SEO's full JSON-LD output through unchanged (peer-schema model).
      *
-     * Filter: wpseo_json_ld_output (priority 99)
-     * Only runs if wpseo_schema_graph didn't fire (old Yoast versions).
+     * Filter: wpseo_json_ld_output (priority 99) — legacy Yoast pre-14.0.
      *
      * @since    1.3.0
      * @param    array    $data    Yoast JSON-LD data.
-     * @return   array             Modified data with locus nodes merged in.
+     * @return   array             Unmodified data.
      */
     public function merge_into_yoast_jsonld($data)
     {
-        if ($this->jsonld_merged_into_seo_plugin) {
-            return $data;
-        }
-        return $this->merge_into_seo_jsonld($data, "Yoast");
+        return $data;
     }
 
     /**
-     * Merge locus JSON-LD into RankMath's @graph output.
+     * Pass RankMath's JSON-LD output through unchanged (peer-schema model).
      *
      * Filter: rank_math/json_ld (priority 99)
      *
      * @since    1.3.0
      * @param    array    $data    RankMath JSON-LD data.
-     * @return   array             Modified data with locus nodes merged in.
+     * @return   array             Unmodified data.
      */
     public function merge_into_rankmath_jsonld($data)
     {
-        return $this->merge_into_seo_jsonld($data, "RankMath");
-    }
-
-    /**
-     * Core merge logic for SEO plugin JSON-LD integration.
-     *
-     * @since    1.3.0
-     * @access   private
-     * @param    array     $data          SEO plugin's JSON-LD data.
-     * @param    string    $plugin_name   Name of the SEO plugin (for logging).
-     * @return   array                    Modified JSON-LD data.
-     */
-    private function merge_into_seo_jsonld($data, $plugin_name)
-    {
-        if (!is_array($data)) {
-            return $data;
-        }
-
-        $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
-        if ($conflict_mode === "off") {
-            $this->log_debug(sprintf("JSON-LD conflict mode is 'off', skipping %s merge", $plugin_name));
-            return $data;
-        }
-
-        $locus_jsonld = $this->get_locus_jsonld();
-        if ($locus_jsonld === null) {
-            $this->log_debug(sprintf("No locus JSON-LD available for %s merge", $plugin_name));
-            return $data;
-        }
-
-        $locus_nodes = $this->extract_graph_nodes($locus_jsonld);
-        if (empty($locus_nodes)) {
-            $this->log_debug("No locus @graph nodes to merge");
-            return $data;
-        }
-
-        // Ensure @graph exists in the SEO data
-        if (!isset($data["@graph"]) || !is_array($data["@graph"])) {
-            $data["@graph"] = [];
-        }
-
-        // Build a map of existing @types in the SEO plugin's graph (lowercased)
-        $seo_type_index = [];
-        foreach ($data["@graph"] as $idx => $node) {
-            if (!is_array($node) || !isset($node["@type"])) {
-                continue;
-            }
-            $types = (array) $node["@type"];
-            foreach ($types as $type) {
-                $seo_type_index[strtolower($type)] = $idx;
-            }
-        }
-
-        foreach ($locus_nodes as $locus_node) {
-            if (!is_array($locus_node) || !isset($locus_node["@type"])) {
-                // No @type - just append
-                $data["@graph"][] = $locus_node;
-                continue;
-            }
-
-            $locus_types = (array) $locus_node["@type"];
-            $collision_idx = null;
-
-            if ($conflict_mode === "merge") {
-                // Check for @type collision
-                foreach ($locus_types as $type) {
-                    $key = strtolower($type);
-                    if (isset($seo_type_index[$key])) {
-                        $collision_idx = $seo_type_index[$key];
-                        break;
-                    }
-                }
-            }
-
-            if ($collision_idx !== null) {
-                // Merge: add locus properties into existing node (additive only)
-                foreach ($locus_node as $prop => $value) {
-                    if (!isset($data["@graph"][$collision_idx][$prop])) {
-                        $data["@graph"][$collision_idx][$prop] = $value;
-                    }
-                }
-                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
-                $this->log_debug(sprintf(
-                    "Merged locus node @id=%s into %s node @type=%s (additive)",
-                    $node_id,
-                    $plugin_name,
-                    implode(",", $locus_types)
-                ));
-            } else {
-                // No collision or replace mode: append
-                $data["@graph"][] = $locus_node;
-                $node_id = isset($locus_node["@id"]) ? $locus_node["@id"] : "unknown";
-                $this->log_debug(sprintf(
-                    "Appended locus node @id=%s (@type=%s) to %s @graph",
-                    $node_id,
-                    implode(",", $locus_types),
-                    $plugin_name
-                ));
-            }
-        }
-
-        $this->jsonld_merged_into_seo_plugin = true;
-        $this->log_debug(sprintf("JSON-LD merge into %s complete (%d locus nodes processed)", $plugin_name, count($locus_nodes)));
-
         return $data;
     }
 
@@ -458,9 +260,12 @@ class BotDot_WP_Content_Injector
             return;
         }
 
-        // Skip standalone output if already merged into SEO plugin's @graph
-        if ($this->jsonld_merged_into_seo_plugin) {
-            $this->log_debug("JSON-LD already merged into SEO plugin output, skipping standalone injection");
+        // Respect the "off" option as a full disable, regardless of SEO plugin
+        // presence. "merge" and "replace" modes are legacy; in the peer-schema
+        // model both behave the same (emit the standalone tag).
+        $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
+        if ($conflict_mode === "off") {
+            $this->log_debug("JSON-LD conflict mode is 'off', skipping injection");
             return;
         }
 
@@ -478,7 +283,7 @@ class BotDot_WP_Content_Injector
         echo '<script type="application/ld+json">' . $json_string . "</script>";
         echo "\n<!-- /BotSpot JSON-LD -->\n";
 
-        $this->log_debug("JSON-LD injected into wp_head (standalone, no SEO plugin detected)");
+        $this->log_debug("JSON-LD injected into wp_head as peer schema tag");
     }
 
     /**

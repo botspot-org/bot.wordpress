@@ -159,6 +159,13 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.5.0
+- **Change (visible)**: BotSpot JSON-LD is now emitted as a **separate `<script type="application/ld+json">` tag** alongside any SEO plugin's output, instead of being merged into Yoast's or RankMath's `@graph`. This is the "peer schema" model: BotSpot and the SEO plugin are independent publishers of structured data. `locus-core` coordinates emission so BotSpot no longer emits `Organization` or `BreadcrumbList` when the SEO plugin already provides them, avoiding `@id` collisions.
+- **Change**: The `jsonld_conflict_mode` option's `"merge"` and `"replace"` values now behave identically in 2.5.0 — both cause BotSpot to emit its peer tag. `"off"` still disables injection entirely. Legacy option is scheduled for removal in a future major release.
+- **Fix**: Pre-capture sanitizer in `extract_page_jsonld()` now strips Yoast replacement tokens (`%%name%%`, `%%sitename%%`, etc.) and unresolved Mustache-style placeholders (`{search_term_string}`) from source JSON-LD **before** it's sent to `locus-core`. Addresses the live `forus.fi` `SearchAction` leak flagged on BOT-237 #1. Language-agnostic — matches on shape, not token vocabulary.
+- **New**: Polylang + WPML per-post language detection via new `BotDot_WP_Language` helper. Resolution order is Polylang → WPML → WordPress `get_locale()`. Sites without a multilingual plugin behave identically to 2.4.0; sites with Polylang or WPML now send the correct post-specific language to `locus-core` (previously all posts shared the site-wide locale). Affects ingest payloads and the three frontend cache-key / API-fetch sites.
+- **Compat**: Requires `locus-core` with peer-schema Stream A deployed (core-side supplement-only JSON-LD + `sanitize_jsonld()`). On older `locus-core`, the plugin side still works but `locus-core` will still merge — net effect is harmless duplication, not breakage.
+
 ### 2.4.0
 - **New**: Analytics tab in the admin UI with three cards: sync health, enrichment lifecycle, and impressions (including per-bot breakdown for AI crawlers like GPTBot, ClaudeBot, PerplexityBot, etc.).
 - **New**: Visitor impressions (including AI crawler hits) are counted in post meta on the hot path via `BotDot_WP_Bot_Classifier`. Classification uses an explicit `monperrus/crawler-user-agents`–derived pattern map for named AI bots and falls back to `jaybizzle/crawler-detect` for any other crawler. Human visitors classify as `human`.
