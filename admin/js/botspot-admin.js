@@ -319,13 +319,14 @@
         return rawMsg;
     }
 
-    function handleTestConnection(btn) {
+    function handleTestConnection(btn, apiKey) {
         if (!btn) return;
         btn.disabled = true;
         var originalText = btn.textContent;
         btn.textContent = strings.testing || "Connecting...";
 
-        bsaAjax("botdot_wp_test_connection", {}, nonces.testConnection).then(function (res) {
+        var payload = apiKey ? { api_key: apiKey } : {};
+        bsaAjax("botdot_wp_test_connection", payload, nonces.testConnection).then(function (res) {
             btn.disabled = false;
             btn.textContent = originalText;
 
@@ -340,13 +341,14 @@
         });
     }
 
-    function handleReconnect(btn) {
+    function handleReconnect(btn, apiKey) {
         if (!btn) return;
         btn.disabled = true;
         var originalText = btn.textContent;
         btn.textContent = strings.testing || "Working...";
 
-        bsaAjax("botdot_wp_register_connection", {}, nonces.registerConnection).then(function (res) {
+        var payload = apiKey ? { api_key: apiKey } : {};
+        bsaAjax("botdot_wp_register_connection", payload, nonces.registerConnection).then(function (res) {
             btn.disabled = false;
             btn.textContent = originalText;
             if (res && res.success) {
@@ -354,21 +356,6 @@
                 setTimeout(function () { window.location.reload(); }, 600);
             } else {
                 showResult("test-connection", false, friendlyConnectionError((res && res.data && res.data.message) || "Connection failed"));
-            }
-        });
-    }
-
-    function handleDisconnect(btn) {
-        if (!btn) return;
-        if (!window.confirm(strings.confirmDisconnect || "Disconnect?")) return;
-
-        btn.disabled = true;
-        bsaAjax("botdot_wp_disconnect", {}, nonces.disconnect).then(function (res) {
-            btn.disabled = false;
-            if (res && res.success) {
-                window.location.reload();
-            } else {
-                showResult("test-connection", false, (res && res.data && res.data.message) || "Disconnect failed");
             }
         });
     }
@@ -445,10 +432,15 @@
 
     function initActions() {
         on(qs('[data-bsa-action="test-connection"]'), "click", function (e) {
-            // First-time connect: register the webhook (which auto-provisions
-            // the site/org on core). Subsequent clicks just probe the key.
+            // Save-then-connect: if the user typed a new key in the input,
+            // pass it inline so the server saves it before registering. No
+            // separate Save button needed.
             var btn = e.currentTarget;
-            if (btn.getAttribute("data-bsa-is-connected") === "1") {
+            var input = qs("#bsa-api-key");
+            var typedKey = input && input.value ? input.value.trim() : "";
+            if (typedKey) {
+                handleReconnect(btn, typedKey);
+            } else if (btn.getAttribute("data-bsa-is-connected") === "1") {
                 handleTestConnection(btn);
             } else {
                 handleReconnect(btn);
@@ -456,9 +448,6 @@
         });
         on(qs('[data-bsa-action="reconnect"]'), "click", function (e) {
             handleReconnect(e.currentTarget);
-        });
-        on(qs('[data-bsa-action="disconnect"]'), "click", function (e) {
-            handleDisconnect(e.currentTarget);
         });
         on(qs('[data-bsa-action="force-resync"]'), "click", function (e) {
             handleForceResync(e.currentTarget);

@@ -66,9 +66,6 @@ if (!defined("WPINC")) {
                         <span class="bsa-dot bsa-dot--ok bsa-dot--pulse"></span>
                         <span class="bsa-status-pill__label"><?php _e("Connected", "botdot-wp"); ?></span>
                     </span>
-                    <button type="button" class="bsa-btn" data-bsa-action="disconnect">
-                        <?php _e("Disconnect", "botdot-wp"); ?>
-                    </button>
                 <?php endif; ?>
                 <span class="bsa-divider-v"></span>
                 <a href="https://platform.bot.spot/integrations" target="_blank" rel="noopener" class="bsa-link">

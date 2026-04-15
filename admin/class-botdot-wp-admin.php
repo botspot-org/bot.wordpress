@@ -193,7 +193,6 @@ class BotDot_WP_Admin
                 "clearErrors" => wp_create_nonce("botdot_wp_clear_errors"),
                 "manualSync" => wp_create_nonce("botdot_wp_manual_sync"),
                 "registerConnection" => wp_create_nonce("botdot_wp_register_connection"),
-                "disconnect" => wp_create_nonce("botdot_wp_disconnect"),
                 "getLogs" => wp_create_nonce("botdot_wp_get_logs"),
                 "getStatus" => wp_create_nonce("botdot_wp_get_status"),
                 "forceResync" => wp_create_nonce("botdot_wp_force_resync"),
@@ -210,7 +209,6 @@ class BotDot_WP_Admin
                 "testSuccess" => __("Connection successful", "botdot-wp"),
                 "testFailed" => __("Connection failed", "botdot-wp"),
                 "copied" => __("Copied to clipboard", "botdot-wp"),
-                "confirmDisconnect" => __("Disconnect this site from bot.spot?", "botdot-wp"),
             ],
         ]);
     }
@@ -467,6 +465,8 @@ class BotDot_WP_Admin
             return;
         }
 
+        $this->maybe_save_inline_api_key();
+
         $result = BotDot_WP_Content_Fetcher::test_connection();
 
         if (!empty($result["success"])) {
@@ -531,6 +531,40 @@ class BotDot_WP_Admin
             wp_send_json_success(["message" => __("Synced successfully", "botdot-wp")]);
         } else {
             wp_send_json_error(["message" => __("Sync failed. Check error log for details.", "botdot-wp")]);
+        }
+    }
+
+    /**
+     * Persist an inline api_key submitted alongside Connect/Test AJAX calls.
+     *
+     * Lets the user paste a key and click Connect without first hitting the
+     * Settings save button. Only acts when a non-empty `api_key` POST param
+     * is present and looks like a WorkOS sk_ key. When `$reset_connection`
+     * is true and the key actually changed, also clears the prior webhook
+     * registration so the caller registers fresh against the new org.
+     *
+     * @since 2.6.2
+     * @param bool $reset_connection Wipe webhook_id/secret/tenant_id on key change.
+     */
+    private function maybe_save_inline_api_key($reset_connection = false)
+    {
+        if (empty($_POST["api_key"])) {
+            return;
+        }
+        $submitted = sanitize_text_field(wp_unslash($_POST["api_key"]));
+        if (strpos($submitted, "sk_") !== 0) {
+            return;
+        }
+        $current = BotDot_WP_Options::get("api_key");
+        if ($submitted === $current) {
+            return;
+        }
+        BotDot_WP_Options::set("api_key", $submitted);
+        if ($reset_connection) {
+            BotDot_WP_Options::set("webhook_id", "");
+            BotDot_WP_Options::set("webhook_secret", "");
+            BotDot_WP_Options::set("connection_id", "");
+            BotDot_WP_Options::set("tenant_id", "");
         }
     }
 
@@ -655,9 +689,15 @@ class BotDot_WP_Admin
             return;
         }
 
+        // Accept an inline api_key from the Connect button so the user
+        // doesn't need to hit "Save settings" first. If the key is new or
+        // changed, also clear the old webhook so the registration below
+        // creates a fresh one against the new key's organization.
+        $this->maybe_save_inline_api_key(true);
+
         $api_key = BotDot_WP_Options::get("api_key");
         if (empty($api_key)) {
-            wp_send_json_error(["message" => __("Please save an access key first.", "botdot-wp")]);
+            wp_send_json_error(["message" => __("Please enter an access key.", "botdot-wp")]);
             return;
         }
 
@@ -726,47 +766,6 @@ class BotDot_WP_Admin
         wp_send_json_success([
             "message" => __("Connected successfully.", "botdot-wp"),
             "connection_id" => isset($body["id"]) ? $body["id"] : "",
-        ]);
-    }
-
-    /**
-     * Handle AJAX disconnect
-     *
-     * Clears connection_id, webhook_secret, and tenant_id.
-     *
-     * @since    1.1.0
-     */
-    public function handle_disconnect()
-    {
-        check_ajax_referer("botdot_wp_disconnect", "nonce");
-
-        if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
-            return;
-        }
-
-        // Delete webhook registration from locus-core
-        $webhook_id = BotDot_WP_Options::get("webhook_id");
-        if (!empty($webhook_id)) {
-            $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-            $api_key = BotDot_WP_Options::get("api_key");
-            wp_remote_request(
-                rtrim($locus_api_url, "/") . "/api/v1/webhooks/" . urlencode($webhook_id),
-                [
-                    "method" => "DELETE",
-                    "headers" => ["X-API-Key" => $api_key],
-                    "timeout" => 10,
-                ],
-            );
-        }
-
-        BotDot_WP_Options::set("connection_id", "");
-        BotDot_WP_Options::set("webhook_secret", "");
-        BotDot_WP_Options::set("webhook_id", "");
-        BotDot_WP_Options::set("tenant_id", "");
-
-        wp_send_json_success([
-            "message" => __("Disconnected successfully.", "botdot-wp"),
         ]);
     }
 

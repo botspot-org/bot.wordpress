@@ -159,6 +159,10 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.6.2
+- **UX**: Connect button now saves the access key inline. Paste your `sk_*` key and click Connect — no separate "Save settings" step required. If the key differs from the previously stored one, the prior webhook registration is cleared so the new key registers cleanly against its own organization.
+- **UX**: Removed the "Disconnect" button. It served no purpose for end users — connections are managed from the bot.spot side, and the local webhook is replaced automatically when a new key is connected. Drops the `botdot_wp_disconnect` AJAX action and handler.
+
 ### 2.6.1
 - **Fix**: First-time "Connect" on a freshly installed plugin no longer fails with `Connection returned HTTP 404`. The primary button now runs the register flow (POST `/api/v1/webhooks`), which validates the key and provisions the webhook in a single call. Previously it only ran a read probe against `/api/v1/appendix/config`, which legitimately 404s until first content ingest creates the site row.
 - **Fix**: Post-connect status probe (the dot indicator) now hits the auth-only `/api/v1/webhooks?limit=1` endpoint instead of `/api/v1/appendix/config`, so the connection reads healthy as soon as the key is valid — independent of whether any content has been ingested yet.
