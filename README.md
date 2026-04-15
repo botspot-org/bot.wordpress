@@ -159,6 +159,10 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.6.1
+- **Fix**: First-time "Connect" on a freshly installed plugin no longer fails with `Connection returned HTTP 404`. The primary button now runs the register flow (POST `/api/v1/webhooks`), which validates the key and provisions the webhook in a single call. Previously it only ran a read probe against `/api/v1/appendix/config`, which legitimately 404s until first content ingest creates the site row.
+- **Fix**: Post-connect status probe (the dot indicator) now hits the auth-only `/api/v1/webhooks?limit=1` endpoint instead of `/api/v1/appendix/config`, so the connection reads healthy as soon as the key is valid — independent of whether any content has been ingested yet.
+
 ### 2.5.0
 - **Change (visible)**: BotSpot JSON-LD is now emitted as a **separate `<script type="application/ld+json">` tag** alongside any SEO plugin's output, instead of being merged into Yoast's or RankMath's `@graph`. This is the "peer schema" model: BotSpot and the SEO plugin are independent publishers of structured data. `locus-core` coordinates emission so BotSpot no longer emits `Organization` or `BreadcrumbList` when the SEO plugin already provides them, avoiding `@id` collisions.
 - **Change**: The `jsonld_conflict_mode` option's `"merge"` and `"replace"` values now behave identically in 2.5.0 — both cause BotSpot to emit its peer tag. `"off"` still disables injection entirely. Legacy option is scheduled for removal in a future major release.

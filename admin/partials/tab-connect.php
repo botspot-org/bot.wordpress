@@ -58,7 +58,7 @@ if (!defined("WPINC")) {
             </div>
 
             <div class="bsa-actions">
-                <button type="button" class="bsa-btn bsa-btn--primary" data-bsa-action="test-connection" data-bsa-requires-key="1" <?php echo !$bsa_has_api_key ? 'disabled' : ''; ?>>
+                <button type="button" class="bsa-btn bsa-btn--primary" data-bsa-action="test-connection" data-bsa-requires-key="1" data-bsa-is-connected="<?php echo $bsa_is_connected ? '1' : '0'; ?>" <?php echo !$bsa_has_api_key ? 'disabled' : ''; ?>>
                     <?php _e("Connect", "botdot-wp"); ?>
                 </button>
                 <?php if ($bsa_is_connected): ?>

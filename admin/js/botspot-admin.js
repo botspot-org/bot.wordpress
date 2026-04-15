@@ -445,7 +445,14 @@
 
     function initActions() {
         on(qs('[data-bsa-action="test-connection"]'), "click", function (e) {
-            handleTestConnection(e.currentTarget);
+            // First-time connect: register the webhook (which auto-provisions
+            // the site/org on core). Subsequent clicks just probe the key.
+            var btn = e.currentTarget;
+            if (btn.getAttribute("data-bsa-is-connected") === "1") {
+                handleTestConnection(btn);
+            } else {
+                handleReconnect(btn);
+            }
         });
         on(qs('[data-bsa-action="reconnect"]'), "click", function (e) {
             handleReconnect(e.currentTarget);

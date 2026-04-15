@@ -304,6 +304,10 @@ class BotDot_WP_Content_Fetcher
     /**
      * Test connection to locus-core
      *
+     * Probes an auth-only endpoint (webhook list) so the check succeeds as
+     * soon as the API key is valid — without requiring a provisioned site
+     * config, which only exists after first ingest.
+     *
      * @since    1.0.0
      * @return   array    Result with 'success' and 'message' keys.
      */
@@ -319,7 +323,7 @@ class BotDot_WP_Content_Fetcher
             ];
         }
 
-        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/config";
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/webhooks?limit=1";
 
         $response = wp_remote_get($endpoint, [
             "headers" => [
