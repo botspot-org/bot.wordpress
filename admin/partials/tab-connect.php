@@ -1,6 +1,6 @@
 <?php
 /**
- * Connect tab — API key entry, test/reconnect, setup guide.
+ * Connect tab — access key entry, connect, setup guide.
  *
  * @package BotDot_WP
  * @subpackage BotDot_WP/admin/partials
@@ -28,12 +28,12 @@ if (!defined("WPINC")) {
                     <span class="bsa-h1__accent"><?php _e("site", "botdot-wp"); ?></span>
                 </h1>
                 <p class="bsa-description">
-                    <?php _e("Paste your API key to connect this WordPress site to BotSpot. Content, review, and publishing are managed there.", "botdot-wp"); ?>
+                    <?php _e("Paste your access key to connect this WordPress site to bot.spot. Content, review, and publishing are managed there.", "botdot-wp"); ?>
                 </p>
             </div>
 
             <div class="bsa-field">
-                <label class="bsa-label" for="bsa-api-key"><?php _e("API key", "botdot-wp"); ?></label>
+                <label class="bsa-label" for="bsa-api-key"><?php _e("Access key", "botdot-wp"); ?></label>
                 <div class="bsa-input-group" data-bsa-component="api-key-input">
                     <div class="bsa-input-group__prefix" aria-hidden="true">
                         <svg class="bsa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="square" d="M15 7a4 4 0 11-5.2 3.8L3 17.5V21h3.5l1-1v-1.5h1.5v-1.5H10l1.2-1.2A4 4 0 1115 7z"/></svg>
@@ -58,21 +58,21 @@ if (!defined("WPINC")) {
             </div>
 
             <div class="bsa-actions">
-                <button type="button" class="bsa-btn bsa-btn--primary" data-bsa-action="test-connection" <?php echo !$bsa_has_api_key ? 'disabled' : ''; ?>>
-                    <?php _e("Test connection", "botdot-wp"); ?>
+                <button type="button" class="bsa-btn bsa-btn--primary" data-bsa-action="test-connection" data-bsa-requires-key="1" <?php echo !$bsa_has_api_key ? 'disabled' : ''; ?>>
+                    <?php _e("Connect", "botdot-wp"); ?>
                 </button>
                 <?php if ($bsa_is_connected): ?>
+                    <span class="bsa-status-pill bsa-status-pill--connected" data-bsa-connected-indicator>
+                        <span class="bsa-dot bsa-dot--ok bsa-dot--pulse"></span>
+                        <span class="bsa-status-pill__label"><?php _e("Connected", "botdot-wp"); ?></span>
+                    </span>
                     <button type="button" class="bsa-btn" data-bsa-action="disconnect">
                         <?php _e("Disconnect", "botdot-wp"); ?>
                     </button>
-                <?php else: ?>
-                    <button type="button" class="bsa-btn" data-bsa-action="reconnect" <?php echo !$bsa_has_api_key ? 'disabled' : ''; ?>>
-                        <?php _e("Reconnect", "botdot-wp"); ?>
-                    </button>
                 <?php endif; ?>
                 <span class="bsa-divider-v"></span>
-                <a href="https://app.bot.spot" target="_blank" rel="noopener" class="bsa-link">
-                    <?php _e("Open BotSpot", "botdot-wp"); ?>
+                <a href="https://platform.bot.spot/integrations" target="_blank" rel="noopener" class="bsa-link">
+                    <?php _e("Open bot.spot", "botdot-wp"); ?>
                     <svg class="bsa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="square" d="M7 17L17 7M17 7H9M17 7v8"/></svg>
                 </a>
             </div>
@@ -103,21 +103,23 @@ if (!defined("WPINC")) {
                     <li class="bsa-step">
                         <span class="bsa-step__num">1</span>
                         <div class="bsa-step__body">
-                            <p class="bsa-step__title"><?php _e("Sign in to BotSpot", "botdot-wp"); ?></p>
+                            <p class="bsa-step__title">
+                                <a href="https://platform.bot.spot/integrations" target="_blank" rel="noopener"><?php _e("Sign in to bot.spot", "botdot-wp"); ?></a>
+                            </p>
                             <p class="bsa-step__desc"><?php _e("Use your workspace account.", "botdot-wp"); ?></p>
                         </div>
                     </li>
                     <li class="bsa-step">
                         <span class="bsa-step__num">2</span>
                         <div class="bsa-step__body">
-                            <p class="bsa-step__title"><?php _e("Go to Settings → Integrations", "botdot-wp"); ?></p>
-                            <p class="bsa-step__desc"><?php _e("Find the WordPress card.", "botdot-wp"); ?></p>
+                            <p class="bsa-step__title"><?php _e("Go to Integrations", "botdot-wp"); ?></p>
+                            <p class="bsa-step__desc"><?php _e("Find the WordPress card in your workspace.", "botdot-wp"); ?></p>
                         </div>
                     </li>
                     <li class="bsa-step">
                         <span class="bsa-step__num">3</span>
                         <div class="bsa-step__body">
-                            <p class="bsa-step__title"><?php _e("Generate an API key", "botdot-wp"); ?></p>
+                            <p class="bsa-step__title"><?php _e("Generate an access key", "botdot-wp"); ?></p>
                             <p class="bsa-step__desc"><?php _e("Copy it to your clipboard.", "botdot-wp"); ?></p>
                         </div>
                     </li>
@@ -129,12 +131,6 @@ if (!defined("WPINC")) {
                         </div>
                     </li>
                 </ol>
-                <div class="bsa-card__foot">
-                    <span class="bsa-card__foot-label"><?php _e("Need help?", "botdot-wp"); ?></span>
-                    <a href="https://docs.bot.spot" target="_blank" rel="noopener" class="bsa-link-sm">
-                        <?php _e("Docs →", "botdot-wp"); ?>
-                    </a>
-                </div>
             </div>
 
             <div class="bsa-card bsa-card--accent">
@@ -147,13 +143,13 @@ if (!defined("WPINC")) {
                         <span class="bsa-next-step__label"><?php _e("Next step", "botdot-wp"); ?></span>
                     </div>
                     <h3 class="bsa-next-step__title">
-                        <?php _e("Open BotSpot to generate, review, and publish your content.", "botdot-wp"); ?>
+                        <?php _e("Open bot.spot to generate, review, and publish your content.", "botdot-wp"); ?>
                     </h3>
                     <p class="bsa-next-step__desc">
                         <?php _e("Your appendix, schema, and styling live in the platform. This plugin handles syncing and injection automatically.", "botdot-wp"); ?>
                     </p>
-                    <a href="https://app.bot.spot" target="_blank" rel="noopener" class="bsa-btn bsa-btn--ghost">
-                        <?php _e("Open BotSpot", "botdot-wp"); ?>
+                    <a href="https://platform.bot.spot/integrations" target="_blank" rel="noopener" class="bsa-btn bsa-btn--ghost">
+                        <?php _e("Open bot.spot", "botdot-wp"); ?>
                         <svg class="bsa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="square" d="M7 17L17 7M17 7H9M17 7v8"/></svg>
                     </a>
                 </div>

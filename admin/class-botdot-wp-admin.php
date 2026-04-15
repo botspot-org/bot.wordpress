@@ -62,8 +62,8 @@ class BotDot_WP_Admin
     public function add_admin_menu()
     {
         add_menu_page(
-            __("BotSpot Settings", "botdot-wp"),
-            __("BotSpot", "botdot-wp"),
+            __("bot.spot Settings", "botdot-wp"),
+            __("bot.spot", "botdot-wp"),
             "manage_options",
             "botdot-wp",
             [$this, "display_settings_page"],
@@ -210,7 +210,7 @@ class BotDot_WP_Admin
                 "testSuccess" => __("Connection successful", "botdot-wp"),
                 "testFailed" => __("Connection failed", "botdot-wp"),
                 "copied" => __("Copied to clipboard", "botdot-wp"),
-                "confirmDisconnect" => __("Disconnect this site from BotSpot?", "botdot-wp"),
+                "confirmDisconnect" => __("Disconnect this site from bot.spot?", "botdot-wp"),
             ],
         ]);
     }
@@ -240,7 +240,7 @@ class BotDot_WP_Admin
         ?>
         <div class="notice notice-<?php echo esc_attr($last_error["type"]); ?> is-dismissible">
             <p>
-                <strong><?php _e("BotSpot WP:", "botdot-wp"); ?></strong>
+                <strong><?php _e("bot.spot WP:", "botdot-wp"); ?></strong>
                 <?php echo esc_html($last_error["message"]); ?>
                 <em>(<?php echo esc_html(sprintf(__("%s ago", "botdot-wp"), $time_ago)); ?>)</em>
             </p>
@@ -268,7 +268,7 @@ class BotDot_WP_Admin
         foreach ($sync_post_types as $post_type) {
             add_meta_box(
                 "botdot-wp-sync",
-                __("BotSpot Sync", "botdot-wp"),
+                __("bot.spot Sync", "botdot-wp"),
                 [$this, "render_sync_meta_box"],
                 $post_type,
                 "side",
@@ -363,7 +363,7 @@ class BotDot_WP_Admin
      */
     public function add_sync_column($columns)
     {
-        $columns["botdot_sync"] = __("BotSpot", "botdot-wp");
+        $columns["botdot_sync"] = __("bot.spot", "botdot-wp");
         return $columns;
     }
 
@@ -422,7 +422,7 @@ class BotDot_WP_Admin
      */
     public function add_bulk_sync_action($actions)
     {
-        $actions["botdot_sync"] = __("Sync with BotSpot", "botdot-wp");
+        $actions["botdot_sync"] = __("Sync with bot.spot", "botdot-wp");
         return $actions;
     }
 
@@ -569,7 +569,7 @@ class BotDot_WP_Admin
             add_settings_error(
                 "botdot_wp_api_key",
                 "botdot_wp_api_key_changed",
-                __("API key changed. Previous connection has been disconnected. Please re-connect.", "botdot-wp"),
+                __("Access key changed. Previous connection has been disconnected. Please re-connect.", "botdot-wp"),
                 "warning"
             );
         }
@@ -657,7 +657,7 @@ class BotDot_WP_Admin
 
         $api_key = BotDot_WP_Options::get("api_key");
         if (empty($api_key)) {
-            wp_send_json_error(["message" => __("Please save an API key first.", "botdot-wp")]);
+            wp_send_json_error(["message" => __("Please save an access key first.", "botdot-wp")]);
             return;
         }
 
@@ -686,7 +686,7 @@ class BotDot_WP_Admin
         if (is_wp_error($response)) {
             wp_send_json_error([
                 "message" => sprintf(
-                    __("Webhook registration failed: %s", "botdot-wp"),
+                    __("Connection failed: %s", "botdot-wp"),
                     $response->get_error_message()
                 ),
             ]);
@@ -700,9 +700,12 @@ class BotDot_WP_Admin
             $error_msg = is_array($body) && isset($body["detail"])
                 ? $body["detail"]
                 : sprintf("HTTP %d", $status_code);
-            wp_send_json_error([
-                "message" => sprintf(__("Webhook registration failed: %s", "botdot-wp"), $error_msg),
-            ]);
+            // Friendly copy for auth failures — the most common cause of
+            // webhook registration failing is a wrong / truncated key.
+            $friendly = ($status_code === 401 || $status_code === 403)
+                ? __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botdot-wp")
+                : sprintf(__("Connection failed: %s", "botdot-wp"), $error_msg);
+            wp_send_json_error(["message" => $friendly]);
             return;
         }
 
@@ -905,14 +908,14 @@ class BotDot_WP_Admin
         if (empty($api_key)) {
             $connection = [
                 "status" => "error",
-                "label" => __("No API key", "botdot-wp"),
-                "detail" => __("Paste your BotSpot API key on the Connect tab.", "botdot-wp"),
+                "label" => __("No access key", "botdot-wp"),
+                "detail" => __("Paste your bot.spot access key on the Connect tab.", "botdot-wp"),
             ];
         } elseif (empty($connection_id)) {
             $connection = [
                 "status" => "warn",
                 "label" => __("Not registered", "botdot-wp"),
-                "detail" => __("API key present but site is not yet registered with BotSpot.", "botdot-wp"),
+                "detail" => __("Access key present but site is not yet registered with bot.spot.", "botdot-wp"),
             ];
         } else {
             // Quick health probe via content fetcher (has its own short timeout)

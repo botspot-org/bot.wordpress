@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 <div class="bsa-analytics">
     <header class="bsa-analytics__header">
         <h1><?php esc_html_e('Analytics', 'botdot-wp'); ?></h1>
-        <p><?php esc_html_e('Insights into how your BotSpot content is syncing, enriching, and being served.', 'botdot-wp'); ?></p>
+        <p><?php esc_html_e('Insights into how your bot.spot content is syncing, enriching, and being served.', 'botdot-wp'); ?></p>
 
         <div class="bsa-analytics__window-selector" role="tablist">
             <button type="button" data-window="24h" class="bsa-btn bsa-btn--ghost"><?php esc_html_e('24h', 'botdot-wp'); ?></button>

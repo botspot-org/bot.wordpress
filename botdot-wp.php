@@ -3,8 +3,8 @@
  * Plugin Name: BotSpot WordPress
  * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 2.5.0
- * Author: BotSpot Team
+ * Version: 2.6.0
+ * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: Proprietary
  * License URI: https://bot.spot/license
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package BotDot_WP
- * @version 2.5.0
+ * @version 2.6.0
  */
 
 // If this file is called directly, abort.
@@ -32,7 +32,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin version.
  */
-define('BOTDOT_WP_VERSION', '2.5.0');
+define('BOTDOT_WP_VERSION', '2.6.0');
 
 /**
  * Plugin file path
@@ -106,7 +106,7 @@ function activate_botdot_wp() {
         deactivate_plugins(plugin_basename(__FILE__));
 
         wp_die(
-            'BotSpot WP could not be activated. Error: ' . esc_html($e->getMessage()) .
+            'bot.spot WP could not be activated. Error: ' . esc_html($e->getMessage()) .
             '<br><br>Check your error log for more details.' .
             '<br><br><a href="' . admin_url('plugins.php') . '">Back to Plugins</a>'
         );
@@ -142,7 +142,7 @@ function botdot_wp_check_requirements() {
 
     if (version_compare(get_bloginfo('version'), BOTDOT_WP_MIN_WP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('BotSpot WP requires WordPress %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
+            __('bot.spot WP requires WordPress %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
             BOTDOT_WP_MIN_WP_VERSION,
             get_bloginfo('version')
         );
@@ -150,24 +150,24 @@ function botdot_wp_check_requirements() {
 
     if (version_compare(PHP_VERSION, BOTDOT_WP_MIN_PHP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('BotSpot WP requires PHP %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
+            __('bot.spot WP requires PHP %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
             BOTDOT_WP_MIN_PHP_VERSION,
             PHP_VERSION
         );
     }
 
     if (!extension_loaded('curl')) {
-        $errors[] = __('BotSpot WP requires the PHP cURL extension.', BOTDOT_WP_TEXT_DOMAIN);
+        $errors[] = __('bot.spot WP requires the PHP cURL extension.', BOTDOT_WP_TEXT_DOMAIN);
     }
 
     if (!extension_loaded('json')) {
-        $errors[] = __('BotSpot WP requires the PHP JSON extension.', BOTDOT_WP_TEXT_DOMAIN);
+        $errors[] = __('bot.spot WP requires the PHP JSON extension.', BOTDOT_WP_TEXT_DOMAIN);
     }
 
     if (!empty($errors)) {
         add_action('admin_notices', function() use ($errors) {
             echo '<div class="error"><p>';
-            echo '<strong>' . __('BotSpot WP Plugin Error:', BOTDOT_WP_TEXT_DOMAIN) . '</strong><br>';
+            echo '<strong>' . __('bot.spot WP Plugin Error:', BOTDOT_WP_TEXT_DOMAIN) . '</strong><br>';
             foreach ($errors as $error) {
                 echo $error . '<br>';
             }
@@ -221,7 +221,7 @@ function botdot_wp_init() {
             ?>
             <div class="notice notice-error">
                 <p>
-                    <strong>BotSpot WP Error:</strong>
+                    <strong>bot.spot WP Error:</strong>
                     <?php echo esc_html($e->getMessage()); ?>
                 </p>
                 <p>Check your error log for more details.</p>
@@ -243,7 +243,7 @@ function botdot_wp_activation_notice() {
             <p>
                 <?php
                 printf(
-                    __('BotSpot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', BOTDOT_WP_TEXT_DOMAIN),
+                    __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', BOTDOT_WP_TEXT_DOMAIN),
                     admin_url('admin.php?page=botdot-wp')
                 );
                 ?>

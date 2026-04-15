@@ -105,7 +105,7 @@ class BotDot_WP_Public
         }
 
         vc_map([
-            "name" => __("BotSpot Appendix", "botdot-wp"),
+            "name" => __("bot.spot Appendix", "botdot-wp"),
             "base" => "botdot_appendix",
             "description" => __("Insert AI-discoverable appendix content", "botdot-wp"),
             "category" => __("Content", "botdot-wp"),
@@ -196,7 +196,7 @@ class BotDot_WP_Public
         );
 
         wp_localize_script($this->plugin_name . "-gutenberg", "botdotWP", [
-            "pluginName" => "BotSpot Appendix",
+            "pluginName" => "bot.spot Appendix",
         ]);
     }
 

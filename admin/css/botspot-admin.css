@@ -987,6 +987,44 @@
     box-shadow: 0 0 8px rgba(209, 254, 246, 0.7);
 }
 
+/* Radios rendered as checkmarks (used in Placement / SEO compatibility
+   to match the Content-to-sync checkmark aesthetic). */
+.botspot-admin-root input[type="radio"].bsa-check-as-check:checked {
+    background: var(--bsa-mint);
+    border-color: var(--bsa-mint);
+    box-shadow: 0 0 10px rgba(209, 254, 246, 0.35);
+}
+
+.botspot-admin-root input[type="radio"].bsa-check-as-check:checked::after {
+    content: "";
+    position: absolute;
+    inset: auto;
+    left: 3px;
+    top: 0;
+    width: 4px;
+    height: 8px;
+    border: solid var(--bsa-void);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Connected status pill shown inline on the Connect tab */
+.botspot-admin-root .bsa-status-pill--connected {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    border: 1px solid rgba(209, 254, 246, 0.35);
+    background: rgba(209, 254, 246, 0.08);
+    color: var(--bsa-mint);
+    font-family: var(--bsa-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
 .botspot-admin-root input[type="checkbox"].bsa-toggle {
     appearance: none;
     -webkit-appearance: none;

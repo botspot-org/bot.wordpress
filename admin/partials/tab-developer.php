@@ -15,6 +15,12 @@ $bsa_debug_mode = (bool) BotDot_WP_Options::get("debug_mode", false);
 $bsa_cache_ttl = (int) BotDot_WP_Options::get("cache_ttl", 3600);
 ?>
 <div class="bsa-developer">
+
+    <!-- Analytics (moved from top-level tab — debugging-only). -->
+    <section class="bsa-developer__analytics bsa-reveal bsa-reveal--1">
+        <?php require BOTDOT_WP_PLUGIN_PATH . "admin/partials/tab-analytics.php"; ?>
+    </section>
+
     <div class="bsa-developer__grid">
 
         <!-- Left: Log viewer -->

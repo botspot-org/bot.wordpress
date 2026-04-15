@@ -35,7 +35,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
     <div class="bsa-section-head bsa-reveal bsa-reveal--1">
         <h1 class="bsa-h1"><?php _e("Settings", "botdot-wp"); ?></h1>
         <p class="bsa-description">
-            <?php _e("Optional WordPress-specific runtime settings. Content, review flow, styling, and publishing are managed in BotSpot.", "botdot-wp"); ?>
+            <?php _e("Optional WordPress-specific runtime settings. Content, review flow, styling, and publishing are managed in bot.spot.", "botdot-wp"); ?>
         </p>
     </div>
 
@@ -44,7 +44,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
         <div class="bsa-settings-row__meta">
             <h3 class="bsa-settings-row__title"><?php _e("Content to sync", "botdot-wp"); ?></h3>
             <p class="bsa-settings-row__desc">
-                <?php _e("Updates for selected types are automatically pushed to BotSpot.", "botdot-wp"); ?>
+                <?php _e("Updates for selected types are automatically pushed to bot.spot.", "botdot-wp"); ?>
             </p>
         </div>
         <div class="bsa-settings-row__body">
@@ -93,34 +93,24 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <p class="bsa-settings-row__desc"><?php _e("Where the appendix is injected into the page.", "botdot-wp"); ?></p>
         </div>
         <div class="bsa-settings-row__body">
-            <div class="bsa-radio-list">
-                <label class="bsa-radio">
-                    <input type="radio" name="botdot_wp_injection_position" value="bottom" <?php checked($bsa_injection_position, "bottom"); ?> />
-                    <div>
-                        <div class="bsa-radio__title">
-                            <?php _e("Bottom of content", "botdot-wp"); ?>
-                            <span class="bsa-radio__hint">(<?php _e("recommended", "botdot-wp"); ?>)</span>
-                        </div>
-                        <div class="bsa-radio__desc"><?php _e("Injected after the main article body.", "botdot-wp"); ?></div>
-                    </div>
+            <div class="bsa-check-list">
+                <label class="bsa-check">
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="bottom" <?php checked($bsa_injection_position, "bottom"); ?> />
+                    <span>
+                        <?php _e("Bottom of content", "botdot-wp"); ?>
+                        <span class="bsa-check__tag"><?php _e("recommended", "botdot-wp"); ?></span>
+                    </span>
                 </label>
-                <label class="bsa-radio">
-                    <input type="radio" name="botdot_wp_injection_position" value="above_footer" <?php checked($bsa_injection_position, "above_footer"); ?> />
-                    <div>
-                        <div class="bsa-radio__title"><?php _e("Above footer", "botdot-wp"); ?></div>
-                        <div class="bsa-radio__desc"><?php _e("Injected before the site footer.", "botdot-wp"); ?></div>
-                    </div>
+                <label class="bsa-check">
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="above_footer" <?php checked($bsa_injection_position, "above_footer"); ?> />
+                    <span><?php _e("Above footer", "botdot-wp"); ?></span>
                 </label>
-                <label class="bsa-radio">
-                    <input type="radio" name="botdot_wp_injection_position" value="shortcode" <?php checked($bsa_injection_position, "shortcode"); ?> />
-                    <div>
-                        <div class="bsa-radio__title"><?php _e("Manual placement", "botdot-wp"); ?></div>
-                        <div class="bsa-radio__desc">
-                            <?php _e("Use", "botdot-wp"); ?>
-                            <code class="bsa-code">[botspot_appendix]</code>
-                            <?php _e("shortcode or Gutenberg block.", "botdot-wp"); ?>
-                        </div>
-                    </div>
+                <label class="bsa-check">
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="shortcode" <?php checked($bsa_injection_position, "shortcode"); ?> />
+                    <span>
+                        <?php _e("Manual placement", "botdot-wp"); ?>
+                        <span class="bsa-check__tag"><code class="bsa-code">[botspot_appendix]</code></span>
+                    </span>
                 </label>
             </div>
         </div>
@@ -133,23 +123,17 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <p class="bsa-settings-row__desc"><?php _e("How JSON-LD output interacts with other SEO plugins.", "botdot-wp"); ?></p>
         </div>
         <div class="bsa-settings-row__body">
-            <div class="bsa-radio-list">
-                <label class="bsa-radio">
-                    <input type="radio" name="botdot_wp_jsonld_conflict_mode" value="merge" <?php checked($bsa_jsonld_conflict, "merge"); ?> />
-                    <div>
-                        <div class="bsa-radio__title">
-                            <?php _e("Merge with existing output", "botdot-wp"); ?>
-                            <span class="bsa-radio__hint">(<?php _e("recommended", "botdot-wp"); ?>)</span>
-                        </div>
-                        <div class="bsa-radio__desc"><?php _e("Suppresses duplicate @types from Yoast / RankMath.", "botdot-wp"); ?></div>
-                    </div>
+            <div class="bsa-check-list">
+                <label class="bsa-check">
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_jsonld_conflict_mode" value="merge" <?php checked($bsa_jsonld_conflict, "merge"); ?> />
+                    <span>
+                        <?php _e("Merge with existing output", "botdot-wp"); ?>
+                        <span class="bsa-check__tag"><?php _e("recommended", "botdot-wp"); ?></span>
+                    </span>
                 </label>
-                <label class="bsa-radio">
-                    <input type="radio" name="botdot_wp_jsonld_conflict_mode" value="replace" <?php checked($bsa_jsonld_conflict, "replace"); ?> />
-                    <div>
-                        <div class="bsa-radio__title"><?php _e("Replace conflicting output", "botdot-wp"); ?></div>
-                        <div class="bsa-radio__desc"><?php _e("Always inject regardless of other SEO plugins.", "botdot-wp"); ?></div>
-                    </div>
+                <label class="bsa-check">
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_jsonld_conflict_mode" value="replace" <?php checked($bsa_jsonld_conflict, "replace"); ?> />
+                    <span><?php _e("Replace conflicting output", "botdot-wp"); ?></span>
                 </label>
             </div>
         </div>
@@ -165,7 +149,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
         <section class="bsa-settings-row">
             <div class="bsa-settings-row__meta">
                 <h3 class="bsa-settings-row__title"><?php _e("Auto-sync on publish", "botdot-wp"); ?></h3>
-                <p class="bsa-settings-row__desc"><?php _e("Automatically push content changes to BotSpot on save.", "botdot-wp"); ?></p>
+                <p class="bsa-settings-row__desc"><?php _e("Automatically push content changes to bot.spot on save.", "botdot-wp"); ?></p>
             </div>
             <div class="bsa-settings-row__body">
                 <label class="bsa-toggle-row">

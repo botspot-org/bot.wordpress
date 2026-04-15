@@ -124,11 +124,37 @@
     }
 
     // ------------------------------------------------------------
-    // API key show/hide toggle
+    // API key show/hide toggle + live enable of connection buttons
     // ------------------------------------------------------------
     function initApiKeyToggle() {
         var input = qs("#bsa-api-key");
         var btn = qs('[data-bsa-action="toggle-key-visibility"]');
+
+        // Enable Connect / Test Connection buttons the moment a non-empty
+        // value is typed or pasted into the access key input — don't wait
+        // until settings are saved. The user may still need to save the
+        // form before an AJAX Connect actually succeeds, but the button
+        // should at least not appear disabled while there's a value.
+        function syncActionButtonsDisabled() {
+            var hasInputValue = !!(input && input.value && input.value.trim().length > 0);
+            var hadExistingKey = input && input.getAttribute("data-has-value") === "1";
+            var shouldEnable = hasInputValue || hadExistingKey;
+            qsa('[data-bsa-requires-key="1"]').forEach(function (el) {
+                el.disabled = !shouldEnable;
+            });
+        }
+
+        if (input) {
+            ["input", "change", "paste", "keyup"].forEach(function (ev) {
+                on(input, ev, function () {
+                    // For paste, value isn't populated until next tick.
+                    setTimeout(syncActionButtonsDisabled, 0);
+                });
+            });
+            // Run once at init so the initial state is correct.
+            syncActionButtonsDisabled();
+        }
+
         if (!input || !btn) return;
 
         on(btn, "click", function () {
@@ -273,23 +299,43 @@
         el.textContent = message || "";
     }
 
+    // Map backend error strings to user-friendly copy. Any message that
+    // clearly indicates a bad/invalid API key should surface the guidance
+    // to re-copy from the dashboard rather than a raw HTTP error.
+    function friendlyConnectionError(rawMsg) {
+        var msg = String(rawMsg || "").toLowerCase();
+        var looksLikeBadKey = (
+            msg.indexOf("invalid api key") !== -1 ||
+            msg.indexOf("invalid access key") !== -1 ||
+            msg.indexOf("webhook registration failed") !== -1 ||
+            msg.indexOf("401") !== -1 ||
+            msg.indexOf("403") !== -1 ||
+            msg.indexOf("unauthorized") !== -1 ||
+            msg.indexOf("forbidden") !== -1
+        );
+        if (looksLikeBadKey) {
+            return "Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.";
+        }
+        return rawMsg;
+    }
+
     function handleTestConnection(btn) {
         if (!btn) return;
         btn.disabled = true;
         var originalText = btn.textContent;
-        btn.textContent = strings.testing || "Testing...";
+        btn.textContent = strings.testing || "Connecting...";
 
         bsaAjax("botdot_wp_test_connection", {}, nonces.testConnection).then(function (res) {
             btn.disabled = false;
             btn.textContent = originalText;
 
             if (res && res.success) {
-                showResult("test-connection", true, (res.data && res.data.message) || strings.testSuccess || "Success");
+                showResult("test-connection", true, (res.data && res.data.message) || strings.testSuccess || "Connected");
                 // Refresh the status dots — connection should flip to OK
                 fetchStatus();
             } else {
                 var msg = (res && res.data && res.data.message) || strings.testFailed || "Failed";
-                showResult("test-connection", false, msg);
+                showResult("test-connection", false, friendlyConnectionError(msg));
             }
         });
     }
@@ -304,10 +350,10 @@
             btn.disabled = false;
             btn.textContent = originalText;
             if (res && res.success) {
-                showResult("test-connection", true, (res.data && res.data.message) || "Reconnected");
+                showResult("test-connection", true, (res.data && res.data.message) || "Connected");
                 setTimeout(function () { window.location.reload(); }, 600);
             } else {
-                showResult("test-connection", false, (res && res.data && res.data.message) || "Reconnect failed");
+                showResult("test-connection", false, friendlyConnectionError((res && res.data && res.data.message) || "Connection failed"));
             }
         });
     }
@@ -361,7 +407,7 @@
     function handleCopyDiagnostics(btn) {
         if (!btn) return;
         var payload = [
-            "# BotSpot WP Diagnostics",
+            "# bot.spot WP Diagnostics",
             "Generated: " + new Date().toISOString(),
             "",
             "## Environment",
@@ -601,14 +647,17 @@
     // 'bsa:tab-change' event whenever a panel is activated; we load on first
     // activation of the analytics panel.
     document.addEventListener('bsa:tab-change', function (evt) {
-        if (evt && evt.detail && evt.detail.tab === 'analytics') {
+        // Analytics now lives inside the Developer tab — load on either
+        // tab activation. Legacy 'analytics' tab name kept as a no-op
+        // safety in case an old link lands here.
+        if (evt && evt.detail && (evt.detail.tab === 'analytics' || evt.detail.tab === 'developer')) {
             initAnalyticsPanel();
             loadAll();
         }
     });
 
-    // Also support direct URL hash navigation (#analytics).
-    if (window.location.hash === '#analytics') {
+    // Also support direct URL hash navigation (#developer or legacy #analytics).
+    if (window.location.hash === '#analytics' || window.location.hash === '#developer') {
         document.addEventListener('DOMContentLoaded', function () {
             initAnalyticsPanel();
             loadAll();
