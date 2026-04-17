@@ -181,6 +181,9 @@ class BotDot_WP
         // wp-cron handler for the hourly flush
         $this->loader->add_action("botspot_flush_analytics", "BotDot_WP_Analytics_Flusher", "flush");
 
+        // wp-cron handler for background Force Resync (one-off, scheduled by handle_force_resync)
+        $this->loader->add_action("botdot_wp_force_resync_run", $plugin_admin, "run_scheduled_force_resync");
+
         // Admin notices for errors
         $this->loader->add_action("admin_notices", $plugin_admin, "display_admin_notices");
 

@@ -159,6 +159,9 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.6.3
+- **Fix**: Force Resync no longer times out the admin AJAX request on large sites. The loop now runs on wp-cron in the background; the click returns immediately with a "queued" message, and progress is visible in the status panel. Previously, hosts with a short reverse-proxy timeout would return an HTML error page mid-run, breaking the JSON response even though the syncs themselves were succeeding.
+
 ### 2.6.2
 - **UX**: Connect button now saves the access key inline. Paste your `sk_*` key and click Connect — no separate "Save settings" step required. If the key differs from the previously stored one, the prior webhook registration is cleared so the new key registers cleanly against its own organization.
 - **UX**: Removed the "Disconnect" button. It served no purpose for end users — connections are managed from the bot.spot side, and the local webhook is replaced automatically when a new key is connected. Drops the `botdot_wp_disconnect` AJAX action and handler.

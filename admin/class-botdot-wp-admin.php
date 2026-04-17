@@ -1054,31 +1054,67 @@ class BotDot_WP_Admin
             return;
         }
 
+        // Run the actual loop on wp-cron so the AJAX request returns
+        // immediately. With many posts the synchronous version would block
+        // the PHP request long enough for the host's reverse proxy to time
+        // out and serve an HTML error page, breaking the JSON response in
+        // the admin UI even though the underlying syncs were succeeding.
+        //
+        // wp_schedule_single_event dedupes on (hook, args), so a second
+        // click while a run is pending is a no-op.
+        if (!wp_next_scheduled("botdot_wp_force_resync_run")) {
+            wp_schedule_single_event(time(), "botdot_wp_force_resync_run");
+        }
+
+        // Mark a started_at marker so the status panel can show progress.
+        BotDot_WP_Options::set("force_resync_started_at", time());
+        BotDot_WP_Options::set("force_resync_total", count($post_ids));
+        delete_transient("botdot_wp_status_snapshot");
+
+        wp_send_json_success([
+            "queued" => count($post_ids),
+            "total" => count($post_ids),
+            "message" => sprintf(
+                /* translators: 1: number of posts queued */
+                __("Resync started in background: %d post(s) queued. Progress will appear in the status panel.", "botdot-wp"),
+                count($post_ids)
+            ),
+        ]);
+    }
+
+    /**
+     * wp-cron callback that performs the actual force resync.
+     *
+     * Registered to the `botdot_wp_force_resync_run` action and triggered
+     * once per Force Resync click. Walks every published post of the
+     * configured post types and pushes each through the sync pipeline.
+     *
+     * @since 2.6.3
+     */
+    public function run_scheduled_force_resync()
+    {
+        $post_types = BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $post_ids = get_posts([
+            "post_type" => $post_types,
+            "post_status" => "publish",
+            "posts_per_page" => -1,
+            "fields" => "ids",
+        ]);
+
         $queued = 0;
         $errors = 0;
         foreach ($post_ids as $post_id) {
-            $result = BotDot_WP_Sync::manual_sync($post_id);
-            if ($result) {
+            if (BotDot_WP_Sync::manual_sync($post_id)) {
                 $queued++;
             } else {
                 $errors++;
             }
         }
 
-        // Invalidate status snapshot cache so the UI reflects the change.
+        BotDot_WP_Options::set("force_resync_finished_at", time());
+        BotDot_WP_Options::set("force_resync_succeeded", $queued);
+        BotDot_WP_Options::set("force_resync_failed", $errors);
         delete_transient("botdot_wp_status_snapshot");
-
-        wp_send_json_success([
-            "queued" => $queued,
-            "errors" => $errors,
-            "total" => count($post_ids),
-            "message" => sprintf(
-                /* translators: 1: successful count, 2: error count */
-                __("Re-sync complete: %1$d succeeded, %2$d failed.", "botdot-wp"),
-                $queued,
-                $errors
-            ),
-        ]);
     }
 
     /**
