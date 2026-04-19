@@ -1131,21 +1131,19 @@ class BotDot_WP_Admin
             return;
         }
 
-        global $wpdb;
-        $deleted = $wpdb->query(
-            "DELETE FROM {$wpdb->options}
-             WHERE option_name LIKE '_transient_botdot_wp_appendix_%'
-                OR option_name LIKE '_transient_timeout_botdot_wp_appendix_%'"
-        );
-
-        delete_transient("botdot_wp_status_snapshot");
+        $deleted = BotDot_WP_Cache::purge_all();
 
         wp_send_json_success([
-            "cleared" => (int) $deleted,
+            "cleared" => $deleted,
             "message" => sprintf(
                 /* translators: %d: cleared entries */
-                _n("Cleared %d cached entry.", "Cleared %d cached entries.", max(0, (int) $deleted), "botdot-wp"),
-                max(0, (int) $deleted)
+                _n(
+                    "Cleared %d cached entry and purged external page caches.",
+                    "Cleared %d cached entries and purged external page caches.",
+                    max(0, $deleted),
+                    "botdot-wp"
+                ),
+                max(0, $deleted)
             ),
         ]);
     }

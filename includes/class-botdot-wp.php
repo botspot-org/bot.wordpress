@@ -126,6 +126,11 @@ class BotDot_WP
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-sync.php";
 
         /**
+         * Cache invalidation helpers (plugin transients + external page caches).
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-cache.php";
+
+        /**
          * The class responsible for content fetching (read path).
          */
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-content-fetcher.php";

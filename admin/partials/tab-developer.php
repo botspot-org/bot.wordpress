@@ -16,11 +16,6 @@ $bsa_cache_ttl = (int) BotDot_WP_Options::get("cache_ttl", 3600);
 ?>
 <div class="bsa-developer">
 
-    <!-- Analytics (moved from top-level tab — debugging-only). -->
-    <section class="bsa-developer__analytics bsa-reveal bsa-reveal--1">
-        <?php require BOTDOT_WP_PLUGIN_PATH . "admin/partials/tab-analytics.php"; ?>
-    </section>
-
     <div class="bsa-developer__grid">
 
         <!-- Left: Log viewer -->
@@ -141,4 +136,9 @@ $bsa_cache_ttl = (int) BotDot_WP_Options::get("cache_ttl", 3600);
         </aside>
 
     </div>
+
+    <!-- Analytics (debugging-only; moved to bottom so logs + controls lead). -->
+    <section class="bsa-developer__analytics bsa-reveal bsa-reveal--3">
+        <?php require BOTDOT_WP_PLUGIN_PATH . "admin/partials/tab-analytics.php"; ?>
+    </section>
 </div>

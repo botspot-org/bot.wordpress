@@ -97,7 +97,9 @@ class BotDot_WP_Sync
         $new_tier = $data["enrichment_tier"] ?? "TIER0";
         $current_tier = get_post_meta($post_id, "_botdot_enrichment_tier", true) ?: "NONE";
 
+        $tier_advanced = false;
         if (($tier_order[$new_tier] ?? 0) >= ($tier_order[$current_tier] ?? 0)) {
+            $tier_advanced = ($tier_order[$new_tier] ?? 0) > ($tier_order[$current_tier] ?? 0);
             update_post_meta($post_id, "_botdot_enrichment_tier", $new_tier);
             update_post_meta($post_id, "_botdot_artifact_id", $content_id);
 
@@ -106,7 +108,14 @@ class BotDot_WP_Sync
             update_post_meta($post_id, "_botdot_enrichment_status", $status_map[$new_tier] ?? "unknown");
         }
 
-        return new WP_REST_Response(["status" => "ok", "post_id" => $post_id], 200);
+        // When new enrichment lands, drop plugin transients + external page caches for
+        // this post so the next request re-fetches and cache plugins store the
+        // injected appendix/JSON-LD instead of the pre-enrichment snapshot.
+        if ($tier_advanced && class_exists("BotDot_WP_Cache")) {
+            BotDot_WP_Cache::purge_post($post_id);
+        }
+
+        return new WP_REST_Response(["status" => "ok", "post_id" => $post_id, "purged" => $tier_advanced], 200);
     }
 
     /**

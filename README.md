@@ -159,6 +159,13 @@ define('WP_DEBUG_DISPLAY', false);
 
 ## Changelog
 
+### 2.6.4
+- **Fix**: "Clear cache" button now actually clears the appendix cache. The prior AJAX handler queried for `_transient_botdot_wp_appendix_%`, but the fetcher writes transients under `botdot_content_*` and `botdot_jsonld_*` — so the button reported success while deleting nothing. Wired through the new cache helper.
+- **New**: External page-cache purge on enrichment. When locus-core's webhook reports that a post has advanced a tier (TIER0 → TIER1 → TIER2), the plugin now fires purge hooks for LiteSpeed Cache, W3 Total Cache, WP Rocket, WP Super Cache, SiteGround Optimizer, and Cache Enabler for that specific post, plus WordPress core `clean_post_cache()`. Plugin-owned transients for the post are also dropped so the next request re-fetches. Addresses live issue where LiteSpeed on `mikaelmarisa.com` held 7-day pre-enrichment snapshots, causing the injected `<section id="botspot-appendix">` and JSON-LD to be absent despite successful render in locus-core.
+- **New**: "Clear cache" button now also fires site-wide purge actions for the same third-party cache plugins in addition to plugin transients. One click resolves the stale-page class of issue.
+- **New**: `BotDot_WP_Cache` helper class centralises purge logic. Extension points: `do_action('botdot_wp_after_purge_post', $post_id)` and `do_action('botdot_wp_after_purge_all')` for site-specific integrations.
+- **UX**: Developer tab reshuffle — Logs + Controls lead; Analytics moved to the bottom of the tab (it was debugging-only anyway).
+
 ### 2.6.3
 - **Fix**: Force Resync no longer times out the admin AJAX request on large sites. The loop now runs on wp-cron in the background; the click returns immediately with a "queued" message, and progress is visible in the status panel. Previously, hosts with a short reverse-proxy timeout would return an HTML error page mid-run, breaking the JSON response even though the syncs themselves were succeeding.
 
