@@ -285,7 +285,7 @@ class BotDot_WP_Options
                 return in_array($value, $allowed) ? $value : "merge";
 
             case "injection_position":
-                $allowed = ["bottom", "above_footer", "shortcode"];
+                $allowed = ["bottom", "above_footer", "below_footer", "shortcode"];
                 return in_array($value, $allowed) ? $value : "bottom";
 
             case "sync_post_types":

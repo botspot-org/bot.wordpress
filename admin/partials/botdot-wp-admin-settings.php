@@ -25,7 +25,7 @@ $bsa_post_types = get_post_types(["public" => true], "objects");
 $bsa_has_api_key = !empty(BotDot_WP_Options::get("api_key"));
 $bsa_webhook_id = BotDot_WP_Options::get("webhook_id");
 $bsa_tenant_id = BotDot_WP_Options::get("tenant_id");
-$bsa_is_connected = !empty($bsa_webhook_id);
+$bsa_is_connected = $bsa_has_api_key && !empty($bsa_webhook_id);
 
 // WooCommerce detection
 $bsa_woocommerce_active = class_exists("WooCommerce");
@@ -94,9 +94,9 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
 
         <!-- ============================================================
              SETTINGS FORM (spans all tabs so save works from any tab)
+             Settings are saved via AJAX to avoid WP options.php memory issues.
              ============================================================ -->
-        <form method="post" action="options.php" id="bsa-settings-form" class="bsa-form">
-            <?php settings_fields("botdot_wp_settings"); ?>
+        <form method="post" id="bsa-settings-form" class="bsa-form" data-bsa-ajax-save="1">
 
             <!-- Connect tab -->
             <main class="bsa-panel" data-bsa-panel="connect">

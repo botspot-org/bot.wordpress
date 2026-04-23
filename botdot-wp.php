@@ -3,7 +3,7 @@
  * Plugin Name: BotSpot WordPress
  * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 2.6.4
+ * Version: 2.6.10
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: Proprietary
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package BotDot_WP
- * @version 2.6.4
+ * @version 2.6.10
  */
 
 // If this file is called directly, abort.
@@ -30,9 +30,46 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Fatal error handler - captures PHP fatal errors for the Developer tab.
+ * Registered early so it catches errors even if the plugin fails to load.
+ */
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error === null) {
+        return;
+    }
+    // Only capture fatal errors
+    $fatal_types = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+    if (!in_array($error['type'], $fatal_types, true)) {
+        return;
+    }
+    // Only capture errors from our plugin
+    if (strpos($error['file'], 'botdot-wp') === false && strpos($error['file'], 'botspot') === false) {
+        return;
+    }
+    // Store in option (not transient) so it persists across the fatal redirect
+    $fatal_log = get_option('botdot_wp_fatal_errors', []);
+    if (!is_array($fatal_log)) {
+        $fatal_log = [];
+    }
+    $fatal_log[] = [
+        'type' => 'fatal',
+        'message' => sprintf('%s in %s on line %d', $error['message'], basename($error['file']), $error['line']),
+        'file' => $error['file'],
+        'line' => $error['line'],
+        'timestamp' => time(),
+    ];
+    // Keep last 20 fatal errors
+    if (count($fatal_log) > 20) {
+        $fatal_log = array_slice($fatal_log, -20);
+    }
+    update_option('botdot_wp_fatal_errors', $fatal_log, false);
+});
+
+/**
  * Plugin version.
  */
-define('BOTDOT_WP_VERSION', '2.6.4');
+define('BOTDOT_WP_VERSION', '2.6.10');
 
 /**
  * Plugin file path

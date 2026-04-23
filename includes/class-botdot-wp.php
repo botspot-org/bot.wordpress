@@ -176,6 +176,7 @@ class BotDot_WP
         $this->loader->add_action("wp_ajax_botdot_wp_get_status", $plugin_admin, "handle_get_status");
         $this->loader->add_action("wp_ajax_botdot_wp_force_resync", $plugin_admin, "handle_force_resync");
         $this->loader->add_action("wp_ajax_botdot_wp_clear_cache", $plugin_admin, "handle_clear_cache");
+        $this->loader->add_action("wp_ajax_botdot_wp_save_settings", $plugin_admin, "handle_save_settings");
 
         // Analytics AJAX handlers
         $this->loader->add_action("wp_ajax_botdot_wp_get_sync_health", $plugin_admin, "handle_get_sync_health");
@@ -234,6 +235,9 @@ class BotDot_WP
 
         // Above-footer placement (priority 5)
         $this->loader->add_action("wp_footer", $content_injector, "inject_above_footer", 5);
+
+        // Below-footer placement (priority 99, after most theme footer content)
+        $this->loader->add_action("wp_footer", $content_injector, "inject_below_footer", 99);
 
         // Register shortcode
         $this->loader->add_action("init", $public, "register_shortcode");

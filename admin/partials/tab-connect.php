@@ -44,7 +44,7 @@ if (!defined("WPINC")) {
                         name="botdot_wp_api_key"
                         class="bsa-input-group__input bsa-mono bsa-tabular-nums"
                         value=""
-                        placeholder="<?php echo $bsa_has_api_key ? "••••••••••••••••••••••••" : "bsp_live_xxxxxxxxxxxxxxxxxxxxxxxx"; ?>"
+                        placeholder="<?php echo $bsa_has_api_key ? "••••••••••••••••••••••••" : "sk_live_xxxxxxxxxxxxxxxxxxxxxxxx"; ?>"
                         autocomplete="off"
                         data-has-value="<?php echo $bsa_has_api_key ? "1" : "0"; ?>"
                     />

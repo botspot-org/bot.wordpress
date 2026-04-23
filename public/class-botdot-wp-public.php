@@ -196,7 +196,7 @@ class BotDot_WP_Public
         );
 
         wp_localize_script($this->plugin_name . "-gutenberg", "botdotWP", [
-            "pluginName" => "bot.spot Appendix",
+            "pluginName" => "BotSpot Appendix",
         ]);
     }
 

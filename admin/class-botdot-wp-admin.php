@@ -201,6 +201,7 @@ class BotDot_WP_Admin
                 "getEnrichmentLifecycle" => wp_create_nonce("botdot_wp_get_enrichment_lifecycle"),
                 "getImpressions" => wp_create_nonce("botdot_wp_get_impressions"),
                 "forceFlush" => wp_create_nonce("botdot_wp_force_flush"),
+                "saveSettings" => wp_create_nonce("botdot_wp_save_settings"),
             ],
             "strings" => [
                 "allSaved" => __("All changes saved", "botdot-wp"),
@@ -473,7 +474,7 @@ class BotDot_WP_Admin
             wp_send_json_success([
                 "message" => isset($result["message"])
                     ? $result["message"]
-                    : __("Connected to locus-core successfully.", "botdot-wp"),
+                    : __("Connected to bot.spot successfully.", "botdot-wp"),
                 "details" => ["locus_core" => $result],
             ]);
         } else {
@@ -1145,6 +1146,70 @@ class BotDot_WP_Admin
                 ),
                 max(0, $deleted)
             ),
+        ]);
+    }
+
+    /**
+     * AJAX: Save all plugin settings.
+     *
+     * Bypasses WordPress options.php to avoid memory issues on shared hosts.
+     * Each setting is sanitized and saved individually via BotDot_WP_Options.
+     *
+     * @since    2.6.8
+     */
+    public function handle_save_settings()
+    {
+        check_ajax_referer("botdot_wp_save_settings", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error(["message" => __("Permission denied", "botdot-wp")]);
+            return;
+        }
+
+        $settings = isset($_POST["settings"]) ? $_POST["settings"] : [];
+        if (!is_array($settings)) {
+            wp_send_json_error(["message" => __("Invalid settings data", "botdot-wp")]);
+            return;
+        }
+
+        // Map of setting keys to their sanitizers
+        $sanitizers = [
+            "api_key" => [$this, "sanitize_secret_field_api_key"],
+            "auto_sync_enabled" => [$this, "sanitize_checkbox"],
+            "sync_sensitivity" => [$this, "sanitize_sensitivity"],
+            "sync_post_types" => [$this, "sanitize_post_types"],
+            "appendix_enabled" => [$this, "sanitize_checkbox"],
+            "jsonld_enabled" => [$this, "sanitize_checkbox"],
+            "jsonld_conflict_mode" => [$this, "sanitize_jsonld_conflict_mode"],
+            "injection_position" => [$this, "sanitize_position"],
+            "inject_on_post_types" => [$this, "sanitize_post_types"],
+            "cache_ttl" => "absint",
+            "debug_mode" => [$this, "sanitize_checkbox"],
+        ];
+
+        $saved = 0;
+        foreach ($sanitizers as $key => $sanitizer) {
+            if (!array_key_exists($key, $settings)) {
+                continue;
+            }
+
+            $value = $settings[$key];
+
+            // Apply sanitizer
+            if (is_callable($sanitizer)) {
+                $value = call_user_func($sanitizer, $value);
+            }
+
+            BotDot_WP_Options::set($key, $value);
+            $saved++;
+        }
+
+        // Clear status snapshot so next load picks up changes
+        delete_transient("botdot_wp_status_snapshot");
+
+        wp_send_json_success([
+            "saved" => $saved,
+            "message" => __("Settings saved.", "botdot-wp"),
         ]);
     }
 

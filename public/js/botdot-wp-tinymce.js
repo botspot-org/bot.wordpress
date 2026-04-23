@@ -1,8 +1,8 @@
 /**
- * TinyMCE plugin for BotDot Appendix shortcode
+ * TinyMCE plugin for BotSpot Appendix shortcode
  *
- * @package    BotDot_WP
- * @subpackage BotDot_WP/public/js
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/public/js
  * @since      0.2.0
  */
 
@@ -10,7 +10,7 @@
   tinymce.PluginManager.add("botdot_appendix", function (editor, url) {
     // Add button to toolbar
     editor.addButton("botdot_appendix", {
-      title: "Insert BotDot Appendix",
+      title: "Insert BotSpot Appendix",
       icon: "icon dashicons-info",
       onclick: function () {
         editor.insertContent("[botdot_appendix]");
@@ -19,7 +19,7 @@
 
     // Add menu item
     editor.addMenuItem("botdot_appendix", {
-      text: "BotDot Appendix",
+      text: "BotSpot Appendix",
       icon: "icon dashicons-info",
       context: "insert",
       onclick: function () {

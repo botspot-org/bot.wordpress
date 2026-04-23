@@ -183,6 +183,8 @@ class BotDot_WP_Logger
      */
     public static function clear_errors()
     {
+        // Also clear fatal errors captured by shutdown handler
+        delete_option('botdot_wp_fatal_errors');
         return delete_transient("botdot_wp_recent_errors");
     }
 
@@ -238,6 +240,20 @@ class BotDot_WP_Logger
     public static function get_logs_for_viewer($level_filter = "all")
     {
         $raw = self::get_recent_errors();
+
+        // Merge in fatal errors captured by shutdown handler
+        $fatal_errors = get_option('botdot_wp_fatal_errors', []);
+        if (is_array($fatal_errors)) {
+            foreach ($fatal_errors as $fatal) {
+                $raw[] = [
+                    'message' => isset($fatal['message']) ? $fatal['message'] : 'Unknown fatal error',
+                    'type' => 'error',
+                    'context' => ['source' => 'fatal'],
+                    'timestamp' => isset($fatal['timestamp']) ? $fatal['timestamp'] : time(),
+                ];
+            }
+        }
+
         $result = [];
 
         foreach ($raw as $entry) {

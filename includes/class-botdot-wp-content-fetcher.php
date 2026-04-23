@@ -93,6 +93,7 @@ class BotDot_WP_Content_Fetcher
             "headers" => [
                 "X-API-Key" => $api_key,
                 "Accept" => "application/json",
+                "Origin" => home_url(),
             ],
             "timeout" => 15,
         ]);
@@ -202,6 +203,7 @@ class BotDot_WP_Content_Fetcher
             "headers" => [
                 "X-API-Key" => $api_key,
                 "Accept" => "application/json",
+                "Origin" => home_url(),
             ],
             "timeout" => 15,
         ]);
@@ -279,6 +281,7 @@ class BotDot_WP_Content_Fetcher
             "headers" => [
                 "X-API-Key" => $api_key,
                 "Accept" => "application/json",
+                "Origin" => home_url(),
             ],
             "timeout" => 5,
         ]);
@@ -345,7 +348,7 @@ class BotDot_WP_Content_Fetcher
         if ($status_code === 200) {
             return [
                 "success" => true,
-                "message" => __("Connected to locus-core successfully", "botdot-wp"),
+                "message" => __("Connected to bot.spot successfully", "botdot-wp"),
             ];
         }
 

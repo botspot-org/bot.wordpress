@@ -106,6 +106,10 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     <span><?php _e("Above footer", "botdot-wp"); ?></span>
                 </label>
                 <label class="bsa-check">
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="below_footer" <?php checked($bsa_injection_position, "below_footer"); ?> />
+                    <span><?php _e("Bottom of page", "botdot-wp"); ?></span>
+                </label>
+                <label class="bsa-check">
                     <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="shortcode" <?php checked($bsa_injection_position, "shortcode"); ?> />
                     <span>
                         <?php _e("Manual placement", "botdot-wp"); ?>

@@ -439,6 +439,38 @@ class BotDot_WP_Content_Injector
      */
     public function inject_above_footer()
     {
+        $position = BotDot_WP_Options::get("injection_position", "bottom");
+
+        // Run as primary for above_footer, or as fallback for bottom (page builder case)
+        if ($position === "above_footer" || $position === "bottom") {
+            $this->inject_footer_position("above_footer");
+        }
+    }
+
+    /**
+     * Inject appendix at the very bottom of the page.
+     *
+     * Hook: wp_footer (priority 99)
+     *
+     * @since    1.4.0
+     */
+    public function inject_below_footer()
+    {
+        $position = BotDot_WP_Options::get("injection_position", "bottom");
+
+        if ($position === "below_footer") {
+            $this->inject_footer_position("below_footer");
+        }
+    }
+
+    /**
+     * Shared logic for footer-based injection.
+     *
+     * @since    1.4.0
+     * @param    string    $target_position    The position this method handles.
+     */
+    private function inject_footer_position($target_position)
+    {
         if ($this->appendix_injected) {
             return;
         }
@@ -459,7 +491,7 @@ class BotDot_WP_Content_Injector
         }
 
         $path = $this->get_current_url_path();
-        $this->log_debug(sprintf("Fetching appendix for footer injection (fallback), path: %s", $path));
+        $this->log_debug(sprintf("Fetching appendix for footer injection (%s), path: %s", $target_position, $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
         if (!$data || $data["html"] === null) {
@@ -482,7 +514,7 @@ class BotDot_WP_Content_Injector
         if (!empty($html)) {
             $this->appendix_injected = true;
             echo $html;
-            $this->log_debug(sprintf("Appendix injected via footer fallback (%d bytes)", strlen($html)));
+            $this->log_debug(sprintf("Appendix injected via %s (%d bytes)", $target_position, strlen($html)));
         }
     }
 

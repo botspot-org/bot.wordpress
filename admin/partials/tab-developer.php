@@ -74,6 +74,7 @@ $bsa_cache_ttl = (int) BotDot_WP_Options::get("cache_ttl", 3600);
                             <svg class="bsa-icon bsa-icon--faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11"/><path stroke-linecap="square" d="M5 15V5h10"/></svg>
                         </button>
                     </div>
+                    <div class="bsa-sidebar-result bsa-hidden" data-bsa-result="test-connection"></div>
                 </div>
 
                 <div class="bsa-sidebar-section">
@@ -137,8 +138,4 @@ $bsa_cache_ttl = (int) BotDot_WP_Options::get("cache_ttl", 3600);
 
     </div>
 
-    <!-- Analytics (debugging-only; moved to bottom so logs + controls lead). -->
-    <section class="bsa-developer__analytics bsa-reveal bsa-reveal--3">
-        <?php require BOTDOT_WP_PLUGIN_PATH . "admin/partials/tab-analytics.php"; ?>
-    </section>
 </div>

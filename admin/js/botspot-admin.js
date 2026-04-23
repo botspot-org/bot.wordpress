@@ -431,20 +431,24 @@
     }
 
     function initActions() {
-        on(qs('[data-bsa-action="test-connection"]'), "click", function (e) {
-            // Save-then-connect: if the user typed a new key in the input,
-            // pass it inline so the server saves it before registering. No
-            // separate Save button needed.
-            var btn = e.currentTarget;
-            var input = qs("#bsa-api-key");
-            var typedKey = input && input.value ? input.value.trim() : "";
-            if (typedKey) {
-                handleReconnect(btn, typedKey);
-            } else if (btn.getAttribute("data-bsa-is-connected") === "1") {
-                handleTestConnection(btn);
-            } else {
-                handleReconnect(btn);
-            }
+        // Bind to ALL test-connection buttons (Connect tab + Developer tab)
+        qsa('[data-bsa-action="test-connection"]').forEach(function (btn) {
+            on(btn, "click", function (e) {
+                // Save-then-connect: if the user typed a new key in the input,
+                // pass it inline so the server saves it before registering. No
+                // separate Save button needed.
+                var clickedBtn = e.currentTarget;
+                var input = qs("#bsa-api-key");
+                var typedKey = input && input.value ? input.value.trim() : "";
+                if (typedKey) {
+                    handleReconnect(clickedBtn, typedKey);
+                } else if (clickedBtn.getAttribute("data-bsa-is-connected") === "1") {
+                    handleTestConnection(clickedBtn);
+                } else {
+                    // Developer tab button or not connected - just test connection
+                    handleTestConnection(clickedBtn);
+                }
+            });
         });
         on(qs('[data-bsa-action="reconnect"]'), "click", function (e) {
             handleReconnect(e.currentTarget);
@@ -488,6 +492,126 @@
     }
 
     // ------------------------------------------------------------
+    // AJAX form save (bypasses options.php)
+    // ------------------------------------------------------------
+    function collectFormSettings() {
+        var form = qs("#bsa-settings-form");
+        if (!form) return {};
+
+        var settings = {};
+
+        // API key - only include if user entered a new value
+        var apiKeyInput = form.querySelector('[name="botdot_wp_api_key"]');
+        if (apiKeyInput && apiKeyInput.value) {
+            settings.api_key = apiKeyInput.value;
+        }
+
+        // Checkboxes - booleans
+        var checkboxes = [
+            { name: "botdot_wp_auto_sync_enabled", key: "auto_sync_enabled" },
+            { name: "botdot_wp_appendix_enabled", key: "appendix_enabled" },
+            { name: "botdot_wp_jsonld_enabled", key: "jsonld_enabled" },
+            { name: "botdot_wp_debug_mode", key: "debug_mode" },
+        ];
+        checkboxes.forEach(function (cb) {
+            var el = form.querySelector('[name="' + cb.name + '"]');
+            if (el) settings[cb.key] = el.checked ? "1" : "";
+        });
+
+        // Selects
+        var selects = [
+            { name: "botdot_wp_sync_sensitivity", key: "sync_sensitivity" },
+            { name: "botdot_wp_injection_position", key: "injection_position" },
+            { name: "botdot_wp_jsonld_conflict_mode", key: "jsonld_conflict_mode" },
+        ];
+        selects.forEach(function (sel) {
+            var el = form.querySelector('[name="' + sel.name + '"]');
+            if (el) settings[sel.key] = el.value;
+        });
+
+        // Multi-selects / checkboxes for arrays
+        var syncPostTypes = form.querySelectorAll('[name="botdot_wp_sync_post_types[]"]:checked');
+        settings.sync_post_types = Array.prototype.map.call(syncPostTypes, function (el) { return el.value; });
+
+        var injectPostTypes = form.querySelectorAll('[name="botdot_wp_inject_on_post_types[]"]:checked');
+        settings.inject_on_post_types = Array.prototype.map.call(injectPostTypes, function (el) { return el.value; });
+
+        // Numbers
+        var cacheTtl = form.querySelector('[name="botdot_wp_cache_ttl"]');
+        if (cacheTtl) settings.cache_ttl = cacheTtl.value;
+
+        return settings;
+    }
+
+    function handleAjaxSave(e) {
+        e.preventDefault();
+
+        var form = qs("#bsa-settings-form");
+        var submitBtn = form ? form.querySelector('[type="submit"]') : null;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Saving...";
+        }
+
+        var settings = collectFormSettings();
+        var body = new URLSearchParams();
+        body.append("action", "botdot_wp_save_settings");
+        body.append("nonce", nonces.saveSettings || "");
+
+        // Serialize settings as individual params
+        Object.keys(settings).forEach(function (k) {
+            var v = settings[k];
+            if (Array.isArray(v)) {
+                v.forEach(function (item) {
+                    body.append("settings[" + k + "][]", item);
+                });
+            } else {
+                body.append("settings[" + k + "]", v);
+            }
+        });
+
+        fetch(ajaxurl, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            body: body.toString(),
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (resp) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Save settings";
+                }
+                if (resp.success) {
+                    markClean();
+                    // Clear API key input after successful save (keep placeholder)
+                    var apiKeyInput = qs('[name="botdot_wp_api_key"]');
+                    if (apiKeyInput && apiKeyInput.value) {
+                        apiKeyInput.value = "";
+                        apiKeyInput.setAttribute("data-has-value", "1");
+                        apiKeyInput.placeholder = "••••••••••••••••••••••••";
+                    }
+                    fetchStatus();
+                } else {
+                    alert(resp.data && resp.data.message ? resp.data.message : "Save failed");
+                }
+            })
+            .catch(function (err) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Save settings";
+                }
+                alert("Save failed: " + err.message);
+            });
+    }
+
+    function initAjaxSave() {
+        var form = qs("#bsa-settings-form");
+        if (!form || !form.hasAttribute("data-bsa-ajax-save")) return;
+        form.addEventListener("submit", handleAjaxSave);
+    }
+
+    // ------------------------------------------------------------
     // Init
     // ------------------------------------------------------------
     function init() {
@@ -496,6 +620,7 @@
         initActions();
         initLogViewer();
         initSaveStatus();
+        initAjaxSave();
         fetchStatus();
     }
 

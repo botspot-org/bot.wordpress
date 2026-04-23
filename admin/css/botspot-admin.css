@@ -35,6 +35,7 @@
     --bsa-violet: #743fe2;
     --bsa-amber: #fbbf24;
     --bsa-red: #f87171;
+    --bsa-green: #22c55e;
 
     --bsa-border: rgba(255, 255, 255, 0.1);
     --bsa-border-strong: rgba(255, 255, 255, 0.2);
@@ -726,6 +727,25 @@
     color: var(--bsa-text-muted);
 }
 
+.botspot-admin-root .bsa-result--ok {
+    border-color: var(--bsa-green);
+    color: var(--bsa-green);
+}
+
+.botspot-admin-root .bsa-result--error {
+    border-color: var(--bsa-red);
+    color: var(--bsa-red);
+}
+
+.botspot-admin-root .bsa-sidebar-result {
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
 .botspot-admin-root .bsa-connection-info {
     margin-top: 24px;
     padding: 16px;
@@ -1016,9 +1036,9 @@
     align-items: center;
     gap: 8px;
     padding: 4px 10px;
-    border: 1px solid rgba(209, 254, 246, 0.35);
-    background: rgba(209, 254, 246, 0.08);
-    color: var(--bsa-mint);
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--bsa-green);
     font-family: var(--bsa-font-mono);
     font-size: 10px;
     text-transform: uppercase;
