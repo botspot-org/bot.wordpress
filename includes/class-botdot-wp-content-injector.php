@@ -299,23 +299,23 @@ class BotDot_WP_Content_Injector
     {
         // Don't add if already injected
         if ($this->appendix_injected) {
-            return $content;
+            return $content . $this->bsa_debug_comment("the_content", "already_injected");
         }
 
         if (!$this->should_inject_appendix()) {
-            return $content;
+            return $content . $this->bsa_debug_comment("the_content", "should_not_inject", $this->bsa_debug_state());
         }
 
         $position = $this->resolve_injection_position();
 
         // Only inject via content filter for 'bottom' position
         if ($position !== "bottom") {
-            return $content;
+            return $content . $this->bsa_debug_comment("the_content", "position_not_bottom", ["position" => $position]);
         }
 
         // Check for manual placement
         if ($this->has_manual_placement($content)) {
-            return $content;
+            return $content . $this->bsa_debug_comment("the_content", "manual_placement");
         }
 
         // Don't add on feeds
@@ -327,7 +327,7 @@ class BotDot_WP_Content_Injector
         // In those cases, skip injection here and let wp_footer handle it.
         if ($this->is_page_builder_active()) {
             $this->log_debug("Page builder detected, deferring appendix to footer fallback");
-            return $content;
+            return $content . $this->bsa_debug_comment("the_content", "page_builder_active");
         }
 
         $path = $this->get_current_url_path();
@@ -343,7 +343,12 @@ class BotDot_WP_Content_Injector
                 $api_status,
                 $api_reason
             ));
-            return $content;
+            return $content . $this->bsa_debug_comment("the_content", "fetch_null", [
+                "path" => $path,
+                "api_status" => $api_status,
+                "api_reason" => $api_reason,
+                "data_present" => $data ? true : false,
+            ]);
         }
 
         $html = $this->sanitize_html($data["html"]);
@@ -354,6 +359,7 @@ class BotDot_WP_Content_Injector
         if (!empty($html)) {
             $this->appendix_injected = true;
             $content .= $html;
+            $content .= $this->bsa_debug_comment("the_content", "injected", ["bytes" => strlen($html)]);
             $this->log_debug(sprintf("Appendix injected via content filter (%d bytes)", strlen($html)));
 
             // --- Analytics: increment impression counters ---
@@ -444,6 +450,8 @@ class BotDot_WP_Content_Injector
         // Run as primary for above_footer, or as fallback for bottom (page builder case)
         if ($position === "above_footer" || $position === "bottom") {
             $this->inject_footer_position("above_footer");
+        } else {
+            echo $this->bsa_debug_comment("above_footer", "position_skip", ["position" => $position]);
         }
     }
 
@@ -460,6 +468,8 @@ class BotDot_WP_Content_Injector
 
         if ($position === "below_footer") {
             $this->inject_footer_position("below_footer");
+        } else {
+            echo $this->bsa_debug_comment("below_footer", "position_skip", ["position" => $position]);
         }
     }
 
@@ -486,6 +496,60 @@ class BotDot_WP_Content_Injector
     }
 
     /**
+     * Whether the current request asked for diagnostic comments
+     * (?bsa-debug=1). Used to surface why injection skipped without
+     * leaking diagnostics to normal traffic.
+     */
+    private function bsa_debug_active()
+    {
+        return isset($_GET["bsa-debug"]) && (string) $_GET["bsa-debug"] === "1";
+    }
+
+    /**
+     * Build an HTML comment describing a single decision point in the
+     * injection pipeline. Returns "" when debug is not active.
+     *
+     * @param string $where    Hook name: the_content / above_footer / below_footer.
+     * @param string $reason   Short tag identifying which branch we took.
+     * @param array  $extra    Optional structured payload to aid diagnosis.
+     */
+    private function bsa_debug_comment($where, $reason, array $extra = [])
+    {
+        if (!$this->bsa_debug_active()) {
+            return "";
+        }
+        $payload = array_merge(["where" => $where, "reason" => $reason], $extra);
+        $json = wp_json_encode($payload);
+        if ($json === false) {
+            $json = '{"where":"' . esc_html($where) . '","reason":"json_encode_failed"}';
+        }
+        // Strip "--" so the payload can never close the comment early.
+        $safe = str_replace("--", "-_-", $json);
+        return "\n<!-- bsa-appendix:" . $safe . " -->\n";
+    }
+
+    /**
+     * Snapshot of the page-state booleans that should_inject_common
+     * checks, so a "should_not_inject" debug entry tells us *which*
+     * predicate was the blocker.
+     */
+    private function bsa_debug_state()
+    {
+        return [
+            "is_admin" => is_admin(),
+            "is_404" => is_404(),
+            "is_search" => is_search(),
+            "is_front_page" => is_front_page(),
+            "is_home" => is_home(),
+            "is_singular" => is_singular(),
+            "post_type" => get_post_type(),
+            "appendix_enabled" => (bool) BotDot_WP_Options::get("appendix_enabled"),
+            "inject_on_post_types" => BotDot_WP_Options::get("inject_on_post_types", ["post", "page"]),
+            "injection_position" => $this->resolve_injection_position(),
+        ];
+    }
+
+    /**
      * Shared logic for footer-based injection.
      *
      * @since    1.4.0
@@ -494,16 +558,19 @@ class BotDot_WP_Content_Injector
     private function inject_footer_position($target_position)
     {
         if ($this->appendix_injected) {
+            echo $this->bsa_debug_comment($target_position, "already_injected");
             return;
         }
 
         if (!$this->should_inject_appendix()) {
+            echo $this->bsa_debug_comment($target_position, "should_not_inject", $this->bsa_debug_state());
             return;
         }
 
         // Check for manual placement
         global $post;
         if ($post && $this->has_manual_placement($post->post_content)) {
+            echo $this->bsa_debug_comment($target_position, "manual_placement");
             return;
         }
 
@@ -525,6 +592,12 @@ class BotDot_WP_Content_Injector
                 $api_status,
                 $api_reason
             ));
+            echo $this->bsa_debug_comment($target_position, "fetch_null", [
+                "path" => $path,
+                "api_status" => $api_status,
+                "api_reason" => $api_reason,
+                "data_present" => $data ? true : false,
+            ]);
             return;
         }
 
@@ -536,7 +609,10 @@ class BotDot_WP_Content_Injector
         if (!empty($html)) {
             $this->appendix_injected = true;
             echo $html;
+            echo $this->bsa_debug_comment($target_position, "injected", ["bytes" => strlen($html)]);
             $this->log_debug(sprintf("Appendix injected via %s (%d bytes)", $target_position, strlen($html)));
+        } else {
+            echo $this->bsa_debug_comment($target_position, "html_empty_after_sanitize");
         }
     }
 
