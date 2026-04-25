@@ -306,7 +306,7 @@ class BotDot_WP_Content_Injector
             return $content;
         }
 
-        $position = BotDot_WP_Options::get("injection_position", "bottom");
+        $position = $this->resolve_injection_position();
 
         // Only inject via content filter for 'bottom' position
         if ($position !== "bottom") {
@@ -439,7 +439,7 @@ class BotDot_WP_Content_Injector
      */
     public function inject_above_footer()
     {
-        $position = BotDot_WP_Options::get("injection_position", "bottom");
+        $position = $this->resolve_injection_position();
 
         // Run as primary for above_footer, or as fallback for bottom (page builder case)
         if ($position === "above_footer" || $position === "bottom") {
@@ -456,11 +456,33 @@ class BotDot_WP_Content_Injector
      */
     public function inject_below_footer()
     {
-        $position = BotDot_WP_Options::get("injection_position", "bottom");
+        $position = $this->resolve_injection_position();
 
         if ($position === "below_footer") {
             $this->inject_footer_position("below_footer");
         }
+    }
+
+    /**
+     * Resolve the effective injection position, normalizing unknown / empty
+     * values to "bottom" so the appendix never silently disappears when the
+     * stored option is missing or corrupt.
+     *
+     * Recognized positions: bottom, above_footer, below_footer, shortcode.
+     * Anything else falls back to "bottom".
+     */
+    private function resolve_injection_position()
+    {
+        $stored = BotDot_WP_Options::get("injection_position", "bottom");
+        $allowed = ["bottom", "above_footer", "below_footer", "shortcode"];
+        if (!is_string($stored) || !in_array($stored, $allowed, true)) {
+            $this->log_debug(sprintf(
+                "Unknown injection_position '%s', falling back to 'bottom'",
+                is_string($stored) ? $stored : gettype($stored)
+            ));
+            return "bottom";
+        }
+        return $stored;
     }
 
     /**
