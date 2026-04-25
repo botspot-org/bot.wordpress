@@ -66,6 +66,13 @@ class BotDot_WP_Content_Injector
     private $shortcode_used = false;
 
     /**
+     * Trace of every render_shortcode invocation in the current request.
+     * Surfaced via the ?bsa-debug=1 diagnostic so we can see who's calling
+     * the shortcode handler out-of-band.
+     */
+    private $bsa_render_calls = [];
+
+    /**
      * Per-request cache of locus JSON-LD data.
      *
      * @since    1.3.0
@@ -543,9 +550,14 @@ class BotDot_WP_Content_Injector
             "is_home" => is_home(),
             "is_singular" => is_singular(),
             "post_type" => get_post_type(),
+            "queried_id" => (int) get_queried_object_id(),
+            "current_id" => (int) get_the_ID(),
             "appendix_enabled" => (bool) BotDot_WP_Options::get("appendix_enabled"),
             "inject_on_post_types" => BotDot_WP_Options::get("inject_on_post_types", ["post", "page"]),
             "injection_position" => $this->resolve_injection_position(),
+            "appendix_injected_flag" => $this->appendix_injected,
+            "shortcode_used_flag" => $this->shortcode_used,
+            "render_calls" => $this->bsa_render_calls,
         ];
     }
 
@@ -625,19 +637,26 @@ class BotDot_WP_Content_Injector
      */
     public function render_shortcode($atts)
     {
-        // Only mark the appendix as "handled" when this invocation belongs to
-        // the URL's actual queried post — i.e., the page WordPress is really
-        // rendering. Themes like Newspack call apply_filters('the_content',
-        // $child_post->post_content) for each child article inside a homepage
-        // block, which would otherwise flip our flags and silently disable
-        // the auto-injection path on the real page render.
         $queried_id = (int) get_queried_object_id();
         $current_id = (int) get_the_ID();
-        $is_main_render = $queried_id > 0 && $current_id > 0 && $queried_id === $current_id;
 
-        if ($is_main_render) {
-            $this->shortcode_used = true;
-        }
+        // Capture context for diagnostic output. Helps identify which caller
+        // (Yoast pre-scrape, Newspack child render, real page render, etc.)
+        // triggered this shortcode invocation.
+        $this->bsa_render_calls[] = [
+            "queried_id" => $queried_id,
+            "current_id" => $current_id,
+            "current_filter" => function_exists("current_filter") ? current_filter() : null,
+            "doing_the_content" => function_exists("doing_filter") ? doing_filter("the_content") : null,
+            "in_the_loop" => function_exists("in_the_loop") ? in_the_loop() : null,
+        ];
+
+        // Don't mutate global flags from render_shortcode. Auto-injection
+        // paths (the_content priority 20 and wp_footer) instead defer to
+        // has_manual_placement, which inspects the queried post's raw
+        // post_content for the shortcode/block — so out-of-band invocations
+        // (Yoast/SEO scraping, themes pre-rendering child articles, etc.)
+        // can no longer poison the real render.
 
         if (!$this->should_inject_appendix()) {
             return "";
@@ -654,10 +673,6 @@ class BotDot_WP_Content_Injector
 
         // Apply filter
         $html = apply_filters("botdot_wp_appendix_html", $html);
-
-        if ($is_main_render) {
-            $this->appendix_injected = true;
-        }
 
         return $html;
     }
@@ -775,15 +790,31 @@ class BotDot_WP_Content_Injector
      */
     private function has_manual_placement($content)
     {
+        // Inspect the queried post's raw, unexpanded content too. By the time
+        // the_content priority 20 runs, do_shortcode (priority 11) has already
+        // rewritten [botdot_appendix] into HTML, so has_shortcode($content,...)
+        // can return false even though the user did manually place the
+        // shortcode. The queried post's post_content always holds the raw
+        // form, so it's the authoritative source.
+        $queried_id = (int) get_queried_object_id();
+        if ($queried_id > 0) {
+            $post_obj = get_post($queried_id);
+            if ($post_obj && isset($post_obj->post_content)) {
+                $raw = (string) $post_obj->post_content;
+                if (function_exists("has_block") && has_block("botdot-wp/appendix", $raw)) {
+                    return true;
+                }
+                if (has_shortcode($raw, "botdot_appendix") || has_shortcode($raw, "botspot_appendix")) {
+                    return true;
+                }
+            }
+        }
+
         if (function_exists("has_block") && has_block("botdot-wp/appendix", $content)) {
             return true;
         }
 
         if (has_shortcode($content, "botdot_appendix") || has_shortcode($content, "botspot_appendix")) {
-            return true;
-        }
-
-        if ($this->shortcode_used) {
             return true;
         }
 
