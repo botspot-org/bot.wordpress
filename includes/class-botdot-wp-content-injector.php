@@ -320,6 +320,23 @@ class BotDot_WP_Content_Injector
             ]);
         }
 
+        // Skip when the_content is invoked outside the WP main loop. SEO
+        // plugins (Yoast, RankMath) and similar tooling call apply_filters(
+        // 'the_content', $post->post_content) during wp_head to derive meta
+        // descriptions and Schema graphs — those invocations don't go through
+        // setup_postdata/the_post and thus aren't in_the_loop(). Without this
+        // gate, the pre-scrape injects, sets $appendix_injected, and the
+        // actual template render hits "already_injected" and skips.
+        if (function_exists("in_the_loop") && !in_the_loop()) {
+            return $content . $this->bsa_debug_comment("the_content", "skip_not_in_loop", [
+                "queried_id" => $queried_id,
+                "current_id" => $current_id,
+                "current_filter" => function_exists("current_filter") ? current_filter() : null,
+                "did_wp_head" => function_exists("did_action") ? (int) did_action("wp_head") : null,
+                "did_wp_footer" => function_exists("did_action") ? (int) did_action("wp_footer") : null,
+            ]);
+        }
+
         // Don't add if already injected
         if ($this->appendix_injected) {
             return $content . $this->bsa_debug_comment("the_content", "already_injected", $this->bsa_debug_state());
