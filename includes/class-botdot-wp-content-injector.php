@@ -625,7 +625,17 @@ class BotDot_WP_Content_Injector
      */
     public function render_shortcode($atts)
     {
-        $this->shortcode_used = true;
+        // Only mark the appendix as "handled" when we're genuinely inside the
+        // the_content filter chain. Out-of-band callers (SEO plugins running
+        // do_shortcode for meta-description scraping, REST excerpt generators,
+        // homepage-articles blocks pre-rendering child posts, etc.) would
+        // otherwise flip our flags and silently disable the auto-injection
+        // path on the real page render.
+        $in_the_content = function_exists("doing_filter") && doing_filter("the_content");
+
+        if ($in_the_content) {
+            $this->shortcode_used = true;
+        }
 
         if (!$this->should_inject_appendix()) {
             return "";
@@ -643,7 +653,9 @@ class BotDot_WP_Content_Injector
         // Apply filter
         $html = apply_filters("botdot_wp_appendix_html", $html);
 
-        $this->appendix_injected = true;
+        if ($in_the_content) {
+            $this->appendix_injected = true;
+        }
 
         return $html;
     }
