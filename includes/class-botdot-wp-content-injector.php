@@ -304,9 +304,25 @@ class BotDot_WP_Content_Injector
      */
     public function inject_appendix_content($content)
     {
+        // Skip when this the_content invocation is for a post other than the
+        // URL's queried object. Themes like Newspack call apply_filters(
+        // 'the_content', $child_post->post_content) inside a homepage block to
+        // pre-render each child article — those calls would otherwise inject
+        // the appendix into the child output (whose return value the theme
+        // discards), set $appendix_injected, and prevent the real page render
+        // from injecting at all.
+        $queried_id = (int) get_queried_object_id();
+        $current_id = (int) get_the_ID();
+        if ($queried_id > 0 && $current_id > 0 && $queried_id !== $current_id) {
+            return $content . $this->bsa_debug_comment("the_content", "skip_not_queried", [
+                "queried_id" => $queried_id,
+                "current_id" => $current_id,
+            ]);
+        }
+
         // Don't add if already injected
         if ($this->appendix_injected) {
-            return $content . $this->bsa_debug_comment("the_content", "already_injected");
+            return $content . $this->bsa_debug_comment("the_content", "already_injected", $this->bsa_debug_state());
         }
 
         if (!$this->should_inject_appendix()) {
@@ -570,7 +586,7 @@ class BotDot_WP_Content_Injector
     private function inject_footer_position($target_position)
     {
         if ($this->appendix_injected) {
-            echo $this->bsa_debug_comment($target_position, "already_injected");
+            echo $this->bsa_debug_comment($target_position, "already_injected", $this->bsa_debug_state());
             return;
         }
 
