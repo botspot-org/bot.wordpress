@@ -625,15 +625,17 @@ class BotDot_WP_Content_Injector
      */
     public function render_shortcode($atts)
     {
-        // Only mark the appendix as "handled" when we're genuinely inside the
-        // the_content filter chain. Out-of-band callers (SEO plugins running
-        // do_shortcode for meta-description scraping, REST excerpt generators,
-        // homepage-articles blocks pre-rendering child posts, etc.) would
-        // otherwise flip our flags and silently disable the auto-injection
-        // path on the real page render.
-        $in_the_content = function_exists("doing_filter") && doing_filter("the_content");
+        // Only mark the appendix as "handled" when this invocation belongs to
+        // the URL's actual queried post — i.e., the page WordPress is really
+        // rendering. Themes like Newspack call apply_filters('the_content',
+        // $child_post->post_content) for each child article inside a homepage
+        // block, which would otherwise flip our flags and silently disable
+        // the auto-injection path on the real page render.
+        $queried_id = (int) get_queried_object_id();
+        $current_id = (int) get_the_ID();
+        $is_main_render = $queried_id > 0 && $current_id > 0 && $queried_id === $current_id;
 
-        if ($in_the_content) {
+        if ($is_main_render) {
             $this->shortcode_used = true;
         }
 
@@ -653,7 +655,7 @@ class BotDot_WP_Content_Injector
         // Apply filter
         $html = apply_filters("botdot_wp_appendix_html", $html);
 
-        if ($in_the_content) {
+        if ($is_main_render) {
             $this->appendix_injected = true;
         }
 
