@@ -1055,30 +1055,34 @@ class BotDot_WP_Admin
             return;
         }
 
-        // Run the actual loop on wp-cron so the AJAX request returns
-        // immediately. With many posts the synchronous version would block
-        // the PHP request long enough for the host's reverse proxy to time
-        // out and serve an HTML error page, breaking the JSON response in
-        // the admin UI even though the underlying syncs were succeeding.
-        //
-        // wp_schedule_single_event dedupes on (hook, args), so a second
-        // click while a run is pending is a no-op.
-        if (!wp_next_scheduled("botdot_wp_force_resync_run")) {
-            wp_schedule_single_event(time(), "botdot_wp_force_resync_run");
-        }
-
-        // Mark a started_at marker so the status panel can show progress.
         BotDot_WP_Options::set("force_resync_started_at", time());
         BotDot_WP_Options::set("force_resync_total", count($post_ids));
         delete_transient("botdot_wp_status_snapshot");
 
+        // Run bulk_sync directly - uses batch ingest endpoint which is efficient
+        $result = BotDot_WP_Sync::bulk_sync();
+
+        BotDot_WP_Options::set("force_resync_finished_at", time());
+        if ($result) {
+            BotDot_WP_Options::set("force_resync_succeeded", $result["processed"] ?? 0);
+            BotDot_WP_Options::set("force_resync_failed", $result["failed"] ?? 0);
+        }
+
+        if ($result === false) {
+            wp_send_json_error([
+                "message" => __("Sync failed - check API key configuration.", "botdot-wp"),
+            ]);
+            return;
+        }
+
         wp_send_json_success([
-            "queued" => count($post_ids),
-            "total" => count($post_ids),
+            "queued" => $result["processed"] ?? 0,
+            "total" => $result["total"] ?? count($post_ids),
+            "failed" => $result["failed"] ?? 0,
             "message" => sprintf(
-                /* translators: 1: number of posts queued */
-                __("Resync started in background: %d post(s) queued. Progress will appear in the status panel.", "botdot-wp"),
-                count($post_ids)
+                /* translators: 1: number of posts synced */
+                __("Resync complete: %d post(s) synced.", "botdot-wp"),
+                $result["processed"] ?? 0
             ),
         ]);
     }
