@@ -681,6 +681,102 @@ class BotDot_WP_Sync
     }
 
     /**
+     * Register page stubs for immediate platform visibility.
+     *
+     * Sends all published posts as stubs to locus-core so they appear
+     * in the platform immediately, before full content ingestion completes.
+     *
+     * @since    2.2.0
+     * @param    array|null    $post_types    Post types to include.
+     * @return   array|false                  Result with created/skipped counts or false on failure.
+     */
+    public static function register_page_stubs($post_types = null)
+    {
+        $api_key = BotDot_WP_Options::get("api_key");
+        if (empty($api_key)) {
+            return false;
+        }
+
+        $sync_post_types = $post_types ?: BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
+        $endpoint = rtrim($locus_api_url, "/") . "/api/v1/sites/pages/stubs";
+
+        // Get site domain
+        $site_url = get_site_url();
+        $domain = wp_parse_url($site_url, PHP_URL_HOST);
+
+        // Get all published posts
+        $posts = get_posts([
+            "post_type" => $sync_post_types,
+            "post_status" => "publish",
+            "posts_per_page" => -1,
+            "orderby" => "ID",
+            "order" => "ASC",
+        ]);
+
+        if (empty($posts)) {
+            return ["created" => 0, "skipped" => 0];
+        }
+
+        // Build page stubs
+        $pages = [];
+        foreach ($posts as $post) {
+            $permalink = get_permalink($post->ID);
+            $path = wp_parse_url($permalink, PHP_URL_PATH) ?: "/";
+
+            // Get language if WPML/Polylang is active
+            $language = null;
+            if (function_exists("pll_get_post_language")) {
+                $language = pll_get_post_language($post->ID, "slug");
+            } elseif (function_exists("wpml_get_language_information")) {
+                $lang_info = wpml_get_language_information(null, $post->ID);
+                $language = isset($lang_info["language_code"]) ? $lang_info["language_code"] : null;
+            }
+
+            $pages[] = [
+                "path" => $path,
+                "title" => $post->post_title,
+                "language" => $language,
+            ];
+        }
+
+        $payload = [
+            "domain" => $domain,
+            "pages" => $pages,
+        ];
+
+        $headers = [
+            "Content-Type" => "application/json",
+            "X-API-Key" => $api_key,
+        ];
+
+        $response = wp_remote_post($endpoint, [
+            "headers" => $headers,
+            "body" => wp_json_encode($payload),
+            "timeout" => 30,
+            "data_format" => "body",
+        ]);
+
+        if (is_wp_error($response)) {
+            self::log_error("Page stubs registration failed: " . $response->get_error_message());
+            return false;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($status_code >= 200 && $status_code < 300 && is_array($body)) {
+            $created = isset($body["created"]) ? (int) $body["created"] : 0;
+            $skipped = isset($body["skipped"]) ? (int) $body["skipped"] : 0;
+            self::log_debug(sprintf("Page stubs registered: %d created, %d skipped", $created, $skipped));
+            return ["created" => $created, "skipped" => $skipped];
+        }
+
+        self::log_error(sprintf("Page stubs registration returned HTTP %d", $status_code));
+        return false;
+    }
+
+    /**
      * Bulk sync all published posts via batch ingest endpoint
      *
      * @since    2.0.0
@@ -696,6 +792,10 @@ class BotDot_WP_Sync
         }
 
         $sync_post_types = $post_type ? [$post_type] : BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
+
+        // Register page stubs first for immediate platform visibility
+        self::register_page_stubs($sync_post_types);
+
         $locus_api_url = BotDot_WP_Options::get_locus_api_url();
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/connector/ingest/batch";
         $batch_size = 100;
