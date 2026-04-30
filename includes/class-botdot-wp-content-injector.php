@@ -486,6 +486,80 @@ class BotDot_WP_Content_Injector
     }
 
     /**
+     * Output the client-side placement script that relocates the appendix
+     * marker (<div data-bsa-appendix>) to be the previous/next sibling of the
+     * real <footer> element when position is above_footer / below_footer.
+     *
+     * For position=bottom or shortcode the script is a no-op.
+     *
+     * Hook: wp_footer (priority 1) — runs before theme scripts so the <script>
+     * tag is in the DOM early, but the placement runs on DOMContentLoaded so
+     * the body is fully parsed.
+     *
+     * @since 2.7.0
+     */
+    public function inject_placement_script()
+    {
+        // Skip emitting on pages where injection is gated off — saves bytes.
+        if (!$this->should_inject_appendix()) {
+            return;
+        }
+        $position = $this->resolve_injection_position();
+        if ($position === "shortcode") {
+            // Shortcode placement is fully manual; no JS reposition needed.
+            return;
+        }
+        ?>
+<script>
+(function () {
+    var SELECTORS = [
+        "footer",
+        "[role=contentinfo]",
+        ".site-footer",
+        "#colophon",
+        ".footer",
+        ".page-footer",
+        "#footer",
+        ".elementor-location-footer",
+        ".fl-builder-footer",
+        "#main-footer"
+    ];
+    function findFooter() {
+        for (var i = 0; i < SELECTORS.length; i++) {
+            var el = document.querySelector(SELECTORS[i]);
+            if (el) return el;
+        }
+        return null;
+    }
+    function place() {
+        var node = document.querySelector("[data-bsa-appendix]");
+        if (!node) return;
+        var pos = node.getAttribute("data-bsa-position");
+        if (pos !== "above_footer" && pos !== "below_footer") return;
+        var footer = findFooter();
+        if (!footer) {
+            if (window.console && console.warn) {
+                console.warn("[BotSpot] footer not detected, appendix left in-content");
+            }
+            return;
+        }
+        if (pos === "above_footer") {
+            footer.parentNode.insertBefore(node, footer);
+        } else {
+            footer.parentNode.insertBefore(node, footer.nextSibling);
+        }
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", place);
+    } else {
+        place();
+    }
+})();
+</script>
+        <?php
+    }
+
+    /**
      * Page-builder fallback: when the_content filter is bypassed by a page
      * builder (Elementor, Divi, WPBakery, Beaver Builder, Bricks), render the
      * wrapped appendix at wp_footer so the JS placement script can still
