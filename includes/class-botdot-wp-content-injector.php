@@ -348,9 +348,11 @@ class BotDot_WP_Content_Injector
 
         $position = $this->resolve_injection_position();
 
-        // Only inject via content filter for 'bottom' position
-        if ($position !== "bottom") {
-            return $content . $this->bsa_debug_comment("the_content", "position_not_bottom", ["position" => $position]);
+        // Skip the_content path only for shortcode (manual placement). bottom /
+        // above_footer / below_footer all render here; the JS placement script
+        // (inject_placement_script) reposition above_footer/below_footer at runtime.
+        if ($position === "shortcode") {
+            return $content . $this->bsa_debug_comment("the_content", "position_shortcode", ["position" => $position]);
         }
 
         // Check for manual placement
@@ -398,9 +400,21 @@ class BotDot_WP_Content_Injector
 
         if (!empty($html)) {
             $this->appendix_injected = true;
-            $content .= $html;
-            $content .= $this->bsa_debug_comment("the_content", "injected", ["bytes" => strlen($html)]);
-            $this->log_debug(sprintf("Appendix injected via content filter (%d bytes)", strlen($html)));
+            $wrapped = sprintf(
+                '<div data-bsa-appendix data-bsa-position="%s">%s</div>',
+                esc_attr($position),
+                $html
+            );
+            $content .= $wrapped;
+            $content .= $this->bsa_debug_comment("the_content", "injected", [
+                "bytes" => strlen($html),
+                "position" => $position,
+            ]);
+            $this->log_debug(sprintf(
+                "Appendix injected via content filter (%d bytes, position=%s)",
+                strlen($html),
+                $position
+            ));
 
             // --- Analytics: increment impression counters ---
             try {
@@ -472,45 +486,113 @@ class BotDot_WP_Content_Injector
     }
 
     /**
-     * Inject appendix via wp_footer as fallback or primary method.
+     * Output the client-side placement script that relocates the appendix
+     * marker (<div data-bsa-appendix>) to be the previous/next sibling of the
+     * real <footer> element when position is above_footer / below_footer.
      *
-     * Hook: wp_footer (priority 5)
+     * For position=bottom or shortcode the script is a no-op.
      *
-     * Fires as a universal fallback: if the_content filter ran but a page builder
-     * (Elementor, Divi, WPBakery, etc.) discarded the output, $appendix_injected
-     * will still be false and we inject here instead. Also fires as primary method
-     * when injection_position is 'above_footer'.
+     * Hook: wp_footer (priority 1) — runs before theme scripts so the <script>
+     * tag is in the DOM early, but the placement runs on DOMContentLoaded so
+     * the body is fully parsed.
      *
-     * @since    1.0.0
+     * @since 2.7.0
      */
-    public function inject_above_footer()
+    public function inject_placement_script()
     {
-        $position = $this->resolve_injection_position();
-
-        // Run as primary for above_footer, or as fallback for bottom (page builder case)
-        if ($position === "above_footer" || $position === "bottom") {
-            $this->inject_footer_position("above_footer");
-        } else {
-            echo $this->bsa_debug_comment("above_footer", "position_skip", ["position" => $position]);
+        // Skip emitting on pages where injection is gated off — saves bytes.
+        if (!$this->should_inject_appendix()) {
+            return;
         }
+        $position = $this->resolve_injection_position();
+        if ($position === "shortcode") {
+            // Shortcode placement is fully manual; no JS reposition needed.
+            return;
+        }
+        ?>
+<script>
+(function () {
+    var SELECTORS = [
+        "footer",
+        "[role=contentinfo]",
+        ".site-footer",
+        "#colophon",
+        ".footer",
+        ".page-footer",
+        "#footer",
+        ".elementor-location-footer",
+        ".fl-builder-footer",
+        "#main-footer"
+    ];
+    function findFooter() {
+        for (var i = 0; i < SELECTORS.length; i++) {
+            var el = document.querySelector(SELECTORS[i]);
+            if (el) return el;
+        }
+        return null;
+    }
+    function place() {
+        var node = document.querySelector("[data-bsa-appendix]");
+        if (!node) return;
+        var pos = node.getAttribute("data-bsa-position");
+        if (pos !== "above_footer" && pos !== "below_footer") return;
+        var footer = findFooter();
+        if (!footer) {
+            if (window.console && console.warn) {
+                console.warn("[BotSpot] footer not detected, appendix left in-content");
+            }
+            return;
+        }
+        if (pos === "above_footer") {
+            footer.parentNode.insertBefore(node, footer);
+        } else {
+            footer.parentNode.insertBefore(node, footer.nextSibling);
+        }
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", place);
+    } else {
+        place();
+    }
+})();
+</script>
+        <?php
     }
 
     /**
-     * Inject appendix at the very bottom of the page.
+     * Page-builder fallback: when the_content filter is bypassed by a page
+     * builder (Elementor, Divi, WPBakery, Beaver Builder, Bricks), render the
+     * wrapped appendix at wp_footer so the JS placement script can still
+     * relocate it. For non-page-builder pages the_content already handled the
+     * render, so this method is a no-op.
      *
-     * Hook: wp_footer (priority 99)
+     * Hook: wp_footer (priority 5)
      *
-     * @since    1.4.0
+     * @since    2.7.0
      */
-    public function inject_below_footer()
+    public function inject_appendix_footer_fallback()
     {
-        $position = $this->resolve_injection_position();
-
-        if ($position === "below_footer") {
-            $this->inject_footer_position("below_footer");
-        } else {
-            echo $this->bsa_debug_comment("below_footer", "position_skip", ["position" => $position]);
+        // Already injected by the_content path, nothing to do.
+        if ($this->appendix_injected) {
+            echo $this->bsa_debug_comment("wp_footer", "already_injected");
+            return;
         }
+
+        // Only fall back when a page builder discarded the_content output.
+        // Otherwise the_content's gate (in_the_loop, queried-object) already
+        // chose not to inject and we should respect that.
+        if (!$this->is_page_builder_active()) {
+            echo $this->bsa_debug_comment("wp_footer", "no_page_builder_skip");
+            return;
+        }
+
+        $position = $this->resolve_injection_position();
+        if ($position === "shortcode") {
+            echo $this->bsa_debug_comment("wp_footer", "position_shortcode");
+            return;
+        }
+
+        $this->inject_footer_position($position);
     }
 
     /**
@@ -597,25 +679,31 @@ class BotDot_WP_Content_Injector
     /**
      * Shared logic for footer-based injection.
      *
+     * Output is wrapped in <div data-bsa-appendix data-bsa-position="X"> so
+     * the JS placement script (inject_placement_script) can relocate it for
+     * above_footer / below_footer positions. For position=bottom on a page
+     * builder, the marker keeps its starting position.
+     *
      * @since    1.4.0
-     * @param    string    $target_position    The position this method handles.
+     * @param    string    $position    The configured injection_position
+     *                                  (bottom / above_footer / below_footer).
      */
-    private function inject_footer_position($target_position)
+    private function inject_footer_position($position)
     {
         if ($this->appendix_injected) {
-            echo $this->bsa_debug_comment($target_position, "already_injected", $this->bsa_debug_state());
+            echo $this->bsa_debug_comment("wp_footer", "already_injected", $this->bsa_debug_state());
             return;
         }
 
         if (!$this->should_inject_appendix()) {
-            echo $this->bsa_debug_comment($target_position, "should_not_inject", $this->bsa_debug_state());
+            echo $this->bsa_debug_comment("wp_footer", "should_not_inject", $this->bsa_debug_state());
             return;
         }
 
         // Check for manual placement
         global $post;
         if ($post && $this->has_manual_placement($post->post_content)) {
-            echo $this->bsa_debug_comment($target_position, "manual_placement");
+            echo $this->bsa_debug_comment("wp_footer", "manual_placement");
             return;
         }
 
@@ -625,7 +713,7 @@ class BotDot_WP_Content_Injector
         }
 
         $path = $this->get_current_url_path();
-        $this->log_debug(sprintf("Fetching appendix for footer injection (%s), path: %s", $target_position, $path));
+        $this->log_debug(sprintf("Fetching appendix for footer injection (%s), path: %s", $position, $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
         if (!$data || $data["html"] === null) {
@@ -637,7 +725,7 @@ class BotDot_WP_Content_Injector
                 $api_status,
                 $api_reason
             ));
-            echo $this->bsa_debug_comment($target_position, "fetch_null", [
+            echo $this->bsa_debug_comment("wp_footer", "fetch_null", [
                 "path" => $path,
                 "api_status" => $api_status,
                 "api_reason" => $api_reason,
@@ -653,11 +741,18 @@ class BotDot_WP_Content_Injector
 
         if (!empty($html)) {
             $this->appendix_injected = true;
-            echo $html;
-            echo $this->bsa_debug_comment($target_position, "injected", ["bytes" => strlen($html)]);
-            $this->log_debug(sprintf("Appendix injected via %s (%d bytes)", $target_position, strlen($html)));
+            printf(
+                '<div data-bsa-appendix data-bsa-position="%s">%s</div>',
+                esc_attr($position),
+                $html
+            );
+            echo $this->bsa_debug_comment("wp_footer", "injected_fallback", [
+                "bytes" => strlen($html),
+                "position" => $position,
+            ]);
+            $this->log_debug(sprintf("Appendix injected via wp_footer fallback (%d bytes, position=%s)", strlen($html), $position));
         } else {
-            echo $this->bsa_debug_comment($target_position, "html_empty_after_sanitize");
+            echo $this->bsa_debug_comment("wp_footer", "html_empty_after_sanitize");
         }
     }
 

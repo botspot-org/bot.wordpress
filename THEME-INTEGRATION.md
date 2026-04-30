@@ -85,3 +85,18 @@ add_filter('botdot_wp_should_inject', function($should_inject) {
 **Styling conflicts?**
 - The appendix CSS has low specificity by design
 - Override with your theme's stylesheet using more specific selectors
+
+## Smart Footer Placement (v2.7.0+)
+
+When `injection_position` is `above_footer` or `below_footer`, the plugin uses a small client-side script to find the real footer element and position the appendix relative to it. Selectors checked in order:
+
+1. `<footer>` (semantic)
+2. `[role=contentinfo]`
+3. `.site-footer`, `#colophon`, `.footer`, `.page-footer`, `#footer`
+4. `.elementor-location-footer`, `.fl-builder-footer`, `#main-footer`
+
+First match wins. If none match, the appendix stays where the `the_content` filter rendered it (in article body) and the script logs a console warning (`[BotSpot] footer not detected`).
+
+Multi-footer pages use the first match in document order. If your theme has an unusual structure, choose `bottom` or use the `[bsa_appendix]` shortcode for manual placement.
+
+**Known limitation:** the appendix briefly appears in the article body before the script repositions it (visible reflow on page load). This is intentional for now — the alternative (`display:none` until positioned) silently hides the appendix if the script errors. Revisit if reported as a real problem.
