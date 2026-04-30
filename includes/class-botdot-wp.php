@@ -233,11 +233,12 @@ class BotDot_WP
         // Appendix injection via the_content (priority 20)
         $this->loader->add_filter("the_content", $content_injector, "inject_appendix_content", 20);
 
-        // Above-footer placement (priority 5)
-        $this->loader->add_action("wp_footer", $content_injector, "inject_above_footer", 5);
+        // Placement script: emit early so the <script> tag is in the DOM before
+        // theme scripts; the script itself runs on DOMContentLoaded.
+        $this->loader->add_action("wp_footer", $content_injector, "inject_placement_script", 1);
 
-        // Below-footer placement (priority 99, after most theme footer content)
-        $this->loader->add_action("wp_footer", $content_injector, "inject_below_footer", 99);
+        // Page-builder fallback: only fires when a page builder bypassed the_content.
+        $this->loader->add_action("wp_footer", $content_injector, "inject_appendix_footer_fallback", 5);
 
         // Register shortcode
         $this->loader->add_action("init", $public, "register_shortcode");
