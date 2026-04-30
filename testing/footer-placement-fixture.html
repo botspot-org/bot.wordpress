@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BotSpot footer placement fixture</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2em auto; padding: 1em; }
+        [data-bsa-appendix] { background: #ffd; border: 2px dashed #c80; padding: 1em; margin: 1em 0; }
+        [data-bsa-appendix]::before { content: "BSA APPENDIX (data-bsa-position=" attr(data-bsa-position) ")"; font-weight: bold; display: block; margin-bottom: 0.5em; color: #840; }
+        .site-footer, footer, [role=contentinfo], .footer, #colophon, .page-footer, #footer,
+        .elementor-location-footer, .fl-builder-footer, #main-footer { background: #ddd; padding: 1em; margin-top: 2em; border-top: 2px solid #999; }
+        .scenario { border: 1px solid #ccc; padding: 1em; margin: 2em 0; }
+        .scenario h2 { margin-top: 0; }
+        .instructions { background: #eef; padding: 1em; border-left: 4px solid #66c; margin-bottom: 2em; }
+    </style>
+</head>
+<body>
+    <h1>BotSpot footer-placement fixture</h1>
+    <div class="instructions">
+        <strong>How to use:</strong>
+        <ol>
+            <li>Open this file directly in a browser (no plugin needed).</li>
+            <li>Open DevTools console.</li>
+            <li>Paste the placement script (copy from <code>includes/class-botdot-wp-content-injector.php</code> &rarr; <code>inject_placement_script()</code>) into the console and press Enter.</li>
+            <li>Each scenario has only one <code>data-bsa-appendix</code> visible at a time (others are commented out below). To run a scenario, uncomment its block and refresh.</li>
+            <li>Verify the appendix lands in the expected spot per the comment.</li>
+        </ol>
+        <p><strong>Note:</strong> the script's <code>querySelector</code> picks the FIRST <code>data-bsa-appendix</code> in the document; only one scenario should be active per page load.</p>
+    </div>
+
+    <!-- ===== Scenario 1: Semantic <footer> (most themes) ===== -->
+    <div class="scenario" id="scenario-semantic">
+        <h2>1. Semantic &lt;footer&gt; (most themes)</h2>
+        <p>Article body content goes here. Above_footer should land just above the &lt;footer&gt; element below.</p>
+        <div data-bsa-appendix data-bsa-position="above_footer">should land just above the footer</div>
+        <footer>&copy; 2026 Example. This is the semantic &lt;footer&gt;.</footer>
+    </div>
+
+    <!-- ===== Scenario 2: role=contentinfo (no <footer> element) =====
+    <div class="scenario" id="scenario-role">
+        <h2>2. [role=contentinfo] (no &lt;footer&gt; element)</h2>
+        <p>Article body. The "footer" here is a div with role=contentinfo only.</p>
+        <div data-bsa-appendix data-bsa-position="below_footer">should land just below the role=contentinfo</div>
+        <div role="contentinfo">Footer via ARIA role only.</div>
+    </div>
+    -->
+
+    <!-- ===== Scenario 3: .site-footer (Twenty Twenty-* and Astra) =====
+    <div class="scenario" id="scenario-class">
+        <h2>3. .site-footer (Twenty Twenty-* and Astra)</h2>
+        <p>Article body.</p>
+        <div data-bsa-appendix data-bsa-position="above_footer">should land above .site-footer</div>
+        <div class="site-footer">.site-footer class only — no semantic element.</div>
+    </div>
+    -->
+
+    <!-- ===== Scenario 4: .elementor-location-footer (Elementor Pro) =====
+    <div class="scenario" id="scenario-elementor">
+        <h2>4. .elementor-location-footer (Elementor Pro)</h2>
+        <p>Article body.</p>
+        <div data-bsa-appendix data-bsa-position="below_footer">should land below .elementor-location-footer</div>
+        <div class="elementor-location-footer">Elementor footer template.</div>
+    </div>
+    -->
+
+    <!-- ===== Scenario 5: No footer at all (degraded behavior) =====
+    <div class="scenario" id="scenario-no-footer">
+        <h2>5. No footer at all (degraded behavior)</h2>
+        <p>There is no footer element on this page at all.</p>
+        <div data-bsa-appendix data-bsa-position="above_footer">should stay where it is + log "[BotSpot] footer not detected" warning</div>
+    </div>
+    -->
+</body>
+</html>
