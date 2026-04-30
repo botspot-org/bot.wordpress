@@ -348,9 +348,11 @@ class BotDot_WP_Content_Injector
 
         $position = $this->resolve_injection_position();
 
-        // Only inject via content filter for 'bottom' position
-        if ($position !== "bottom") {
-            return $content . $this->bsa_debug_comment("the_content", "position_not_bottom", ["position" => $position]);
+        // Skip the_content path only for shortcode (manual placement). bottom /
+        // above_footer / below_footer all render here; the JS placement script
+        // (inject_placement_script) reposition above_footer/below_footer at runtime.
+        if ($position === "shortcode") {
+            return $content . $this->bsa_debug_comment("the_content", "position_shortcode", ["position" => $position]);
         }
 
         // Check for manual placement
@@ -398,9 +400,21 @@ class BotDot_WP_Content_Injector
 
         if (!empty($html)) {
             $this->appendix_injected = true;
-            $content .= $html;
-            $content .= $this->bsa_debug_comment("the_content", "injected", ["bytes" => strlen($html)]);
-            $this->log_debug(sprintf("Appendix injected via content filter (%d bytes)", strlen($html)));
+            $wrapped = sprintf(
+                '<div data-bsa-appendix data-bsa-position="%s">%s</div>',
+                esc_attr($position),
+                $html
+            );
+            $content .= $wrapped;
+            $content .= $this->bsa_debug_comment("the_content", "injected", [
+                "bytes" => strlen($html),
+                "position" => $position,
+            ]);
+            $this->log_debug(sprintf(
+                "Appendix injected via content filter (%d bytes, position=%s)",
+                strlen($html),
+                $position
+            ));
 
             // --- Analytics: increment impression counters ---
             try {
