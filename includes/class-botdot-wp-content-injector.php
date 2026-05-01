@@ -255,6 +255,77 @@ class BotDot_WP_Content_Injector
     }
 
     /**
+     * Resolve delivery_mode for the current page from the /render response.
+     *
+     * Returns 'full' when the field is absent (backward compat with older core).
+     *
+     * @since    2.8.0
+     * @access   private
+     * @return   string    One of: 'disabled', 'jsonld_only', 'full'.
+     */
+    private function get_delivery_mode()
+    {
+        $path = $this->get_current_url_path();
+        $data = BotDot_WP_Content_Fetcher::fetch($path);
+        if (!$data || empty($data["delivery_mode"])) {
+            return "full";
+        }
+        $mode = $data["delivery_mode"];
+        if (!in_array($mode, ["disabled", "jsonld_only", "full"], true)) {
+            return "full";
+        }
+        return $mode;
+    }
+
+    /**
+     * Emit only the JSON-LD <script> block from a pre-fetched render response.
+     *
+     * @since    2.8.0
+     * @access   private
+     * @param    mixed    $jsonld_raw    Raw JSON-LD from the render response.
+     */
+    private function emit_jsonld_from_response($jsonld_raw)
+    {
+        if ($jsonld_raw === null) {
+            return;
+        }
+
+        $jsonld = $jsonld_raw;
+        if (is_string($jsonld)) {
+            $decoded = json_decode($jsonld, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return;
+            }
+            $jsonld = $decoded;
+        }
+
+        $jsonld = apply_filters("botdot_wp_appendix_jsonld", $jsonld);
+        if (empty($jsonld)) {
+            return;
+        }
+
+        $nodes = $this->extract_graph_nodes($jsonld);
+        if (!empty($nodes)) {
+            $nodes = $this->annotate_nodes_with_botspot($nodes);
+            $existing_ids = array_filter(array_map(function ($n) {
+                return is_array($n) && isset($n["@id"]) ? $n["@id"] : null;
+            }, $nodes));
+            if (!in_array("https://bot.spot/#botspot", $existing_ids)) {
+                $nodes[] = $this->get_botspot_org_node();
+            }
+            $context = isset($jsonld["@context"]) ? $jsonld["@context"] : "https://schema.org";
+            $jsonld = ["@context" => $context, "@graph" => $nodes];
+        }
+
+        $json_string = wp_json_encode($jsonld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json_string = str_replace("</script>", "<\/script>", $json_string);
+
+        echo "\n<!-- BotSpot JSON-LD -->\n";
+        echo '<script type="application/ld+json">' . $json_string . "</script>";
+        echo "\n<!-- /BotSpot JSON-LD -->\n";
+    }
+
+    /**
      * Inject JSON-LD into wp_head
      *
      * Hook: wp_head (priority 99, after other SEO plugins)
@@ -273,6 +344,23 @@ class BotDot_WP_Content_Injector
         $conflict_mode = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
         if ($conflict_mode === "off") {
             $this->log_debug("JSON-LD conflict mode is 'off', skipping injection");
+            return;
+        }
+
+        // When appendix is enabled, the render response carries delivery_mode.
+        // Honor it here so disabled suppresses JSON-LD too.
+        if (BotDot_WP_Options::get("appendix_enabled")) {
+            $mode = $this->get_delivery_mode();
+            if ($mode === "disabled") {
+                $this->log_debug("delivery_mode=disabled, skipping JSON-LD injection");
+                return;
+            }
+            // For jsonld_only and full, emit JSON-LD via the shared render response.
+            $path = $this->get_current_url_path();
+            $data = BotDot_WP_Content_Fetcher::fetch($path);
+            $jsonld_raw = ($data && isset($data["jsonld"])) ? $data["jsonld"] : null;
+            $this->emit_jsonld_from_response($jsonld_raw);
+            $this->log_debug(sprintf("JSON-LD injected via wp_head (delivery_mode=%s)", $mode));
             return;
         }
 
@@ -375,6 +463,16 @@ class BotDot_WP_Content_Injector
         $path = $this->get_current_url_path();
         $this->log_debug(sprintf("Fetching appendix for path: %s", $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
+
+        // Dispatch on delivery_mode before consuming html.
+        $delivery_mode = ($data && isset($data["delivery_mode"]) && $data["delivery_mode"]) ? $data["delivery_mode"] : "full";
+        if (!in_array($delivery_mode, ["disabled", "jsonld_only", "full"], true)) {
+            $delivery_mode = "full";
+        }
+        if ($delivery_mode === "disabled" || $delivery_mode === "jsonld_only") {
+            $this->log_debug(sprintf("delivery_mode=%s, skipping appendix HTML injection", $delivery_mode));
+            return $content . $this->bsa_debug_comment("the_content", "delivery_mode_skip", ["delivery_mode" => $delivery_mode]);
+        }
 
         if (!$data || $data["html"] === null) {
             $api_status = ($data && isset($data["status"])) ? $data["status"] : "no_response";
@@ -716,6 +814,16 @@ class BotDot_WP_Content_Injector
         $this->log_debug(sprintf("Fetching appendix for footer injection (%s), path: %s", $position, $path));
         $data = BotDot_WP_Content_Fetcher::fetch($path);
 
+        $delivery_mode = ($data && isset($data["delivery_mode"]) && $data["delivery_mode"]) ? $data["delivery_mode"] : "full";
+        if (!in_array($delivery_mode, ["disabled", "jsonld_only", "full"], true)) {
+            $delivery_mode = "full";
+        }
+        if ($delivery_mode === "disabled" || $delivery_mode === "jsonld_only") {
+            $this->log_debug(sprintf("delivery_mode=%s, skipping footer appendix HTML injection", $delivery_mode));
+            echo $this->bsa_debug_comment("wp_footer", "delivery_mode_skip", ["delivery_mode" => $delivery_mode]);
+            return;
+        }
+
         if (!$data || $data["html"] === null) {
             $api_status = ($data && isset($data["status"])) ? $data["status"] : "no_response";
             $api_reason = ($data && isset($data["reason"])) ? $data["reason"] : "unknown";
@@ -792,6 +900,15 @@ class BotDot_WP_Content_Injector
 
         $path = $this->get_current_url_path();
         $data = BotDot_WP_Content_Fetcher::fetch($path);
+
+        $delivery_mode = ($data && isset($data["delivery_mode"]) && $data["delivery_mode"]) ? $data["delivery_mode"] : "full";
+        if (!in_array($delivery_mode, ["disabled", "jsonld_only", "full"], true)) {
+            $delivery_mode = "full";
+        }
+        if ($delivery_mode === "disabled" || $delivery_mode === "jsonld_only") {
+            $this->log_debug(sprintf("delivery_mode=%s, shortcode emits nothing", $delivery_mode));
+            return "";
+        }
 
         if (!$data || $data["html"] === null) {
             return "";

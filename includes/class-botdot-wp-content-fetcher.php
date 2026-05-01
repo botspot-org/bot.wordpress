@@ -136,6 +136,8 @@ class BotDot_WP_Content_Fetcher
             "content_hash" => isset($body["content_hash"]) ? $body["content_hash"] : null,
             "status" => isset($body["status"]) ? $body["status"] : null,
             "reason" => isset($body["reason"]) ? $body["reason"] : null,
+            "delivery_mode" => isset($body["delivery_mode"]) ? $body["delivery_mode"] : null,
+            "placement" => isset($body["placement"]) ? $body["placement"] : null,
         ];
 
         // Cache with configured TTL
