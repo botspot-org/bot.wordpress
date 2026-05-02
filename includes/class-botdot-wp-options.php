@@ -51,7 +51,7 @@ class BotDot_WP_Options
         "appendix_enabled" => true,
         "jsonld_enabled" => true,
         "jsonld_conflict_mode" => "merge",
-        "injection_position" => "bottom",
+        "injection_position" => "bottom_of_content",
         "inject_on_post_types" => ["post", "page"],
 
         // Cache
@@ -241,9 +241,12 @@ class BotDot_WP_Options
             case "connection_id":
             case "tenant_id":
             case "sync_sensitivity":
-            case "injection_position":
             case "jsonld_conflict_mode":
                 return is_string($value) ? trim($value) : "";
+
+            case "injection_position":
+                $val = is_string($value) ? trim($value) : "";
+                return self::migrate_placement_value($val);
 
             default:
                 return $value;
@@ -285,8 +288,9 @@ class BotDot_WP_Options
                 return in_array($value, $allowed) ? $value : "merge";
 
             case "injection_position":
-                $allowed = ["bottom", "above_footer", "below_footer", "shortcode"];
-                return in_array($value, $allowed) ? $value : "bottom";
+                $value = self::migrate_placement_value($value);
+                $allowed = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
+                return in_array($value, $allowed) ? $value : "bottom_of_content";
 
             case "sync_post_types":
             case "inject_on_post_types":
@@ -304,6 +308,23 @@ class BotDot_WP_Options
                 }
                 return $value;
         }
+    }
+
+    /**
+     * Migrate legacy placement values to new vocabulary.
+     *
+     * @since    1.1.0
+     * @param    string    $value    The placement value.
+     * @return   string              The migrated value.
+     */
+    private static function migrate_placement_value($value)
+    {
+        $migration_map = [
+            "bottom"       => "bottom_of_content",
+            "below_footer" => "bottom_of_page",
+            "shortcode"    => "manual",
+        ];
+        return isset($migration_map[$value]) ? $migration_map[$value] : $value;
     }
 
     /**

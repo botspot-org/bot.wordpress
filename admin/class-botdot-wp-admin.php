@@ -113,7 +113,7 @@ class BotDot_WP_Admin
         ]);
         register_setting("botdot_wp_settings", "botdot_wp_injection_position", [
             "sanitize_callback" => [$this, "sanitize_position"],
-            "default" => "bottom",
+            "default" => "bottom_of_content",
         ]);
         register_setting("botdot_wp_settings", "botdot_wp_inject_on_post_types", [
             "sanitize_callback" => [$this, "sanitize_post_types"],

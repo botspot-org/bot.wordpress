@@ -17,7 +17,7 @@ if (!defined("WPINC")) {
 
 $bsa_sync_post_types = BotDot_WP_Options::get("sync_post_types", ["post", "page"]);
 $bsa_inject_post_types = BotDot_WP_Options::get("inject_on_post_types", ["post", "page"]);
-$bsa_injection_position = BotDot_WP_Options::get("injection_position", "bottom");
+$bsa_injection_position = BotDot_WP_Options::get("injection_position", "bottom_of_content");
 $bsa_jsonld_conflict = BotDot_WP_Options::get("jsonld_conflict_mode", "merge");
 $bsa_auto_sync = (bool) BotDot_WP_Options::get("auto_sync_enabled", true);
 $bsa_sync_sensitivity = BotDot_WP_Options::get("sync_sensitivity", "medium");
@@ -95,7 +95,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
         <div class="bsa-settings-row__body">
             <div class="bsa-check-list">
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="bottom" <?php checked($bsa_injection_position, "bottom"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="bottom_of_content" <?php checked($bsa_injection_position, "bottom_of_content"); ?> />
                     <span>
                         <?php _e("Bottom of content", "botdot-wp"); ?>
                         <span class="bsa-check__tag"><?php _e("recommended", "botdot-wp"); ?></span>
@@ -106,11 +106,11 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     <span><?php _e("Above footer", "botdot-wp"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="below_footer" <?php checked($bsa_injection_position, "below_footer"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="bottom_of_page" <?php checked($bsa_injection_position, "bottom_of_page"); ?> />
                     <span><?php _e("Bottom of page", "botdot-wp"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="shortcode" <?php checked($bsa_injection_position, "shortcode"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="manual" <?php checked($bsa_injection_position, "manual"); ?> />
                     <span>
                         <?php _e("Manual placement", "botdot-wp"); ?>
                         <span class="bsa-check__tag"><code class="bsa-code">[botspot_appendix]</code></span>

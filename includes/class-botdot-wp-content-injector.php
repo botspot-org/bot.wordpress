@@ -436,11 +436,11 @@ class BotDot_WP_Content_Injector
 
         $position = $this->resolve_injection_position();
 
-        // Skip the_content path only for shortcode (manual placement). bottom /
-        // above_footer / below_footer all render here; the JS placement script
-        // (inject_placement_script) reposition above_footer/below_footer at runtime.
-        if ($position === "shortcode") {
-            return $content . $this->bsa_debug_comment("the_content", "position_shortcode", ["position" => $position]);
+        // Skip the_content path for manual placement. bottom_of_content /
+        // above_footer / bottom_of_page all render here; the JS placement script
+        // (inject_placement_script) repositions above_footer/bottom_of_page at runtime.
+        if ($position === "manual") {
+            return $content . $this->bsa_debug_comment("the_content", "position_manual", ["position" => $position]);
         }
 
         // Check for manual placement
@@ -586,9 +586,9 @@ class BotDot_WP_Content_Injector
     /**
      * Output the client-side placement script that relocates the appendix
      * marker (<div data-bsa-appendix>) to be the previous/next sibling of the
-     * real <footer> element when position is above_footer / below_footer.
+     * real <footer> element when position is above_footer / bottom_of_page.
      *
-     * For position=bottom or shortcode the script is a no-op.
+     * For position=bottom_of_content or manual the script is a no-op.
      *
      * Hook: wp_footer (priority 1) — runs before theme scripts so the <script>
      * tag is in the DOM early, but the placement runs on DOMContentLoaded so
@@ -603,8 +603,8 @@ class BotDot_WP_Content_Injector
             return;
         }
         $position = $this->resolve_injection_position();
-        if ($position === "shortcode") {
-            // Shortcode placement is fully manual; no JS reposition needed.
+        if ($position === "manual") {
+            // Manual placement; no JS reposition needed.
             return;
         }
         ?>
@@ -633,7 +633,7 @@ class BotDot_WP_Content_Injector
         var node = document.querySelector("[data-bsa-appendix]");
         if (!node) return;
         var pos = node.getAttribute("data-bsa-position");
-        if (pos !== "above_footer" && pos !== "below_footer") return;
+        if (pos !== "above_footer" && pos !== "bottom_of_page") return;
         var footer = findFooter();
         if (!footer) {
             if (window.console && console.warn) {
@@ -685,8 +685,8 @@ class BotDot_WP_Content_Injector
         }
 
         $position = $this->resolve_injection_position();
-        if ($position === "shortcode") {
-            echo $this->bsa_debug_comment("wp_footer", "position_shortcode");
+        if ($position === "manual") {
+            echo $this->bsa_debug_comment("wp_footer", "position_manual");
             return;
         }
 
@@ -695,22 +695,22 @@ class BotDot_WP_Content_Injector
 
     /**
      * Resolve the effective injection position, normalizing unknown / empty
-     * values to "bottom" so the appendix never silently disappears when the
+     * values to "bottom_of_content" so the appendix never silently disappears when the
      * stored option is missing or corrupt.
      *
-     * Recognized positions: bottom, above_footer, below_footer, shortcode.
-     * Anything else falls back to "bottom".
+     * Recognized positions: bottom_of_content, above_footer, bottom_of_page, manual.
+     * Anything else falls back to "bottom_of_content".
      */
     private function resolve_injection_position()
     {
-        $stored = BotDot_WP_Options::get("injection_position", "bottom");
-        $allowed = ["bottom", "above_footer", "below_footer", "shortcode"];
+        $stored = BotDot_WP_Options::get("injection_position", "bottom_of_content");
+        $allowed = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
         if (!is_string($stored) || !in_array($stored, $allowed, true)) {
             $this->log_debug(sprintf(
-                "Unknown injection_position '%s', falling back to 'bottom'",
+                "Unknown injection_position '%s', falling back to 'bottom_of_content'",
                 is_string($stored) ? $stored : gettype($stored)
             ));
-            return "bottom";
+            return "bottom_of_content";
         }
         return $stored;
     }
@@ -729,7 +729,7 @@ class BotDot_WP_Content_Injector
      * Build an HTML comment describing a single decision point in the
      * injection pipeline. Returns "" when debug is not active.
      *
-     * @param string $where    Hook name: the_content / above_footer / below_footer.
+     * @param string $where    Hook name: the_content / above_footer / bottom_of_page.
      * @param string $reason   Short tag identifying which branch we took.
      * @param array  $extra    Optional structured payload to aid diagnosis.
      */
@@ -779,12 +779,12 @@ class BotDot_WP_Content_Injector
      *
      * Output is wrapped in <div data-bsa-appendix data-bsa-position="X"> so
      * the JS placement script (inject_placement_script) can relocate it for
-     * above_footer / below_footer positions. For position=bottom on a page
-     * builder, the marker keeps its starting position.
+     * above_footer / bottom_of_page positions. For position=bottom_of_content
+     * on a page builder, the marker keeps its starting position.
      *
      * @since    1.4.0
      * @param    string    $position    The configured injection_position
-     *                                  (bottom / above_footer / below_footer).
+     *                                  (bottom_of_content / above_footer / bottom_of_page).
      */
     private function inject_footer_position($position)
     {
