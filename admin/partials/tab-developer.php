@@ -57,10 +57,6 @@ $bsa_cache_ttl = (int) BotDot_WP_Options::get("cache_ttl", 3600);
                 <div class="bsa-sidebar-section">
                     <h4 class="bsa-sidebar-section__title"><?php _e("Actions", "botdot-wp"); ?></h4>
                     <div class="bsa-sidebar-actions">
-                        <button type="button" class="bsa-sidebar-btn" data-bsa-action="test-connection">
-                            <span><?php _e("Test connection", "botdot-wp"); ?></span>
-                            <svg class="bsa-icon bsa-icon--faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="square" d="M5 12h14M13 5l7 7-7 7"/></svg>
-                        </button>
                         <button type="button" class="bsa-sidebar-btn" data-bsa-action="force-resync">
                             <span><?php _e("Force re-sync", "botdot-wp"); ?></span>
                             <svg class="bsa-icon bsa-icon--faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="square" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14.9-2M4 16a8 8 0 0014.9 2"/></svg>
@@ -74,7 +70,6 @@ $bsa_cache_ttl = (int) BotDot_WP_Options::get("cache_ttl", 3600);
                             <svg class="bsa-icon bsa-icon--faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11"/><path stroke-linecap="square" d="M5 15V5h10"/></svg>
                         </button>
                     </div>
-                    <div class="bsa-sidebar-result bsa-hidden" data-bsa-result="test-connection"></div>
                 </div>
 
                 <div class="bsa-sidebar-section">
