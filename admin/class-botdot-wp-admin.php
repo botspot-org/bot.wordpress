@@ -471,6 +471,9 @@ class BotDot_WP_Admin
         $result = BotDot_WP_Content_Fetcher::test_connection();
 
         if (!empty($result["success"])) {
+            // Register webhook for cache invalidation on successful connection
+            BotDot_WP_Webhook_Handler::register_webhook();
+
             wp_send_json_success([
                 "message" => isset($result["message"])
                     ? $result["message"]

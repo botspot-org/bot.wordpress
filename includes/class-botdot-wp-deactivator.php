@@ -44,6 +44,10 @@ class BotDot_WP_Deactivator {
             wp_unschedule_event($timestamp, 'botspot_flush_analytics');
         }
 
+        // Deregister webhook from locus-core
+        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-webhook-handler.php';
+        BotDot_WP_Webhook_Handler::deregister_webhook();
+
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug('BotSpot WP deactivated.');
         }

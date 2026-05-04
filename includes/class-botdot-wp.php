@@ -141,6 +141,11 @@ class BotDot_WP
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-content-injector.php";
 
         /**
+         * The class responsible for handling webhooks from locus-core.
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-webhook-handler.php";
+
+        /**
          * The class responsible for defining all actions in the admin area.
          */
         require_once BOTDOT_WP_PLUGIN_PATH . "admin/class-botdot-wp-admin.php";
@@ -217,6 +222,8 @@ class BotDot_WP
      */
     private function define_public_hooks()
     {
+        new BotDot_WP_Webhook_Handler();
+
         $content_injector = new BotDot_WP_Content_Injector($this->get_plugin_name(), $this->get_version());
         $public = new BotDot_WP_Public($this->get_plugin_name(), $this->get_version(), $content_injector);
 

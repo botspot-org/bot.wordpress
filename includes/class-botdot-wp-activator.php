@@ -90,6 +90,12 @@ class BotDot_WP_Activator {
             wp_schedule_event(time() + 3600, 'hourly', 'botspot_flush_analytics');
         }
 
+        // Register webhook for cache invalidation (if API key is configured)
+        if (BotDot_WP_Options::get('api_key')) {
+            require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-webhook-handler.php';
+            BotDot_WP_Webhook_Handler::register_webhook();
+        }
+
         if (BotDot_WP_Options::get('debug_mode')) {
             BotDot_WP_Logger::log_debug('BotSpot WP v1.0.1 activated.');
         }
