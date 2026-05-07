@@ -117,6 +117,22 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     </span>
                 </label>
             </div>
+            <p class="bsa-settings-row__note" id="bsa-footer-detection-note" style="display: none; margin-top: 12px; padding: 10px; background: #fff8e5; border-left: 3px solid #ffb900; font-size: 13px;">
+                <strong><?php _e("Note:", "botdot-wp"); ?></strong>
+                <?php _e("Footer detection relies on common HTML patterns (<code>&lt;footer&gt;</code>, <code>role=\"contentinfo\"</code>, etc.). If your theme uses a non-standard footer, add the attribute <code>data-botspot-footer</code> to your footer element for reliable placement.", "botdot-wp"); ?>
+            </p>
+            <script>
+            (function() {
+                var radios = document.querySelectorAll('input[name="botdot_wp_injection_position"]');
+                var note = document.getElementById('bsa-footer-detection-note');
+                function toggle() {
+                    var val = document.querySelector('input[name="botdot_wp_injection_position"]:checked');
+                    note.style.display = (val && (val.value === 'above_footer' || val.value === 'bottom_of_page')) ? 'block' : 'none';
+                }
+                radios.forEach(function(r) { r.addEventListener('change', toggle); });
+                toggle();
+            })();
+            </script>
         </div>
     </section>
 
