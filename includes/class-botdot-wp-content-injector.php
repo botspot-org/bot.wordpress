@@ -642,6 +642,11 @@ class BotDot_WP_Content_Injector
             if (window.console && console.warn) {
                 console.warn("[BotSpot] footer not detected, appendix left in-content");
             }
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get("bsa-debug") === "1") {
+                var comment = document.createComment(" bsa-footer-detection: failed, fallback to bottom_of_content ");
+                node.parentNode.insertBefore(comment, node);
+            }
             return;
         }
         if (pos === "above_footer") {
