@@ -611,6 +611,7 @@ class BotDot_WP_Content_Injector
 <script>
 (function () {
     var SELECTORS = [
+        "[data-botspot-footer]",
         "footer",
         "[role=contentinfo]",
         ".site-footer",
@@ -618,9 +619,11 @@ class BotDot_WP_Content_Injector
         ".footer",
         ".page-footer",
         "#footer",
+        "#site-footer",
         ".elementor-location-footer",
         ".fl-builder-footer",
-        "#main-footer"
+        "#main-footer",
+        ".wp-block-template-part[data-area=footer]"
     ];
     function findFooter() {
         for (var i = 0; i < SELECTORS.length; i++) {
