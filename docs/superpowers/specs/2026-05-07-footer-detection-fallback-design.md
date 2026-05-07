@@ -42,12 +42,13 @@ var SELECTORS = [
 ```
 
 **Fallback behavior:**
-- When `findFooter()` returns null, leave appendix in its `the_content` position
+- Both `above_footer` and `bottom_of_page` require footer detection (`above_footer` inserts before footer, `bottom_of_page` inserts after footer)
+- When `findFooter()` returns null, both fall back identically: leave appendix in its `the_content` position
 - If `bsa-debug=1` query param present, inject HTML comment: `<!-- bsa-footer-detection: failed, fallback to bottom_of_content -->`
 
 ### PHP Changes
 
-File: `admin/partials/tab-settings.php` (or equivalent)
+File: `admin/partials/tab-settings.php` (lines ~45-65, injection_position radio group)
 
 **Settings page warning:**
 When `injection_position` is `above_footer` or `bottom_of_page`, show inline notice below the dropdown:
