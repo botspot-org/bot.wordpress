@@ -767,6 +767,9 @@ class BotDot_WP_Admin
             BotDot_WP_Options::set("tenant_id", $body["org_id"]);
         }
 
+        // Trigger initial bulk sync to provision site and pages
+        BotDot_WP_Sync::bulk_sync();
+
         wp_send_json_success([
             "message" => __("Connected successfully.", "botdot-wp"),
             "connection_id" => isset($body["id"]) ? $body["id"] : "",
