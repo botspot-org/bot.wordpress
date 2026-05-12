@@ -518,15 +518,23 @@
             if (el) settings[cb.key] = el.checked ? "1" : "";
         });
 
-        // Selects
+        // Selects (dropdowns)
         var selects = [
             { name: "botdot_wp_sync_sensitivity", key: "sync_sensitivity" },
+        ];
+        selects.forEach(function (sel) {
+            var el = form.querySelector('select[name="' + sel.name + '"]');
+            if (el) settings[sel.key] = el.value;
+        });
+
+        // Radio buttons - must query for :checked
+        var radios = [
             { name: "botdot_wp_injection_position", key: "injection_position" },
             { name: "botdot_wp_jsonld_conflict_mode", key: "jsonld_conflict_mode" },
         ];
-        selects.forEach(function (sel) {
-            var el = form.querySelector('[name="' + sel.name + '"]');
-            if (el) settings[sel.key] = el.value;
+        radios.forEach(function (radio) {
+            var el = form.querySelector('[name="' + radio.name + '"]:checked');
+            if (el) settings[radio.key] = el.value;
         });
 
         // Multi-selects / checkboxes for arrays
