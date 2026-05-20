@@ -422,6 +422,10 @@ class BotDot_WP_Sync
         // Extract existing page JSON-LD from SEO plugins (source layer for merge)
         $source_jsonld = self::extract_page_jsonld($post->ID);
 
+        // Extract content from page builders if needed (Elementor, Divi, etc.)
+        $content = BotDot_WP_Page_Builder::extract_content($post);
+        $page_builder = BotDot_WP_Page_Builder::detect_builder($post->ID);
+
         $payload = [
             "source_type" => "wordpress",
             "identifier" => [
@@ -439,8 +443,9 @@ class BotDot_WP_Sync
             ],
             "body" => [
                 "format" => "html",
-                "content" => $post->post_content,
+                "content" => $content,
                 "excerpt" => $excerpt,
+                "page_builder" => $page_builder,
             ],
             "structured_data" => [
                 "schema_type" => "wordpress_" . $post->post_type,
@@ -978,7 +983,8 @@ class BotDot_WP_Sync
      */
     private static function compute_content_hash($post)
     {
-        $data = $post->post_title . $post->post_content . $post->post_excerpt;
+        $content = BotDot_WP_Page_Builder::extract_content($post);
+        $data = $post->post_title . $content . $post->post_excerpt;
         return hash("sha256", $data);
     }
 
@@ -992,8 +998,9 @@ class BotDot_WP_Sync
      */
     private static function compute_change_percentage($post, $post_id)
     {
+        $content = BotDot_WP_Page_Builder::extract_content($post);
         $current_words = str_word_count(
-            strip_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt),
+            strip_tags($post->post_title . " " . $content . " " . $post->post_excerpt),
         );
 
         // Get cached word count from previous sync

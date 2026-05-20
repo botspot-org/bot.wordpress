@@ -121,6 +121,11 @@ class BotDot_WP
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-language.php";
 
         /**
+         * The class responsible for page builder content extraction.
+         */
+        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-page-builder.php";
+
+        /**
          * The class responsible for content sync (write path).
          */
         require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-sync.php";
