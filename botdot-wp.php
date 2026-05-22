@@ -6,8 +6,8 @@
  * Version: 2.9.2
  * Author: bot.spot Team
  * Author URI: https://bot.spot
- * License: Proprietary
- * License URI: https://bot.spot/license
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: botdot-wp
  * Domain Path: /languages
  * Requires at least: 5.0

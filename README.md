@@ -287,4 +287,4 @@ configure a system cron job:
 
 ## License
 
-Proprietary - All rights reserved by BotSpot Team
+GPLv2 or later. See https://www.gnu.org/licenses/gpl-2.0.html.
