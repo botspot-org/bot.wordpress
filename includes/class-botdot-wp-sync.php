@@ -340,6 +340,7 @@ class BotDot_WP_Sync
             "Content-Type" => "application/json",
             "X-API-Key" => $api_key,
             "X-Source-Type" => "wordpress",
+            "X-Plugin-Version" => defined('BOTDOT_WP_VERSION') ? BOTDOT_WP_VERSION : 'unknown',
         ];
 
         $locus_api_url = BotDot_WP_Options::get_locus_api_url();
@@ -422,8 +423,8 @@ class BotDot_WP_Sync
         // Extract existing page JSON-LD from SEO plugins (source layer for merge)
         $source_jsonld = self::extract_page_jsonld($post->ID);
 
-        // Extract content from page builders if needed (Elementor, Divi, etc.)
-        $content = BotDot_WP_Page_Builder::extract_content($post);
+        // Fetch rendered HTML from the live page for reliable content extraction
+        $content = self::fetch_rendered_content($post, $permalink);
         $page_builder = BotDot_WP_Page_Builder::detect_builder($post->ID);
 
         $payload = [
@@ -465,6 +466,142 @@ class BotDot_WP_Sync
         }
 
         return $payload;
+    }
+
+    /**
+     * Fetch rendered HTML content from the live page
+     *
+     * Makes an HTTP request to the permalink and extracts the main content,
+     * stripping navigation, footer, scripts, and other boilerplate.
+     * Falls back to page builder extraction if fetch fails.
+     *
+     * @since    2.10.0
+     * @param    WP_Post   $post       The post object.
+     * @param    string    $permalink  The post permalink.
+     * @return   string                Extracted HTML content.
+     */
+    private static function fetch_rendered_content($post, $permalink)
+    {
+        // Skip fetch for non-published posts (preview URLs won't work)
+        if ($post->post_status !== 'publish') {
+            return BotDot_WP_Page_Builder::extract_content($post);
+        }
+
+        // Add cache-busting param to ensure fresh content
+        $url = add_query_arg('_bsync', time(), $permalink);
+
+        $response = wp_remote_get($url, [
+            'timeout' => 15,
+            'sslverify' => false,
+            'user-agent' => 'BotSpot-WP-Sync/1.0',
+            'headers' => [
+                'Cache-Control' => 'no-cache',
+                'Pragma' => 'no-cache',
+            ],
+        ]);
+
+        if (is_wp_error($response)) {
+            self::log_debug(sprintf(
+                'Post %d: fetch failed (%s), falling back to post_content',
+                $post->ID,
+                $response->get_error_message()
+            ));
+            return BotDot_WP_Page_Builder::extract_content($post);
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code !== 200) {
+            self::log_debug(sprintf(
+                'Post %d: fetch returned HTTP %d, falling back to post_content',
+                $post->ID,
+                $status_code
+            ));
+            return BotDot_WP_Page_Builder::extract_content($post);
+        }
+
+        $html = wp_remote_retrieve_body($response);
+        if (empty($html)) {
+            return BotDot_WP_Page_Builder::extract_content($post);
+        }
+
+        // Extract main content from the HTML
+        $content = self::extract_main_content($html);
+
+        // Validate we got meaningful content
+        $stripped = wp_strip_all_tags($content);
+        if (mb_strlen($stripped) < 50) {
+            self::log_debug(sprintf(
+                'Post %d: extracted content too short (%d chars), falling back to post_content',
+                $post->ID,
+                mb_strlen($stripped)
+            ));
+            return BotDot_WP_Page_Builder::extract_content($post);
+        }
+
+        return $content;
+    }
+
+    /**
+     * Extract main content from full page HTML
+     *
+     * Strips header, footer, nav, sidebar, scripts, styles, and other boilerplate.
+     * Looks for common content container selectors.
+     *
+     * @since    2.10.0
+     * @param    string    $html    Full page HTML.
+     * @return   string             Extracted content HTML.
+     */
+    private static function extract_main_content($html)
+    {
+        // Remove scripts, styles, and comments first
+        $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
+        $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
+        $html = preg_replace('/<!--.*?-->/s', '', $html);
+        $html = preg_replace('/<noscript\b[^>]*>.*?<\/noscript>/is', '', $html);
+
+        // Remove common boilerplate elements
+        $boilerplate_patterns = [
+            '/<header\b[^>]*>.*?<\/header>/is',
+            '/<footer\b[^>]*>.*?<\/footer>/is',
+            '/<nav\b[^>]*>.*?<\/nav>/is',
+            '/<aside\b[^>]*>.*?<\/aside>/is',
+            '/<form\b[^>]*>.*?<\/form>/is',
+        ];
+
+        foreach ($boilerplate_patterns as $pattern) {
+            $html = preg_replace($pattern, '', $html);
+        }
+
+        // Try to find main content container
+        $content_selectors = [
+            // Standard HTML5
+            '/<main\b[^>]*>(.*?)<\/main>/is',
+            '/<article\b[^>]*>(.*?)<\/article>/is',
+            // Common content IDs
+            '/<[^>]+id=["\'](?:content|main-content|primary|main)["\'][^>]*>(.*?)<\/[^>]+>/is',
+            // Common content classes
+            '/<[^>]+class=["\'][^"\']*\b(?:entry-content|post-content|page-content|content-area|main-content)[^"\']*["\'][^>]*>(.*?)<\/[^>]+>/is',
+            // WordPress specific
+            '/<div[^>]+class=["\'][^"\']*\bsite-content[^"\']*["\'][^>]*>(.*?)<\/div>/is',
+        ];
+
+        foreach ($content_selectors as $selector) {
+            if (preg_match($selector, $html, $matches)) {
+                $content = $matches[1];
+                // Validate it's not empty
+                if (mb_strlen(wp_strip_all_tags($content)) > 50) {
+                    return trim($content);
+                }
+            }
+        }
+
+        // Fallback: extract body content
+        if (preg_match('/<body\b[^>]*>(.*?)<\/body>/is', $html, $matches)) {
+            return trim($matches[1]);
+        }
+
+        // Last resort: return cleaned HTML
+        return trim($html);
     }
 
     /**
@@ -813,6 +950,7 @@ class BotDot_WP_Sync
             "Content-Type" => "application/json",
             "X-API-Key" => $api_key,
             "X-Source-Type" => "wordpress",
+            "X-Plugin-Version" => defined('BOTDOT_WP_VERSION') ? BOTDOT_WP_VERSION : 'unknown',
         ];
 
         while (true) {
