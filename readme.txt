@@ -2,9 +2,9 @@
 Contributors: botspot
 Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
-Tested up to: 6.4
+Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 2.9.2
+Stable tag: 2.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 

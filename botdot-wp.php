@@ -11,7 +11,7 @@
  * Text Domain: botdot-wp
  * Domain Path: /languages
  * Requires at least: 5.0
- * Tested up to: 6.4
+ * Tested up to: 6.7
  * Requires PHP: 7.4
  * Network: false
  *
