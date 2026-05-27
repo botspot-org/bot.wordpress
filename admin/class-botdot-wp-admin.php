@@ -156,14 +156,6 @@ class BotDot_WP_Admin
             return;
         }
 
-        // Google Fonts (Inter + JetBrains Mono)
-        wp_enqueue_style(
-            "botspot-admin-fonts",
-            "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
-            [],
-            null
-        );
-
         wp_enqueue_style(
             "botspot-admin",
             BOTDOT_WP_PLUGIN_URL . "admin/css/botspot-admin.css",

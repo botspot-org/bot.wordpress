@@ -198,60 +198,8 @@ class BotDot_WP_Content_Injector
             return null;
         }
 
-        // Annotate with BotSpot sdPublisher attribution
-        $nodes = $this->extract_graph_nodes($jsonld);
-        if (!empty($nodes)) {
-            $nodes = $this->annotate_nodes_with_botspot($nodes);
-
-            // Append BotSpot org node if not already present
-            $existing_ids = array_filter(array_map(function ($n) {
-                return is_array($n) && isset($n["@id"]) ? $n["@id"] : null;
-            }, $nodes));
-            if (!in_array("https://bot.spot/#botspot", $existing_ids)) {
-                $nodes[] = $this->get_botspot_org_node();
-            }
-
-            // Re-wrap as @graph structure
-            $context = isset($jsonld["@context"]) ? $jsonld["@context"] : "https://schema.org";
-            $jsonld = ["@context" => $context, "@graph" => $nodes];
-        }
-
         $this->locus_jsonld_cache = $jsonld;
         return $jsonld;
-    }
-
-    /**
-     * Extract @graph nodes from a JSON-LD structure.
-     *
-     * Handles both @graph arrays and single-node structures.
-     *
-     * @since    1.3.0
-     * @access   private
-     * @param    array    $jsonld    Decoded JSON-LD data.
-     * @return   array               Array of individual nodes.
-     */
-    private function extract_graph_nodes($jsonld)
-    {
-        if (!is_array($jsonld)) {
-            return [];
-        }
-
-        // Has @graph array
-        if (isset($jsonld["@graph"]) && is_array($jsonld["@graph"])) {
-            return $jsonld["@graph"];
-        }
-
-        // Flat array of nodes
-        if (isset($jsonld[0]) && is_array($jsonld[0])) {
-            return $jsonld;
-        }
-
-        // Single node (has @type)
-        if (isset($jsonld["@type"])) {
-            return [$jsonld];
-        }
-
-        return [];
     }
 
     /**
@@ -302,19 +250,6 @@ class BotDot_WP_Content_Injector
         $jsonld = apply_filters("botdot_wp_appendix_jsonld", $jsonld);
         if (empty($jsonld)) {
             return;
-        }
-
-        $nodes = $this->extract_graph_nodes($jsonld);
-        if (!empty($nodes)) {
-            $nodes = $this->annotate_nodes_with_botspot($nodes);
-            $existing_ids = array_filter(array_map(function ($n) {
-                return is_array($n) && isset($n["@id"]) ? $n["@id"] : null;
-            }, $nodes));
-            if (!in_array("https://bot.spot/#botspot", $existing_ids)) {
-                $nodes[] = $this->get_botspot_org_node();
-            }
-            $context = isset($jsonld["@context"]) ? $jsonld["@context"] : "https://schema.org";
-            $jsonld = ["@context" => $context, "@graph" => $nodes];
         }
 
         $json_string = wp_json_encode($jsonld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -1139,58 +1074,6 @@ class BotDot_WP_Content_Injector
         $allowed["div"]["style"] = true;
 
         return wp_kses($html, $allowed);
-    }
-
-    /**
-     * Annotate JSON-LD nodes with BotSpot sdPublisher attribution.
-     *
-     * Adds sdPublisher property to each node and renames #locus- to #botspot-
-     * in @id values for public-facing output.
-     *
-     * @since    2.3.0
-     * @access   private
-     * @param    array    $nodes    Array of JSON-LD nodes.
-     * @return   array              Annotated nodes.
-     */
-    private function annotate_nodes_with_botspot($nodes)
-    {
-        $botspot_ref = ["@id" => "https://bot.spot/#botspot"];
-
-        return array_map(function ($node) use ($botspot_ref) {
-            if (!is_array($node)) {
-                return $node;
-            }
-
-            // Rename #locus- to #botspot- in @id for public-facing output
-            if (isset($node["@id"]) && strpos($node["@id"], "#locus-") !== false) {
-                $node["@id"] = str_replace("#locus-", "#botspot-", $node["@id"]);
-            }
-
-            // Add sdPublisher if not already set
-            if (!isset($node["sdPublisher"])) {
-                $node["sdPublisher"] = $botspot_ref;
-            }
-
-            return $node;
-        }, $nodes);
-    }
-
-    /**
-     * Get the BotSpot Organization node for schema attribution.
-     *
-     * @since    2.3.0
-     * @access   private
-     * @return   array    BotSpot Organization JSON-LD node.
-     */
-    private function get_botspot_org_node()
-    {
-        return [
-            "@type" => "Organization",
-            "@id" => "https://bot.spot/#botspot",
-            "name" => "BotSpot",
-            "url" => "https://bot.spot",
-            "description" => "AI-powered content enrichment and structured data.",
-        ];
     }
 
     /**

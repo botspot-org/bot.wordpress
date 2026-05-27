@@ -114,6 +114,7 @@ fi
 # Copy README and documentation
 cp README.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
 cp THEME-INTEGRATION.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp readme.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
 # Copy uninstall script
 cp uninstall.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
