@@ -128,6 +128,31 @@ class BotDot_WP_Webhook_Handler
     }
 
     /**
+     * Normalize API settings to WP option names with validation.
+     *
+     * @since    2.11.0
+     * @param    array    $settings    Settings from API.
+     * @return   array                 Normalized settings for wp_options.
+     */
+    private static function normalize_platform_settings($settings)
+    {
+        $allowed_placements = ["auto", "footer", "manual", "bottom_of_content"];
+        $placement = isset($settings["placement_mode"]) ? $settings["placement_mode"] : null;
+
+        $normalized = [
+            "sync_post_types" => isset($settings["sync_post_types"]) ? (array) $settings["sync_post_types"] : null,
+            "inject_on_post_types" => isset($settings["output_post_types"]) ? (array) $settings["output_post_types"] : null,
+            "appendix_enabled" => isset($settings["appendix_enabled"]) ? (bool) $settings["appendix_enabled"] : null,
+            "jsonld_enabled" => isset($settings["jsonld_enabled"]) ? (bool) $settings["jsonld_enabled"] : null,
+            "injection_position" => ($placement && in_array($placement, $allowed_placements, true)) ? $placement : null,
+        ];
+
+        return array_filter($normalized, function ($v) {
+            return $v !== null;
+        });
+    }
+
+    /**
      * Handle settings updated webhook event.
      *
      * Updates platform-owned settings in wp_options and sets admin notice.
@@ -137,17 +162,7 @@ class BotDot_WP_Webhook_Handler
      */
     private function handle_settings_updated($settings)
     {
-        $platform_settings = [
-            "sync_post_types" => isset($settings["sync_post_types"]) ? (array) $settings["sync_post_types"] : null,
-            "inject_on_post_types" => isset($settings["output_post_types"]) ? (array) $settings["output_post_types"] : null,
-            "appendix_enabled" => isset($settings["appendix_enabled"]) ? (bool) $settings["appendix_enabled"] : null,
-            "jsonld_enabled" => isset($settings["jsonld_enabled"]) ? (bool) $settings["jsonld_enabled"] : null,
-            "injection_position" => isset($settings["placement_mode"]) ? $settings["placement_mode"] : null,
-        ];
-
-        $platform_settings = array_filter($platform_settings, function ($v) {
-            return $v !== null;
-        });
+        $platform_settings = self::normalize_platform_settings($settings);
 
         if (empty($platform_settings)) {
             return;
@@ -302,18 +317,7 @@ class BotDot_WP_Webhook_Handler
         }
 
         $settings = $body["settings"];
-        $platform_settings = [
-            "sync_post_types" => isset($settings["sync_post_types"]) ? (array) $settings["sync_post_types"] : null,
-            "inject_on_post_types" => isset($settings["output_post_types"]) ? (array) $settings["output_post_types"] : null,
-            "appendix_enabled" => isset($settings["appendix_enabled"]) ? (bool) $settings["appendix_enabled"] : null,
-            "jsonld_enabled" => isset($settings["jsonld_enabled"]) ? (bool) $settings["jsonld_enabled"] : null,
-            "injection_position" => isset($settings["placement_mode"]) ? $settings["placement_mode"] : null,
-        ];
-
-        $platform_settings = array_filter($platform_settings, function ($v) {
-            return $v !== null;
-        });
-
+        $platform_settings = self::normalize_platform_settings($settings);
         $platform_settings["fetched_at"] = gmdate("c");
         update_option("botdot_wp_platform_settings", $platform_settings);
 
@@ -368,16 +372,18 @@ class BotDot_WP_Webhook_Handler
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
-        $settings = isset($body["settings"]) ? $body["settings"] : $local_settings;
+        $api_settings = isset($body["settings"]) ? $body["settings"] : [];
 
-        $platform_settings = [
-            "sync_post_types" => $settings["sync_post_types"] ?? $local_settings["sync_post_types"],
-            "inject_on_post_types" => $settings["output_post_types"] ?? $local_settings["output_post_types"],
-            "appendix_enabled" => $settings["appendix_enabled"] ?? $local_settings["appendix_enabled"],
-            "jsonld_enabled" => $settings["jsonld_enabled"] ?? $local_settings["jsonld_enabled"],
-            "injection_position" => $settings["placement_mode"] ?? $local_settings["placement_mode"],
-            "fetched_at" => gmdate("c"),
+        $local_normalized = [
+            "sync_post_types" => $local_settings["sync_post_types"],
+            "inject_on_post_types" => $local_settings["output_post_types"],
+            "appendix_enabled" => $local_settings["appendix_enabled"],
+            "jsonld_enabled" => $local_settings["jsonld_enabled"],
+            "injection_position" => $local_settings["placement_mode"],
         ];
+
+        $platform_settings = array_merge($local_normalized, self::normalize_platform_settings($api_settings));
+        $platform_settings["fetched_at"] = gmdate("c");
 
         update_option("botdot_wp_platform_settings", $platform_settings);
         update_option("botdot_wp_local_settings_backup", $local_settings);
