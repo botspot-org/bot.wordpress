@@ -1125,6 +1125,86 @@
 }
 
 /* ============================================================
+   MANAGED IN BOTSPOT (platform-owned settings)
+   ============================================================ */
+.botspot-admin-root .bsa-managed-link {
+    font-size: 9px;
+    font-family: 'SF Mono', Monaco, Consolas, 'Andale Mono', 'Ubuntu Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--bsa-mint);
+    opacity: 0.7;
+    text-decoration: none;
+    margin-left: 10px;
+    transition: opacity 0.2s ease;
+}
+
+.botspot-admin-root .bsa-managed-link:hover {
+    opacity: 1;
+}
+
+.botspot-admin-root .bsa-readonly-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.botspot-admin-root .bsa-readonly-item {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--bsa-bg-soft);
+    border: 1px solid var(--bsa-border);
+    font-size: 11px;
+    color: var(--bsa-text-muted);
+}
+
+.botspot-admin-root .bsa-readonly-item--none {
+    color: var(--bsa-text-faint);
+    font-style: italic;
+}
+
+.botspot-admin-root .bsa-readonly-value {
+    font-size: 11px;
+    color: var(--bsa-text-muted);
+    padding: 8px 12px;
+    background: var(--bsa-bg-soft);
+    border: 1px solid var(--bsa-border);
+}
+
+.botspot-admin-root .bsa-readonly-value .bsa-code {
+    margin-left: 8px;
+}
+
+.botspot-admin-root .bsa-readonly-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.botspot-admin-root .bsa-readonly-toggle {
+    font-size: 11px;
+    color: var(--bsa-text-muted);
+}
+
+.botspot-admin-root .bsa-readonly-toggle--on::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--bsa-mint);
+    margin-right: 8px;
+}
+
+.botspot-admin-root .bsa-readonly-toggle--off::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--bsa-text-faint);
+    margin-right: 8px;
+}
+
+/* ============================================================
    CHECK LISTS / CHECK LABELS
    ============================================================ */
 .botspot-admin-root .bsa-check-list {
