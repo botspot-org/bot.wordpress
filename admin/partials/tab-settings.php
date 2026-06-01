@@ -24,6 +24,10 @@ $bsa_sync_sensitivity = BotDot_WP_Options::get("sync_sensitivity", "medium");
 $bsa_appendix_enabled = (bool) BotDot_WP_Options::get("appendix_enabled", true);
 $bsa_jsonld_enabled = (bool) BotDot_WP_Options::get("jsonld_enabled", true);
 
+$bsa_platform_settings = get_option("botdot_wp_platform_settings", []);
+$bsa_is_platform_managed = !empty($bsa_platform_settings);
+$bsa_dashboard_url = "https://platform.bot.spot";
+
 // Custom post types (exclude built-ins we handle explicitly)
 $bsa_builtin_types = ["post", "page", "attachment", "product"];
 $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_builtin_types) {
@@ -42,12 +46,37 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
     <!-- Content to sync -->
     <section class="bsa-settings-row bsa-reveal bsa-reveal--2">
         <div class="bsa-settings-row__meta">
-            <h3 class="bsa-settings-row__title"><?php _e("Content to sync", "botdot-wp"); ?></h3>
+            <h3 class="bsa-settings-row__title">
+                <?php _e("Content to sync", "botdot-wp"); ?>
+                <?php if ($bsa_is_platform_managed): ?>
+                <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                    <?php _e("Managed in BotSpot", "botdot-wp"); ?> ↗
+                </a>
+                <?php endif; ?>
+            </h3>
             <p class="bsa-settings-row__desc">
                 <?php _e("Updates for selected types are automatically pushed to bot.spot.", "botdot-wp"); ?>
             </p>
         </div>
         <div class="bsa-settings-row__body">
+            <?php if ($bsa_is_platform_managed): ?>
+            <div class="bsa-readonly-list">
+                <?php
+                $type_labels = [
+                    "post" => __("Posts", "botdot-wp"),
+                    "page" => __("Pages", "botdot-wp"),
+                    "product" => __("Products", "botdot-wp"),
+                ];
+                foreach ($bsa_sync_post_types as $type):
+                    $label = isset($type_labels[$type]) ? $type_labels[$type] : ucfirst($type);
+                ?>
+                <span class="bsa-readonly-item"><?php echo esc_html($label); ?></span>
+                <?php endforeach; ?>
+                <?php if (empty($bsa_sync_post_types)): ?>
+                <span class="bsa-readonly-item bsa-readonly-item--none"><?php _e("None selected", "botdot-wp"); ?></span>
+                <?php endif; ?>
+            </div>
+            <?php else: ?>
             <div class="bsa-check-list">
                 <label class="bsa-check">
                     <input type="checkbox" name="botdot_wp_sync_post_types[]" value="post" <?php checked(in_array("post", $bsa_sync_post_types, true)); ?> />
@@ -83,16 +112,43 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 </label>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
         </div>
     </section>
 
     <!-- Placement -->
     <section class="bsa-settings-row bsa-reveal bsa-reveal--3">
         <div class="bsa-settings-row__meta">
-            <h3 class="bsa-settings-row__title"><?php _e("Placement", "botdot-wp"); ?></h3>
+            <h3 class="bsa-settings-row__title">
+                <?php _e("Placement", "botdot-wp"); ?>
+                <?php if ($bsa_is_platform_managed): ?>
+                <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                    <?php _e("Managed in BotSpot", "botdot-wp"); ?> ↗
+                </a>
+                <?php endif; ?>
+            </h3>
             <p class="bsa-settings-row__desc"><?php _e("Where the appendix is injected into the page.", "botdot-wp"); ?></p>
         </div>
         <div class="bsa-settings-row__body">
+            <?php if ($bsa_is_platform_managed): ?>
+            <?php
+            $placement_labels = [
+                "bottom_of_content" => __("Bottom of content", "botdot-wp"),
+                "auto" => __("Automatic", "botdot-wp"),
+                "above_footer" => __("Above footer", "botdot-wp"),
+                "bottom_of_page" => __("Bottom of page", "botdot-wp"),
+                "footer" => __("Footer", "botdot-wp"),
+                "manual" => __("Manual placement", "botdot-wp"),
+            ];
+            $placement_label = isset($placement_labels[$bsa_injection_position]) ? $placement_labels[$bsa_injection_position] : ucfirst($bsa_injection_position);
+            ?>
+            <div class="bsa-readonly-value">
+                <?php echo esc_html($placement_label); ?>
+                <?php if ($bsa_injection_position === "manual"): ?>
+                <code class="bsa-code">[botspot_appendix]</code>
+                <?php endif; ?>
+            </div>
+            <?php else: ?>
             <div class="bsa-check-list">
                 <label class="bsa-check">
                     <input type="radio" class="bsa-check-as-check" name="botdot_wp_injection_position" value="bottom_of_content" <?php checked($bsa_injection_position, "bottom_of_content"); ?> />
@@ -133,6 +189,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 toggle();
             })();
             </script>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -213,10 +270,27 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
 
         <section class="bsa-settings-row">
             <div class="bsa-settings-row__meta">
-                <h3 class="bsa-settings-row__title"><?php _e("Output toggles", "botdot-wp"); ?></h3>
+                <h3 class="bsa-settings-row__title">
+                    <?php _e("Output toggles", "botdot-wp"); ?>
+                    <?php if ($bsa_is_platform_managed): ?>
+                    <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                        <?php _e("Managed in BotSpot", "botdot-wp"); ?> ↗
+                    </a>
+                    <?php endif; ?>
+                </h3>
                 <p class="bsa-settings-row__desc"><?php _e("Disable specific injection outputs.", "botdot-wp"); ?></p>
             </div>
             <div class="bsa-settings-row__body">
+                <?php if ($bsa_is_platform_managed): ?>
+                <div class="bsa-readonly-toggles">
+                    <span class="bsa-readonly-toggle <?php echo $bsa_appendix_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
+                        <?php _e("HTML appendix", "botdot-wp"); ?>: <?php echo $bsa_appendix_enabled ? __("Enabled", "botdot-wp") : __("Disabled", "botdot-wp"); ?>
+                    </span>
+                    <span class="bsa-readonly-toggle <?php echo $bsa_jsonld_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
+                        <?php _e("JSON-LD structured data", "botdot-wp"); ?>: <?php echo $bsa_jsonld_enabled ? __("Enabled", "botdot-wp") : __("Disabled", "botdot-wp"); ?>
+                    </span>
+                </div>
+                <?php else: ?>
                 <label class="bsa-toggle-row">
                     <input type="checkbox" class="bsa-toggle" name="botdot_wp_appendix_enabled" value="1" <?php checked($bsa_appendix_enabled); ?> />
                     <span><?php _e("HTML appendix", "botdot-wp"); ?></span>
@@ -225,15 +299,41 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     <input type="checkbox" class="bsa-toggle" name="botdot_wp_jsonld_enabled" value="1" <?php checked($bsa_jsonld_enabled); ?> />
                     <span><?php _e("JSON-LD structured data", "botdot-wp"); ?></span>
                 </label>
+                <?php endif; ?>
             </div>
         </section>
 
         <section class="bsa-settings-row">
             <div class="bsa-settings-row__meta">
-                <h3 class="bsa-settings-row__title"><?php _e("Inject on post types", "botdot-wp"); ?></h3>
+                <h3 class="bsa-settings-row__title">
+                    <?php _e("Inject on post types", "botdot-wp"); ?>
+                    <?php if ($bsa_is_platform_managed): ?>
+                    <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                        <?php _e("Managed in BotSpot", "botdot-wp"); ?> ↗
+                    </a>
+                    <?php endif; ?>
+                </h3>
                 <p class="bsa-settings-row__desc"><?php _e("Override which post types receive injected output (defaults to synced types).", "botdot-wp"); ?></p>
             </div>
             <div class="bsa-settings-row__body">
+                <?php if ($bsa_is_platform_managed): ?>
+                <div class="bsa-readonly-list">
+                    <?php
+                    $type_labels = [
+                        "post" => __("Posts", "botdot-wp"),
+                        "page" => __("Pages", "botdot-wp"),
+                        "product" => __("Products", "botdot-wp"),
+                    ];
+                    foreach ($bsa_inject_post_types as $type):
+                        $label = isset($type_labels[$type]) ? $type_labels[$type] : ucfirst($type);
+                    ?>
+                    <span class="bsa-readonly-item"><?php echo esc_html($label); ?></span>
+                    <?php endforeach; ?>
+                    <?php if (empty($bsa_inject_post_types)): ?>
+                    <span class="bsa-readonly-item bsa-readonly-item--none"><?php _e("None selected", "botdot-wp"); ?></span>
+                    <?php endif; ?>
+                </div>
+                <?php else: ?>
                 <div class="bsa-check-list">
                     <?php foreach ($bsa_post_types as $pt): ?>
                     <label class="bsa-check">
@@ -242,6 +342,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     </label>
                     <?php endforeach; ?>
                 </div>
+                <?php endif; ?>
             </div>
         </section>
     </details>
