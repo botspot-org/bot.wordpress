@@ -51,13 +51,15 @@ Data sent to BotSpot may include:
 * The current page path, site origin, and API authentication headers when fetching rendered appendix content or JSON-LD.
 * Aggregated impression counters for synced content, grouped by bot or human class. The plugin classifies visitors locally and sends aggregate counts, artifact identifiers, and first-hit timestamps. It does not send raw visitor IP addresses or raw user-agent strings in the analytics batch.
 
-BotSpot may send webhook requests back to the WordPress site to update enrichment status and clear local caches. These requests are authenticated with an HMAC signature.
+BotSpot may send webhook requests back to the WordPress site to update enrichment status, clear local caches, and push configuration changes. These requests are authenticated with an HMAC signature.
 
 == Privacy ==
 
 Content sync and rendering require an administrator to connect the site with a BotSpot access key. After connection, the plugin can automatically send selected published content to BotSpot when that content is published or updated.
 
-Site administrators can choose which post types are synced and which post types receive injected output from the plugin settings screen. Disconnecting or removing the access key stops new authenticated API calls from succeeding.
+After connection, the BotSpot platform may push configuration changes to the plugin via webhook, altering which post types sync or display enriched content. Administrators can review current settings in the Settings tab. These settings are managed in the BotSpot dashboard.
+
+Site administrators can view which post types are synced and which post types receive injected output from the plugin settings screen. Disconnecting or removing the access key stops new authenticated API calls from succeeding.
 
 The plugin stores BotSpot access credentials and sync metadata in the WordPress database. On uninstall, plugin options and plugin-owned post metadata are removed.
 
@@ -82,11 +84,11 @@ Yes. After an administrator connects the plugin, selected published content and 
 
 = Can I choose what content is synced? =
 
-Yes. The Settings tab lets administrators choose the post types that are synced. By default, posts and pages are selected.
+Yes. Content sync settings are managed in the BotSpot dashboard and sync automatically to the plugin. The Settings tab displays the current configuration. By default, posts and pages are selected.
 
 = Can I disable automatic output? =
 
-Yes. The Settings tab includes controls for appendix HTML output, JSON-LD output, output placement, and post types that receive injected output.
+Yes. Output settings including appendix HTML, JSON-LD, placement, and post types are managed in the BotSpot dashboard. Changes made there sync automatically to this plugin.
 
 = How do I place the appendix manually? =
 
@@ -99,6 +101,10 @@ No. The plugin emits BotSpot JSON-LD as a separate structured data script and is
 = What happens if BotSpot is temporarily unavailable? =
 
 Previously fetched content can be served from WordPress transients while cache entries are still available. Failed sync attempts are logged, and some sync failures are retried with WP-Cron.
+
+= Does this work on WordPress Multisite? =
+
+Yes. Each subsite connects to BotSpot independently with its own access key. Network administrators cannot configure BotSpot network-wide; each subsite administrator manages their own connection and settings.
 
 == Screenshots ==
 

@@ -213,11 +213,30 @@ class BotDot_WP_Admin
      */
     public function display_admin_notices()
     {
+        $screen = get_current_screen();
+
+        if (get_transient("botdot_wp_settings_updated_notice")) {
+            if ($screen && $screen->base === "toplevel_page_botdot-wp") {
+                delete_transient("botdot_wp_settings_updated_notice");
+            } else {
+                ?>
+                <div class="notice notice-info is-dismissible">
+                    <p>
+                        <strong><?php _e("bot.spot:", "botdot-wp"); ?></strong>
+                        <?php _e("Your BotSpot settings were updated remotely.", "botdot-wp"); ?>
+                        <a href="<?php echo esc_url(admin_url("admin.php?page=botdot-wp&tab=settings")); ?>">
+                            <?php _e("View Settings", "botdot-wp"); ?>
+                        </a>
+                    </p>
+                </div>
+                <?php
+            }
+        }
+
         if (!BotDot_WP_Logger::has_errors()) {
             return;
         }
 
-        $screen = get_current_screen();
         if (!$screen || !in_array($screen->base, ["toplevel_page_botdot-wp", "dashboard", "post", "page"])) {
             return;
         }
@@ -465,6 +484,9 @@ class BotDot_WP_Admin
         if (!empty($result["success"])) {
             // Register webhook for cache invalidation on successful connection
             BotDot_WP_Webhook_Handler::register_webhook();
+
+            // Fetch platform-owned settings
+            BotDot_WP_Webhook_Handler::fetch_platform_settings();
 
             wp_send_json_success([
                 "message" => isset($result["message"])
