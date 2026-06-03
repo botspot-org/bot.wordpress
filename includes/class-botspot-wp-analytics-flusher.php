@@ -12,20 +12,20 @@
  *   _botspot_impressions_inflight_at      (int — unix timestamp when inflight was created)
  *
  * Options used:
- *   botdot_wp_last_flush_at  (int unix timestamp)
- *   botdot_wp_last_flush_id  (string UUID)
+ *   botspot_wp_last_flush_at  (int unix timestamp)
+ *   botspot_wp_last_flush_id  (string UUID)
  *
  * Transients used:
  *   botspot_flush_lock       (single-flight lock, 10-minute TTL)
  *
- * @package BotDot_WP
+ * @package BotSpot_WP
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class BotDot_WP_Analytics_Flusher
+class BotSpot_WP_Analytics_Flusher
 {
     const MAX_ITEMS_PER_BATCH = 1000;
     const LOCK_TRANSIENT = 'botspot_flush_lock';
@@ -38,8 +38,8 @@ class BotDot_WP_Analytics_Flusher
     const META_INFLIGHT_BATCH = '_botspot_impressions_inflight_batch';
     const META_INFLIGHT_AT = '_botspot_impressions_inflight_at';
 
-    const OPTION_LAST_FLUSH_AT = 'botdot_wp_last_flush_at';
-    const OPTION_LAST_FLUSH_ID = 'botdot_wp_last_flush_id';
+    const OPTION_LAST_FLUSH_AT = 'botspot_wp_last_flush_at';
+    const OPTION_LAST_FLUSH_ID = 'botspot_wp_last_flush_id';
 
     /**
      * Increment the per-post pending counter. Called from the injector hot path.
@@ -48,7 +48,7 @@ class BotDot_WP_Analytics_Flusher
      * Known limitation, documented in the spec (Non-atomic counter increment).
      *
      * @param int    $post_id
-     * @param string $bot_class  One of BotDot_WP_Bot_Classifier::CANONICAL_CLASSES
+     * @param string $bot_class  One of BotSpot_WP_Bot_Classifier::CANONICAL_CLASSES
      */
     public static function increment_post($post_id, $bot_class)
     {
@@ -97,7 +97,7 @@ class BotDot_WP_Analytics_Flusher
         try {
             return self::do_flush();
         } catch (Throwable $e) {
-            BotDot_WP_Logger::log_error('Analytics flush failed: ' . $e->getMessage());
+            BotSpot_WP_Logger::log_error('Analytics flush failed: ' . $e->getMessage());
             return ['status' => 'error', 'message' => $e->getMessage()];
         } finally {
             delete_transient(self::LOCK_TRANSIENT);
@@ -185,7 +185,7 @@ class BotDot_WP_Analytics_Flusher
                 continue;
             }
 
-            $artifact_id = get_post_meta($post_id, '_botdot_artifact_id', true);
+            $artifact_id = get_post_meta($post_id, '_botspot_artifact_id', true);
             if (empty($artifact_id)) {
                 // Not synced yet — leave pending in place, skip for now.
                 continue;
@@ -217,8 +217,8 @@ class BotDot_WP_Analytics_Flusher
      */
     private static function send_batch($batch_id, $items)
     {
-        $api_url = BotDot_WP_Options::get('api_url', '');
-        $api_key = BotDot_WP_Options::get('api_key', '');
+        $api_url = BotSpot_WP_Options::get('api_url', '');
+        $api_key = BotSpot_WP_Options::get('api_key', '');
         if (empty($api_url) || empty($api_key)) {
             return false;
         }
@@ -241,13 +241,13 @@ class BotDot_WP_Analytics_Flusher
         ]);
 
         if (is_wp_error($response)) {
-            BotDot_WP_Logger::log_error('Analytics batch POST failed: ' . $response->get_error_message());
+            BotSpot_WP_Logger::log_error('Analytics batch POST failed: ' . $response->get_error_message());
             return false;
         }
 
         $code = (int) wp_remote_retrieve_response_code($response);
         if ($code !== 200) {
-            BotDot_WP_Logger::log_error("Analytics batch POST got HTTP $code");
+            BotSpot_WP_Logger::log_error("Analytics batch POST got HTTP $code");
             return false;
         }
 

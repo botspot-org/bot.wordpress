@@ -1,8 +1,8 @@
 /**
  * Gutenberg block for BotSpot Appendix
  *
- * @package    BotDot_WP
- * @subpackage BotDot_WP/public/js
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/public/js
  * @since      0.2.0
  */
 
@@ -29,7 +29,7 @@
       return createElement(
         "div",
         {
-          className: "botdot-wp-appendix-block",
+          className: "botspot-wp-appendix-block",
           style: {
             padding: "24px",
             background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",

@@ -1,12 +1,12 @@
 <?php
 /**
- * Logger class for the BotDot WP plugin
+ * Logger class for the BotSpot WP plugin
  *
  * @link       https://bot.spot
  * @since      0.1.0
  *
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
  */
 
 // If this file is called directly, abort.
@@ -15,17 +15,17 @@ if (!defined("WPINC")) {
 }
 
 /**
- * Logger class for the BotDot WP plugin.
+ * Logger class for the BotSpot WP plugin.
  *
  * This class handles error logging and stores recent errors
  * for display in admin notices.
  *
  * @since      0.1.0
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
- * @author     BotDot Team
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
+ * @author     BotSpot Team
  */
-class BotDot_WP_Logger
+class BotSpot_WP_Logger
 {
     /**
      * Maximum number of errors to store in transient
@@ -77,7 +77,7 @@ class BotDot_WP_Logger
     public static function log_debug($message, $context = [])
     {
         // Only log if debug mode is enabled in plugin settings
-        if (!BotDot_WP_Options::get("debug_mode")) {
+        if (!BotSpot_WP_Options::get("debug_mode")) {
             return;
         }
 
@@ -124,7 +124,7 @@ class BotDot_WP_Logger
      */
     private static function store_error($message, $type = "error", $context = [])
     {
-        $errors = get_transient("botdot_wp_recent_errors");
+        $errors = get_transient("botspot_wp_recent_errors");
 
         if (!is_array($errors)) {
             $errors = [];
@@ -144,7 +144,7 @@ class BotDot_WP_Logger
         }
 
         // Store in transient
-        set_transient("botdot_wp_recent_errors", $errors, self::$transient_expiration);
+        set_transient("botspot_wp_recent_errors", $errors, self::$transient_expiration);
     }
 
     /**
@@ -156,7 +156,7 @@ class BotDot_WP_Logger
      */
     public static function get_recent_errors($limit = null)
     {
-        $errors = get_transient("botdot_wp_recent_errors");
+        $errors = get_transient("botspot_wp_recent_errors");
 
         if (!is_array($errors)) {
             return [];
@@ -184,8 +184,8 @@ class BotDot_WP_Logger
     public static function clear_errors()
     {
         // Also clear fatal errors captured by shutdown handler
-        delete_option('botdot_wp_fatal_errors');
-        return delete_transient("botdot_wp_recent_errors");
+        delete_option('botspot_wp_fatal_errors');
+        return delete_transient("botspot_wp_recent_errors");
     }
 
     /**
@@ -242,7 +242,7 @@ class BotDot_WP_Logger
         $raw = self::get_recent_errors();
 
         // Merge in fatal errors captured by shutdown handler
-        $fatal_errors = get_option('botdot_wp_fatal_errors', []);
+        $fatal_errors = get_option('botspot_wp_fatal_errors', []);
         if (is_array($fatal_errors)) {
             foreach ($fatal_errors as $fatal) {
                 $raw[] = [

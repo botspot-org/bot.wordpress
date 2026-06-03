@@ -3,7 +3,7 @@
  * Tests for delivery_mode dispatch logic.
  *
  * These are logic-level unit tests for the delivery_mode resolution that
- * BotDot_WP_Content_Fetcher::fetch() stores and the injector consumes.
+ * BotSpot_WP_Content_Fetcher::fetch() stores and the injector consumes.
  * They do not require a full WP environment.
  *
  * @since 2.8.0
@@ -124,7 +124,7 @@ class DeliveryModeDispatchTest extends TestCase
     // -------------------------------------------------------------------------
 
     /**
-     * Mirrors the $data array construction in BotDot_WP_Content_Fetcher::fetch().
+     * Mirrors the $data array construction in BotSpot_WP_Content_Fetcher::fetch().
      */
     private function normalize_fetch_response(array $body): array
     {
@@ -140,7 +140,7 @@ class DeliveryModeDispatchTest extends TestCase
     }
 
     /**
-     * Mirrors get_delivery_mode() in BotDot_WP_Content_Injector.
+     * Mirrors get_delivery_mode() in BotSpot_WP_Content_Injector.
      */
     private function resolve_delivery_mode(mixed $raw): string
     {

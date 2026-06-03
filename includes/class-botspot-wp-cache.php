@@ -6,8 +6,8 @@
  * cache plugins) so the same logic is used from both the manual "Clear cache"
  * button and the webhook that fires when locus-core finishes enriching a post.
  *
- * @package BotDot_WP
- * @subpackage BotDot_WP/includes
+ * @package BotSpot_WP
+ * @subpackage BotSpot_WP/includes
  * @since 2.6.4
  */
 
@@ -15,7 +15,7 @@ if (!defined("WPINC")) {
     die();
 }
 
-class BotDot_WP_Cache
+class BotSpot_WP_Cache
 {
     /**
      * Delete all plugin-owned transients for every post (content + jsonld).
@@ -27,10 +27,10 @@ class BotDot_WP_Cache
         global $wpdb;
         $deleted = $wpdb->query(
             "DELETE FROM {$wpdb->options}
-             WHERE option_name LIKE '_transient_botdot_content_%'
-                OR option_name LIKE '_transient_timeout_botdot_content_%'
-                OR option_name LIKE '_transient_botdot_jsonld_%'
-                OR option_name LIKE '_transient_timeout_botdot_jsonld_%'"
+             WHERE option_name LIKE '_transient_botspot_content_%'
+                OR option_name LIKE '_transient_timeout_botspot_content_%'
+                OR option_name LIKE '_transient_botspot_jsonld_%'
+                OR option_name LIKE '_transient_timeout_botspot_jsonld_%'"
         );
         return (int) $deleted;
     }
@@ -49,15 +49,15 @@ class BotDot_WP_Cache
             return;
         }
         $langs = [];
-        if (class_exists("BotDot_WP_Language")) {
-            $langs[] = BotDot_WP_Language::get_current_language();
+        if (class_exists("BotSpot_WP_Language")) {
+            $langs[] = BotSpot_WP_Language::get_current_language();
         }
         $langs[] = substr(get_locale(), 0, 2);
         $langs = array_unique(array_filter($langs));
         foreach ($langs as $lang) {
             $hash = md5($url_path . "_" . $lang);
-            delete_transient("botdot_content_" . $hash);
-            delete_transient("botdot_jsonld_" . $hash);
+            delete_transient("botspot_content_" . $hash);
+            delete_transient("botspot_jsonld_" . $hash);
         }
     }
 
@@ -110,7 +110,7 @@ class BotDot_WP_Cache
          *
          * @param int $post_id
          */
-        do_action("botdot_wp_after_purge_post", $post_id);
+        do_action("botspot_wp_after_purge_post", $post_id);
     }
 
     /**
@@ -144,7 +144,7 @@ class BotDot_WP_Cache
             cache_enabler_clear_complete_cache();
         }
 
-        do_action("botdot_wp_after_purge_all");
+        do_action("botspot_wp_after_purge_all");
     }
 
     /**
@@ -156,7 +156,7 @@ class BotDot_WP_Cache
     {
         $deleted = self::purge_plugin_transients_all();
         self::purge_page_caches_all();
-        delete_transient("botdot_wp_status_snapshot");
+        delete_transient("botspot_wp_status_snapshot");
         return $deleted;
     }
 

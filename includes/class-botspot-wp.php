@@ -8,8 +8,8 @@
  * @link       https://bot.spot
  * @since      0.1.0
  *
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
  */
 
 // If this file is called directly, abort.
@@ -24,18 +24,18 @@ if (!defined("WPINC")) {
  * public-facing site hooks.
  *
  * @since      0.1.0
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
- * @author     BotDot Team
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
+ * @author     BotSpot Team
  */
-class BotDot_WP
+class BotSpot_WP
 {
     /**
      * The loader that's responsible for maintaining and registering all hooks.
      *
      * @since    0.1.0
      * @access   protected
-     * @var      BotDot_WP_Loader    $loader
+     * @var      BotSpot_WP_Loader    $loader
      */
     protected $loader;
 
@@ -64,12 +64,12 @@ class BotDot_WP
      */
     public function __construct()
     {
-        if (defined("BOTDOT_WP_VERSION")) {
-            $this->version = BOTDOT_WP_VERSION;
+        if (defined("BOTSPOT_WP_VERSION")) {
+            $this->version = BOTSPOT_WP_VERSION;
         } else {
             $this->version = "1.0.1";
         }
-        $this->plugin_name = "botdot-wp";
+        $this->plugin_name = "botspot-wp";
 
         $this->load_dependencies();
         if (is_admin()) {
@@ -77,6 +77,30 @@ class BotDot_WP
         }
         $this->define_public_hooks();
         $this->define_sync_hooks();
+        $this->register_legacy_hook_aliases();
+    }
+
+    /**
+     * Register legacy hook aliases for backwards compatibility with botdot-wp v2.x.
+     *
+     * Third-party code using old hook names (botdot_wp_*) will continue to work.
+     *
+     * @since 3.0.0
+     */
+    private function register_legacy_hook_aliases()
+    {
+        $aliases = [
+            'botdot_wp_should_inject'   => 'botspot_wp_should_inject',
+            'botdot_wp_should_sync'     => 'botspot_wp_should_sync',
+            'botdot_wp_appendix_html'   => 'botspot_wp_appendix_html',
+            'botdot_wp_appendix_jsonld' => 'botspot_wp_appendix_jsonld',
+            'botdot_wp_source_jsonld'   => 'botspot_wp_source_jsonld',
+        ];
+        foreach ($aliases as $old_hook => $new_hook) {
+            add_filter($old_hook, function ($value, ...$args) use ($new_hook) {
+                return apply_filters($new_hook, $value, ...$args);
+            }, 10, 99);
+        }
     }
 
     /**
@@ -90,77 +114,77 @@ class BotDot_WP
         /**
          * Strauss-prefixed vendor autoloader (jaybizzle/crawler-detect etc.)
          */
-        if (file_exists(BOTDOT_WP_PLUGIN_PATH . "vendor/botspot-prefixed/autoload.php")) {
-            require_once BOTDOT_WP_PLUGIN_PATH . "vendor/botspot-prefixed/autoload.php";
+        if (file_exists(BOTSPOT_WP_PLUGIN_PATH . "vendor/botspot-prefixed/autoload.php")) {
+            require_once BOTSPOT_WP_PLUGIN_PATH . "vendor/botspot-prefixed/autoload.php";
         }
 
         /**
          * Analytics: bot classifier + flusher (state machine + wp-cron handler).
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-bot-classifier.php";
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-analytics-flusher.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-bot-classifier.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-analytics-flusher.php";
 
         /**
          * The class responsible for orchestrating the actions and filters.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-loader.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-loader.php";
 
         /**
          * The class responsible for options management.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-options.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-options.php";
 
         /**
          * The class responsible for logging.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-logger.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-logger.php";
 
         /**
          * The class responsible for multilingual plugin detection.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-language.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-language.php";
 
         /**
          * The class responsible for page builder content extraction.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-page-builder.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-page-builder.php";
 
         /**
          * The class responsible for content sync (write path).
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-sync.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-sync.php";
 
         /**
          * Cache invalidation helpers (plugin transients + external page caches).
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-cache.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-cache.php";
 
         /**
          * The class responsible for content fetching (read path).
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-content-fetcher.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-content-fetcher.php";
 
         /**
          * The class responsible for content injection (JSON-LD + appendix).
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-content-injector.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-content-injector.php";
 
         /**
          * The class responsible for handling webhooks from locus-core.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "includes/class-botdot-wp-webhook-handler.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "includes/class-botspot-wp-webhook-handler.php";
 
         /**
          * The class responsible for defining all actions in the admin area.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "admin/class-botdot-wp-admin.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "admin/class-botspot-wp-admin.php";
 
         /**
          * The class responsible for public-facing functionality.
          */
-        require_once BOTDOT_WP_PLUGIN_PATH . "public/class-botdot-wp-public.php";
+        require_once BOTSPOT_WP_PLUGIN_PATH . "public/class-botspot-wp-public.php";
 
-        $this->loader = new BotDot_WP_Loader();
+        $this->loader = new BotSpot_WP_Loader();
     }
 
     /**
@@ -171,34 +195,34 @@ class BotDot_WP
      */
     private function define_admin_hooks()
     {
-        $plugin_admin = new BotDot_WP_Admin($this->get_plugin_name(), $this->get_version());
+        $plugin_admin = new BotSpot_WP_Admin($this->get_plugin_name(), $this->get_version());
 
         $this->loader->add_action("admin_menu", $plugin_admin, "add_admin_menu");
         $this->loader->add_action("admin_init", $plugin_admin, "init_settings");
         $this->loader->add_action("admin_enqueue_scripts", $plugin_admin, "enqueue_admin_assets");
 
         // AJAX handlers
-        $this->loader->add_action("wp_ajax_botdot_wp_test_connection", $plugin_admin, "handle_test_connection");
-        $this->loader->add_action("wp_ajax_botdot_wp_clear_errors", $plugin_admin, "handle_clear_errors");
-        $this->loader->add_action("wp_ajax_botdot_wp_manual_sync", $plugin_admin, "handle_manual_sync");
-        $this->loader->add_action("wp_ajax_botdot_wp_register_connection", $plugin_admin, "handle_register_connection");
-        $this->loader->add_action("wp_ajax_botdot_wp_get_logs", $plugin_admin, "handle_get_logs");
-        $this->loader->add_action("wp_ajax_botdot_wp_get_status", $plugin_admin, "handle_get_status");
-        $this->loader->add_action("wp_ajax_botdot_wp_force_resync", $plugin_admin, "handle_force_resync");
-        $this->loader->add_action("wp_ajax_botdot_wp_clear_cache", $plugin_admin, "handle_clear_cache");
-        $this->loader->add_action("wp_ajax_botdot_wp_save_settings", $plugin_admin, "handle_save_settings");
+        $this->loader->add_action("wp_ajax_botspot_wp_test_connection", $plugin_admin, "handle_test_connection");
+        $this->loader->add_action("wp_ajax_botspot_wp_clear_errors", $plugin_admin, "handle_clear_errors");
+        $this->loader->add_action("wp_ajax_botspot_wp_manual_sync", $plugin_admin, "handle_manual_sync");
+        $this->loader->add_action("wp_ajax_botspot_wp_register_connection", $plugin_admin, "handle_register_connection");
+        $this->loader->add_action("wp_ajax_botspot_wp_get_logs", $plugin_admin, "handle_get_logs");
+        $this->loader->add_action("wp_ajax_botspot_wp_get_status", $plugin_admin, "handle_get_status");
+        $this->loader->add_action("wp_ajax_botspot_wp_force_resync", $plugin_admin, "handle_force_resync");
+        $this->loader->add_action("wp_ajax_botspot_wp_clear_cache", $plugin_admin, "handle_clear_cache");
+        $this->loader->add_action("wp_ajax_botspot_wp_save_settings", $plugin_admin, "handle_save_settings");
 
         // Analytics AJAX handlers
-        $this->loader->add_action("wp_ajax_botdot_wp_get_sync_health", $plugin_admin, "handle_get_sync_health");
-        $this->loader->add_action("wp_ajax_botdot_wp_get_enrichment_lifecycle", $plugin_admin, "handle_get_enrichment_lifecycle");
-        $this->loader->add_action("wp_ajax_botdot_wp_get_impressions", $plugin_admin, "handle_get_impressions");
-        $this->loader->add_action("wp_ajax_botdot_wp_force_flush", $plugin_admin, "handle_force_flush");
+        $this->loader->add_action("wp_ajax_botspot_wp_get_sync_health", $plugin_admin, "handle_get_sync_health");
+        $this->loader->add_action("wp_ajax_botspot_wp_get_enrichment_lifecycle", $plugin_admin, "handle_get_enrichment_lifecycle");
+        $this->loader->add_action("wp_ajax_botspot_wp_get_impressions", $plugin_admin, "handle_get_impressions");
+        $this->loader->add_action("wp_ajax_botspot_wp_force_flush", $plugin_admin, "handle_force_flush");
 
         // wp-cron handler for the hourly flush
-        $this->loader->add_action("botspot_flush_analytics", "BotDot_WP_Analytics_Flusher", "flush");
+        $this->loader->add_action("botspot_flush_analytics", "BotSpot_WP_Analytics_Flusher", "flush");
 
         // wp-cron handler for background Force Resync (one-off, scheduled by handle_force_resync)
-        $this->loader->add_action("botdot_wp_force_resync_run", $plugin_admin, "run_scheduled_force_resync");
+        $this->loader->add_action("botspot_wp_force_resync_run", $plugin_admin, "run_scheduled_force_resync");
 
         // Admin notices for errors
         $this->loader->add_action("admin_notices", $plugin_admin, "display_admin_notices");
@@ -227,10 +251,10 @@ class BotDot_WP
      */
     private function define_public_hooks()
     {
-        new BotDot_WP_Webhook_Handler();
+        new BotSpot_WP_Webhook_Handler();
 
-        $content_injector = new BotDot_WP_Content_Injector($this->get_plugin_name(), $this->get_version());
-        $public = new BotDot_WP_Public($this->get_plugin_name(), $this->get_version(), $content_injector);
+        $content_injector = new BotSpot_WP_Content_Injector($this->get_plugin_name(), $this->get_version());
+        $public = new BotSpot_WP_Public($this->get_plugin_name(), $this->get_version(), $content_injector);
 
         // Merge locus JSON-LD into SEO plugin output (priority 99: run after they build their graph)
         // wpseo_schema_graph: modern Yoast (14.0+) — receives @graph array directly
@@ -279,13 +303,13 @@ class BotDot_WP
      */
     private function define_sync_hooks()
     {
-        $this->loader->add_action("save_post", "BotDot_WP_Sync", "on_save_post", 10, 3);
-        $this->loader->add_action("transition_post_status", "BotDot_WP_Sync", "on_status_change", 10, 3);
-        $this->loader->add_action("before_delete_post", "BotDot_WP_Sync", "on_delete_post");
-        $this->loader->add_action("botdot_wp_retry_sync", "BotDot_WP_Sync", "retry_sync");
+        $this->loader->add_action("save_post", "BotSpot_WP_Sync", "on_save_post", 10, 3);
+        $this->loader->add_action("transition_post_status", "BotSpot_WP_Sync", "on_status_change", 10, 3);
+        $this->loader->add_action("before_delete_post", "BotSpot_WP_Sync", "on_delete_post");
+        $this->loader->add_action("botspot_wp_retry_sync", "BotSpot_WP_Sync", "retry_sync");
 
         // REST API webhook endpoint for enrichment status updates
-        $this->loader->add_action("rest_api_init", "BotDot_WP_Sync", "register_webhook_route");
+        $this->loader->add_action("rest_api_init", "BotSpot_WP_Sync", "register_webhook_route");
     }
 
     /**
@@ -313,7 +337,7 @@ class BotDot_WP
      * The reference to the loader.
      *
      * @since     0.1.0
-     * @return    BotDot_WP_Loader
+     * @return    BotSpot_WP_Loader
      */
     public function get_loader()
     {

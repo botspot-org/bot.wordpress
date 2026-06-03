@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 2.10.0
+Stable tag: 3.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -113,6 +113,14 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.0.0 =
+
+* Renamed internal code from botdot-wp to botspot-wp to match BotSpot branding.
+* File names, class names, constants, hooks, and options now use botspot prefix.
+* Migration code automatically preserves settings from v2.x installations.
+* Legacy hook names (botdot_wp_*) remain as aliases for backwards compatibility.
+* Legacy shortcode [botdot_appendix] remains as alias for [botspot_appendix].
 
 = 2.9.2 =
 

@@ -7,8 +7,8 @@
  * @link       https://bot.spot
  * @since      2.8.0
  *
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
  */
 
 if (!defined("WPINC")) {
@@ -19,10 +19,10 @@ if (!defined("WPINC")) {
  * Handles incoming webhooks from locus-core.
  *
  * @since      2.8.0
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
  */
-class BotDot_WP_Webhook_Handler
+class BotSpot_WP_Webhook_Handler
 {
     /**
      * Initialize the webhook handler.
@@ -59,7 +59,7 @@ class BotDot_WP_Webhook_Handler
     {
         $signature = $request->get_header("X-Webhook-Signature");
         $payload = $request->get_body();
-        $secret = get_option("botdot_wp_webhook_secret", "");
+        $secret = get_option("botspot_wp_webhook_secret", "");
 
         if (empty($secret)) {
             return new WP_REST_Response(["error" => "Webhook not configured"], 400);
@@ -83,7 +83,7 @@ class BotDot_WP_Webhook_Handler
 
             $this->invalidate_page_cache($path, $lang);
 
-            do_action("botdot_wp_cache_invalidated", $path, $lang, $content_hash);
+            do_action("botspot_wp_cache_invalidated", $path, $lang, $content_hash);
 
             return new WP_REST_Response([
                 "status" => "ok",
@@ -97,7 +97,7 @@ class BotDot_WP_Webhook_Handler
 
             $this->handle_settings_updated($settings);
 
-            do_action("botdot_wp_settings_updated", $settings);
+            do_action("botspot_wp_settings_updated", $settings);
 
             return new WP_REST_Response([
                 "status" => "ok",
@@ -168,23 +168,23 @@ class BotDot_WP_Webhook_Handler
             return;
         }
 
-        $current = get_option("botdot_wp_platform_settings", []);
+        $current = get_option("botspot_wp_platform_settings", []);
         $updated = array_merge($current, $platform_settings);
         $updated["fetched_at"] = gmdate("c");
 
-        update_option("botdot_wp_platform_settings", $updated);
+        update_option("botspot_wp_platform_settings", $updated);
 
         foreach ($platform_settings as $key => $value) {
-            BotDot_WP_Options::set($key, $value);
+            BotSpot_WP_Options::set($key, $value);
         }
 
-        set_transient("botdot_wp_settings_updated_notice", true, 60 * 60 * 24);
+        set_transient("botspot_wp_settings_updated_notice", true, 60 * 60 * 24);
     }
 
     /**
      * Invalidate cached appendix content for a page.
      *
-     * Clears transients matching the cache key format used by BotDot_WP_Content_Fetcher.
+     * Clears transients matching the cache key format used by BotSpot_WP_Content_Fetcher.
      *
      * @since    2.8.0
      * @param    string       $path    Page path (e.g., "/pricing").
@@ -193,10 +193,10 @@ class BotDot_WP_Webhook_Handler
     private function invalidate_page_cache($path, $lang = null)
     {
         if ($lang) {
-            $cache_key = "botdot_content_" . md5($path . "_" . $lang);
+            $cache_key = "botspot_content_" . md5($path . "_" . $lang);
             delete_transient($cache_key);
 
-            $jsonld_key = "botdot_jsonld_" . md5($path . "_" . $lang);
+            $jsonld_key = "botspot_jsonld_" . md5($path . "_" . $lang);
             delete_transient($jsonld_key);
         } else {
             global $wpdb;
@@ -204,16 +204,16 @@ class BotDot_WP_Webhook_Handler
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                    "_transient_botdot_content_" . $wpdb->esc_like(md5($path)) . "%",
-                    "_transient_timeout_botdot_content_" . $wpdb->esc_like(md5($path)) . "%"
+                    "_transient_botspot_content_" . $wpdb->esc_like(md5($path)) . "%",
+                    "_transient_timeout_botspot_content_" . $wpdb->esc_like(md5($path)) . "%"
                 )
             );
 
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                    "_transient_botdot_jsonld_" . $wpdb->esc_like(md5($path)) . "%",
-                    "_transient_timeout_botdot_jsonld_" . $wpdb->esc_like(md5($path)) . "%"
+                    "_transient_botspot_jsonld_" . $wpdb->esc_like(md5($path)) . "%",
+                    "_transient_timeout_botspot_jsonld_" . $wpdb->esc_like(md5($path)) . "%"
                 )
             );
         }
@@ -229,14 +229,14 @@ class BotDot_WP_Webhook_Handler
      */
     public static function register_webhook()
     {
-        $api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
+        $api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
 
         if (empty($api_key)) {
             return false;
         }
 
-        $existing_id = get_option("botdot_wp_webhook_id", "");
+        $existing_id = get_option("botspot_wp_webhook_id", "");
         if (!empty($existing_id)) {
             return true;
         }
@@ -268,8 +268,8 @@ class BotDot_WP_Webhook_Handler
             return false;
         }
 
-        update_option("botdot_wp_webhook_id", $body["id"]);
-        update_option("botdot_wp_webhook_secret", $body["secret"]);
+        update_option("botspot_wp_webhook_id", $body["id"]);
+        update_option("botspot_wp_webhook_secret", $body["secret"]);
 
         return true;
     }
@@ -284,8 +284,8 @@ class BotDot_WP_Webhook_Handler
      */
     public static function fetch_platform_settings()
     {
-        $api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
+        $api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
 
         if (empty($api_key)) {
             return false;
@@ -319,11 +319,11 @@ class BotDot_WP_Webhook_Handler
         $settings = $body["settings"];
         $platform_settings = self::normalize_platform_settings($settings);
         $platform_settings["fetched_at"] = gmdate("c");
-        update_option("botdot_wp_platform_settings", $platform_settings);
+        update_option("botspot_wp_platform_settings", $platform_settings);
 
         foreach ($platform_settings as $key => $value) {
             if ($key !== "fetched_at") {
-                BotDot_WP_Options::set($key, $value);
+                BotSpot_WP_Options::set($key, $value);
             }
         }
 
@@ -341,15 +341,15 @@ class BotDot_WP_Webhook_Handler
      */
     private static function bootstrap_platform_settings()
     {
-        $api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
+        $api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
 
         $local_settings = [
-            "sync_post_types" => BotDot_WP_Options::get("sync_post_types"),
-            "output_post_types" => BotDot_WP_Options::get("inject_on_post_types"),
-            "appendix_enabled" => BotDot_WP_Options::get("appendix_enabled"),
-            "jsonld_enabled" => BotDot_WP_Options::get("jsonld_enabled"),
-            "placement_mode" => BotDot_WP_Options::get("injection_position"),
+            "sync_post_types" => BotSpot_WP_Options::get("sync_post_types"),
+            "output_post_types" => BotSpot_WP_Options::get("inject_on_post_types"),
+            "appendix_enabled" => BotSpot_WP_Options::get("appendix_enabled"),
+            "jsonld_enabled" => BotSpot_WP_Options::get("jsonld_enabled"),
+            "placement_mode" => BotSpot_WP_Options::get("injection_position"),
         ];
 
         $response = wp_remote_post(rtrim($api_url, "/") . "/api/v1/wp/settings/bootstrap", [
@@ -385,8 +385,8 @@ class BotDot_WP_Webhook_Handler
         $platform_settings = array_merge($local_normalized, self::normalize_platform_settings($api_settings));
         $platform_settings["fetched_at"] = gmdate("c");
 
-        update_option("botdot_wp_platform_settings", $platform_settings);
-        update_option("botdot_wp_local_settings_backup", $local_settings);
+        update_option("botspot_wp_platform_settings", $platform_settings);
+        update_option("botspot_wp_local_settings_backup", $local_settings);
 
         return $platform_settings;
     }
@@ -400,9 +400,9 @@ class BotDot_WP_Webhook_Handler
      */
     public static function deregister_webhook()
     {
-        $api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
-        $webhook_id = get_option("botdot_wp_webhook_id", "");
+        $api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
+        $webhook_id = get_option("botspot_wp_webhook_id", "");
 
         if (!empty($webhook_id) && !empty($api_key)) {
             wp_remote_request(rtrim($api_url, "/") . "/api/v1/webhooks/" . $webhook_id, [
@@ -414,7 +414,7 @@ class BotDot_WP_Webhook_Handler
             ]);
         }
 
-        delete_option("botdot_wp_webhook_id");
-        delete_option("botdot_wp_webhook_secret");
+        delete_option("botspot_wp_webhook_id");
+        delete_option("botspot_wp_webhook_secret");
     }
 }

@@ -3,20 +3,20 @@
  * Plugin Name: BotSpot WordPress
  * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 2.10.0
+ * Version: 3.0.0
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: botdot-wp
+ * Text Domain: botspot-wp
  * Domain Path: /languages
  * Requires at least: 5.0
  * Tested up to: 6.7
  * Requires PHP: 7.4
  * Network: false
  *
- * @package BotDot_WP
- * @version 2.10.0
+ * @package BotSpot_WP
+ * @version 3.0.0
  */
 
 // If this file is called directly, abort.
@@ -44,11 +44,11 @@ register_shutdown_function(function () {
         return;
     }
     // Only capture errors from our plugin
-    if (strpos($error['file'], 'botdot-wp') === false && strpos($error['file'], 'botspot') === false) {
+    if (strpos($error['file'], 'botspot-wp') === false && strpos($error['file'], 'botspot') === false) {
         return;
     }
     // Store in option (not transient) so it persists across the fatal redirect
-    $fatal_log = get_option('botdot_wp_fatal_errors', []);
+    $fatal_log = get_option('botspot_wp_fatal_errors', []);
     if (!is_array($fatal_log)) {
         $fatal_log = [];
     }
@@ -63,38 +63,38 @@ register_shutdown_function(function () {
     if (count($fatal_log) > 20) {
         $fatal_log = array_slice($fatal_log, -20);
     }
-    update_option('botdot_wp_fatal_errors', $fatal_log, false);
+    update_option('botspot_wp_fatal_errors', $fatal_log, false);
 });
 
 /**
  * Plugin version.
  */
-define('BOTDOT_WP_VERSION', '2.10.0');
+define('BOTSPOT_WP_VERSION', '3.0.0');
 
 /**
  * Plugin file path
  */
-define('BOTDOT_WP_PLUGIN_FILE', __FILE__);
+define('BOTSPOT_WP_PLUGIN_FILE', __FILE__);
 
 /**
  * Plugin directory path
  */
-define('BOTDOT_WP_PLUGIN_PATH', plugin_dir_path(__FILE__));
+define('BOTSPOT_WP_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
 /**
  * Plugin directory URL
  */
-define('BOTDOT_WP_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('BOTSPOT_WP_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
  * Plugin basename
  */
-define('BOTDOT_WP_PLUGIN_BASENAME', plugin_basename(__FILE__));
+define('BOTSPOT_WP_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
 /**
  * Plugin text domain for translations
  */
-define('BOTDOT_WP_TEXT_DOMAIN', 'botdot-wp');
+define('BOTSPOT_WP_TEXT_DOMAIN', 'botspot-wp');
 
 /**
  * Locus API URL (overridable via wp-config.php).
@@ -104,38 +104,38 @@ define('BOTDOT_WP_TEXT_DOMAIN', 'botdot-wp');
  * or the --production flag. Source-tree default is staging so that local
  * development and zero-config builds work without any flags.
  */
-if (!defined('BOTDOT_WP_LOCUS_API_URL')) {
-    define('BOTDOT_WP_LOCUS_API_URL', 'https://locus-staging-api.bot.spot');
+if (!defined('BOTSPOT_WP_LOCUS_API_URL')) {
+    define('BOTSPOT_WP_LOCUS_API_URL', 'https://locus-staging-api.bot.spot');
 }
 
 /**
  * Connector URL (overridable via wp-config.php).
- * Same build-time rewrite rule as BOTDOT_WP_LOCUS_API_URL.
+ * Same build-time rewrite rule as BOTSPOT_WP_LOCUS_API_URL.
  */
-if (!defined('BOTDOT_WP_CONNECTOR_URL')) {
-    define('BOTDOT_WP_CONNECTOR_URL', 'https://staging-locus-connectors.bot.spot');
+if (!defined('BOTSPOT_WP_CONNECTOR_URL')) {
+    define('BOTSPOT_WP_CONNECTOR_URL', 'https://staging-locus-connectors.bot.spot');
 }
 
 /**
  * Minimum WordPress version required
  */
-define('BOTDOT_WP_MIN_WP_VERSION', '5.0');
+define('BOTSPOT_WP_MIN_WP_VERSION', '5.0');
 
 /**
  * Minimum PHP version required
  */
-define('BOTDOT_WP_MIN_PHP_VERSION', '7.4');
+define('BOTSPOT_WP_MIN_PHP_VERSION', '7.4');
 
 /**
  * The code that runs during plugin activation.
  */
-function activate_botdot_wp() {
-    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-options.php';
-    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-logger.php';
-    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-activator.php';
+function activate_botspot_wp() {
+    require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp-options.php';
+    require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp-logger.php';
+    require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp-activator.php';
 
     try {
-        BotDot_WP_Activator::activate();
+        BotSpot_WP_Activator::activate();
     } catch (Exception $e) {
         error_log('BotSpot WP Activation Error: ' . $e->getMessage());
         error_log('Stack trace: ' . $e->getTraceAsString());
@@ -153,13 +153,13 @@ function activate_botdot_wp() {
 /**
  * The code that runs during plugin deactivation.
  */
-function deactivate_botdot_wp() {
-    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-options.php';
-    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-logger.php';
-    require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp-deactivator.php';
+function deactivate_botspot_wp() {
+    require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp-options.php';
+    require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp-logger.php';
+    require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp-deactivator.php';
 
     try {
-        BotDot_WP_Deactivator::deactivate();
+        BotSpot_WP_Deactivator::deactivate();
     } catch (Exception $e) {
         error_log('BotSpot WP Deactivation Error: ' . $e->getMessage());
     }
@@ -168,43 +168,43 @@ function deactivate_botdot_wp() {
 /**
  * Register activation and deactivation hooks
  */
-register_activation_hook(__FILE__, 'activate_botdot_wp');
-register_deactivation_hook(__FILE__, 'deactivate_botdot_wp');
+register_activation_hook(__FILE__, 'activate_botspot_wp');
+register_deactivation_hook(__FILE__, 'deactivate_botspot_wp');
 
 /**
  * Check system requirements before loading the plugin
  */
-function botdot_wp_check_requirements() {
+function botspot_wp_check_requirements() {
     $errors = array();
 
-    if (version_compare(get_bloginfo('version'), BOTDOT_WP_MIN_WP_VERSION, '<')) {
+    if (version_compare(get_bloginfo('version'), BOTSPOT_WP_MIN_WP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('bot.spot WP requires WordPress %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
-            BOTDOT_WP_MIN_WP_VERSION,
+            __('bot.spot WP requires WordPress %s or higher. You are running version %s.', BOTSPOT_WP_TEXT_DOMAIN),
+            BOTSPOT_WP_MIN_WP_VERSION,
             get_bloginfo('version')
         );
     }
 
-    if (version_compare(PHP_VERSION, BOTDOT_WP_MIN_PHP_VERSION, '<')) {
+    if (version_compare(PHP_VERSION, BOTSPOT_WP_MIN_PHP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('bot.spot WP requires PHP %s or higher. You are running version %s.', BOTDOT_WP_TEXT_DOMAIN),
-            BOTDOT_WP_MIN_PHP_VERSION,
+            __('bot.spot WP requires PHP %s or higher. You are running version %s.', BOTSPOT_WP_TEXT_DOMAIN),
+            BOTSPOT_WP_MIN_PHP_VERSION,
             PHP_VERSION
         );
     }
 
     if (!extension_loaded('curl')) {
-        $errors[] = __('bot.spot WP requires the PHP cURL extension.', BOTDOT_WP_TEXT_DOMAIN);
+        $errors[] = __('bot.spot WP requires the PHP cURL extension.', BOTSPOT_WP_TEXT_DOMAIN);
     }
 
     if (!extension_loaded('json')) {
-        $errors[] = __('bot.spot WP requires the PHP JSON extension.', BOTDOT_WP_TEXT_DOMAIN);
+        $errors[] = __('bot.spot WP requires the PHP JSON extension.', BOTSPOT_WP_TEXT_DOMAIN);
     }
 
     if (!empty($errors)) {
         add_action('admin_notices', function() use ($errors) {
             echo '<div class="error"><p>';
-            echo '<strong>' . __('bot.spot WP Plugin Error:', BOTDOT_WP_TEXT_DOMAIN) . '</strong><br>';
+            echo '<strong>' . __('bot.spot WP Plugin Error:', BOTSPOT_WP_TEXT_DOMAIN) . '</strong><br>';
             foreach ($errors as $error) {
                 echo $error . '<br>';
             }
@@ -227,9 +227,9 @@ function botdot_wp_check_requirements() {
 /**
  * Load plugin text domain for internationalization
  */
-function botdot_wp_load_textdomain() {
+function botspot_wp_load_textdomain() {
     load_plugin_textdomain(
-        BOTDOT_WP_TEXT_DOMAIN,
+        BOTSPOT_WP_TEXT_DOMAIN,
         false,
         dirname(plugin_basename(__FILE__)) . '/languages/'
     );
@@ -238,17 +238,17 @@ function botdot_wp_load_textdomain() {
 /**
  * Initialize the plugin
  */
-function botdot_wp_init() {
-    if (!botdot_wp_check_requirements()) {
+function botspot_wp_init() {
+    if (!botspot_wp_check_requirements()) {
         return;
     }
 
-    botdot_wp_load_textdomain();
+    botspot_wp_load_textdomain();
 
     try {
-        require_once BOTDOT_WP_PLUGIN_PATH . 'includes/class-botdot-wp.php';
+        require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp.php';
 
-        $plugin = new BotDot_WP();
+        $plugin = new BotSpot_WP();
         $plugin->run();
     } catch (Exception $e) {
         error_log('BotSpot WP Initialization Error: ' . $e->getMessage());
@@ -268,26 +268,26 @@ function botdot_wp_init() {
     }
 }
 
-add_action('plugins_loaded', 'botdot_wp_init');
+add_action('plugins_loaded', 'botspot_wp_init');
 
 /**
  * Admin notice for successful activation
  */
-function botdot_wp_activation_notice() {
-    if (get_transient('botdot_wp_activation_notice')) {
+function botspot_wp_activation_notice() {
+    if (get_transient('botspot_wp_activation_notice')) {
         ?>
         <div class="notice notice-success is-dismissible">
             <p>
                 <?php
                 printf(
-                    __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', BOTDOT_WP_TEXT_DOMAIN),
-                    admin_url('admin.php?page=botdot-wp')
+                    __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', BOTSPOT_WP_TEXT_DOMAIN),
+                    admin_url('admin.php?page=botspot-wp')
                 );
                 ?>
             </p>
         </div>
         <?php
-        delete_transient('botdot_wp_activation_notice');
+        delete_transient('botspot_wp_activation_notice');
     }
 }
-add_action('admin_notices', 'botdot_wp_activation_notice');
+add_action('admin_notices', 'botspot_wp_activation_notice');

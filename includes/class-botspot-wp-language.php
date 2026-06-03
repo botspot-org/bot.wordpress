@@ -12,14 +12,14 @@
  * intentionally dropped to match the core API's language parameter.
  *
  * @since      2.5.0
- * @package    BotDot_WP
+ * @package    BotSpot_WP
  */
 
 if (!defined("WPINC")) {
     die();
 }
 
-class BotDot_WP_Language
+class BotSpot_WP_Language
 {
     /**
      * Resolve the language for a given post.

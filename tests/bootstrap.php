@@ -1,6 +1,6 @@
 <?php
 /**
- * PHPUnit bootstrap for botdot-wp unit tests.
+ * PHPUnit bootstrap for botspot-wp unit tests.
  *
  * Tests that only exercise pure PHP logic (no WP functions) can be run
  * without a WordPress installation. Tests that require WP stubs define

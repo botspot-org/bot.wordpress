@@ -189,7 +189,7 @@
     }
 
     function fetchStatus() {
-        bsaAjax("botdot_wp_get_status", {}, nonces.getStatus).then(function (res) {
+        bsaAjax("botspot_wp_get_status", {}, nonces.getStatus).then(function (res) {
             state.statusFetched = true;
             if (!res || !res.success) {
                 ["connection", "sync", "runtime"].forEach(function (k) {
@@ -247,7 +247,7 @@
             list.innerHTML = '<div class="bsa-log-empty">' + escapeHtml(strings.loadingLogs || "Loading logs...") + "</div>";
         }
 
-        bsaAjax("botdot_wp_get_logs", { level: state.logFilter }, nonces.getLogs).then(function (res) {
+        bsaAjax("botspot_wp_get_logs", { level: state.logFilter }, nonces.getLogs).then(function (res) {
             state.logsFetched = true;
             if (res && res.success && res.data && Array.isArray(res.data.entries)) {
                 state.logs = res.data.entries;
@@ -326,7 +326,7 @@
         btn.textContent = strings.testing || "Connecting...";
 
         var payload = apiKey ? { api_key: apiKey } : {};
-        bsaAjax("botdot_wp_test_connection", payload, nonces.testConnection).then(function (res) {
+        bsaAjax("botspot_wp_test_connection", payload, nonces.testConnection).then(function (res) {
             btn.disabled = false;
             btn.textContent = originalText;
 
@@ -348,7 +348,7 @@
         btn.textContent = strings.testing || "Working...";
 
         var payload = apiKey ? { api_key: apiKey } : {};
-        bsaAjax("botdot_wp_register_connection", payload, nonces.registerConnection).then(function (res) {
+        bsaAjax("botspot_wp_register_connection", payload, nonces.registerConnection).then(function (res) {
             btn.disabled = false;
             btn.textContent = originalText;
             if (res && res.success) {
@@ -366,7 +366,7 @@
         var originalText = btn.innerHTML;
         btn.querySelector("span").textContent = strings.testing || "Working...";
 
-        bsaAjax("botdot_wp_force_resync", {}, nonces.forceResync).then(function (res) {
+        bsaAjax("botspot_wp_force_resync", {}, nonces.forceResync).then(function (res) {
             btn.disabled = false;
             btn.innerHTML = originalText;
             var msg = (res && res.data && res.data.message) || (res && res.success ? "Done" : "Failed");
@@ -382,7 +382,7 @@
         var originalText = btn.innerHTML;
         btn.querySelector("span").textContent = strings.testing || "Working...";
 
-        bsaAjax("botdot_wp_clear_cache", {}, nonces.clearCache).then(function (res) {
+        bsaAjax("botspot_wp_clear_cache", {}, nonces.clearCache).then(function (res) {
             btn.disabled = false;
             btn.innerHTML = originalText;
             var msg = (res && res.data && res.data.message) || (res && res.success ? "Cache cleared" : "Failed");
@@ -501,17 +501,17 @@
         var settings = {};
 
         // API key - only include if user entered a new value
-        var apiKeyInput = form.querySelector('[name="botdot_wp_api_key"]');
+        var apiKeyInput = form.querySelector('[name="botspot_wp_api_key"]');
         if (apiKeyInput && apiKeyInput.value) {
             settings.api_key = apiKeyInput.value;
         }
 
         // Checkboxes - booleans
         var checkboxes = [
-            { name: "botdot_wp_auto_sync_enabled", key: "auto_sync_enabled" },
-            { name: "botdot_wp_appendix_enabled", key: "appendix_enabled" },
-            { name: "botdot_wp_jsonld_enabled", key: "jsonld_enabled" },
-            { name: "botdot_wp_debug_mode", key: "debug_mode" },
+            { name: "botspot_wp_auto_sync_enabled", key: "auto_sync_enabled" },
+            { name: "botspot_wp_appendix_enabled", key: "appendix_enabled" },
+            { name: "botspot_wp_jsonld_enabled", key: "jsonld_enabled" },
+            { name: "botspot_wp_debug_mode", key: "debug_mode" },
         ];
         checkboxes.forEach(function (cb) {
             var el = form.querySelector('[name="' + cb.name + '"]');
@@ -520,7 +520,7 @@
 
         // Selects (dropdowns)
         var selects = [
-            { name: "botdot_wp_sync_sensitivity", key: "sync_sensitivity" },
+            { name: "botspot_wp_sync_sensitivity", key: "sync_sensitivity" },
         ];
         selects.forEach(function (sel) {
             var el = form.querySelector('select[name="' + sel.name + '"]');
@@ -529,8 +529,8 @@
 
         // Radio buttons - must query for :checked
         var radios = [
-            { name: "botdot_wp_injection_position", key: "injection_position" },
-            { name: "botdot_wp_jsonld_conflict_mode", key: "jsonld_conflict_mode" },
+            { name: "botspot_wp_injection_position", key: "injection_position" },
+            { name: "botspot_wp_jsonld_conflict_mode", key: "jsonld_conflict_mode" },
         ];
         radios.forEach(function (radio) {
             var el = form.querySelector('[name="' + radio.name + '"]:checked');
@@ -538,14 +538,14 @@
         });
 
         // Multi-selects / checkboxes for arrays
-        var syncPostTypes = form.querySelectorAll('[name="botdot_wp_sync_post_types[]"]:checked');
+        var syncPostTypes = form.querySelectorAll('[name="botspot_wp_sync_post_types[]"]:checked');
         settings.sync_post_types = Array.prototype.map.call(syncPostTypes, function (el) { return el.value; });
 
-        var injectPostTypes = form.querySelectorAll('[name="botdot_wp_inject_on_post_types[]"]:checked');
+        var injectPostTypes = form.querySelectorAll('[name="botspot_wp_inject_on_post_types[]"]:checked');
         settings.inject_on_post_types = Array.prototype.map.call(injectPostTypes, function (el) { return el.value; });
 
         // Numbers
-        var cacheTtl = form.querySelector('[name="botdot_wp_cache_ttl"]');
+        var cacheTtl = form.querySelector('[name="botspot_wp_cache_ttl"]');
         if (cacheTtl) settings.cache_ttl = cacheTtl.value;
 
         return settings;
@@ -563,7 +563,7 @@
 
         var settings = collectFormSettings();
         var body = new URLSearchParams();
-        body.append("action", "botdot_wp_save_settings");
+        body.append("action", "botspot_wp_save_settings");
         body.append("nonce", nonces.saveSettings || "");
 
         // Serialize settings as individual params
@@ -593,7 +593,7 @@
                 if (resp.success) {
                     markClean();
                     // Clear API key input after successful save (keep placeholder)
-                    var apiKeyInput = qs('[name="botdot_wp_api_key"]');
+                    var apiKeyInput = qs('[name="botspot_wp_api_key"]');
                     if (apiKeyInput && apiKeyInput.value) {
                         apiKeyInput.value = "";
                         apiKeyInput.setAttribute("data-has-value", "1");
@@ -720,17 +720,17 @@
     }
 
     function loadSyncHealth() {
-        return postAjax('botdot_wp_get_sync_health', 'getSyncHealth', {})
+        return postAjax('botspot_wp_get_sync_health', 'getSyncHealth', {})
             .then(function (resp) { if (resp.success) renderSync(resp.data); });
     }
 
     function loadEnrichmentLifecycle() {
-        return postAjax('botdot_wp_get_enrichment_lifecycle', 'getEnrichmentLifecycle', {})
+        return postAjax('botspot_wp_get_enrichment_lifecycle', 'getEnrichmentLifecycle', {})
             .then(function (resp) { if (resp.success) renderEnrichment(resp.data); });
     }
 
     function loadImpressions() {
-        return postAjax('botdot_wp_get_impressions', 'getImpressions', { window: currentWindow })
+        return postAjax('botspot_wp_get_impressions', 'getImpressions', { window: currentWindow })
             .then(function (resp) { if (resp.success) renderImpressions(resp.data); });
     }
 
@@ -764,7 +764,7 @@
         if (flushBtn) {
             flushBtn.addEventListener('click', function () {
                 flushBtn.disabled = true;
-                postAjax('botdot_wp_force_flush', 'forceFlush', {}).then(function () {
+                postAjax('botspot_wp_force_flush', 'forceFlush', {}).then(function () {
                     flushBtn.disabled = false;
                     loadImpressions();
                 });

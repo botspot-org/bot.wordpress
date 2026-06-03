@@ -1,6 +1,6 @@
 <?php
 /**
- * Unified content fetcher for the BotDot WP plugin
+ * Unified content fetcher for the BotSpot WP plugin
  *
  * Fetches rendered appendix HTML and JSON-LD from locus-core's
  * /appendix/render endpoint with transient caching.
@@ -8,8 +8,8 @@
  * @link       https://bot.spot
  * @since      1.0.0
  *
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
  */
 
 // If this file is called directly, abort.
@@ -20,15 +20,15 @@ if (!defined("WPINC")) {
 /**
  * Unified content fetcher for locus-core appendix rendering.
  *
- * Replaces the old BotDot_WP_Fetcher and BotDot_WP_Appendix_Fetcher
+ * Replaces the old BotSpot_WP_Fetcher and BotSpot_WP_Appendix_Fetcher
  * with a single fetcher that returns both HTML and JSON-LD.
  *
  * @since      1.0.0
- * @package    BotDot_WP
- * @subpackage BotDot_WP/includes
- * @author     BotDot Team
+ * @package    BotSpot_WP
+ * @subpackage BotSpot_WP/includes
+ * @author     BotSpot Team
  */
-class BotDot_WP_Content_Fetcher
+class BotSpot_WP_Content_Fetcher
 {
     /**
      * Per-request cache to avoid duplicate HTTP calls within a single page load.
@@ -55,16 +55,16 @@ class BotDot_WP_Content_Fetcher
             return self::$request_cache[$url_path];
         }
 
-        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
+        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
 
         if (empty($api_key)) {
             self::log_debug("Cannot fetch: API key not configured");
             return null;
         }
 
-        $lang = BotDot_WP_Language::get_current_language();
-        $cache_key = "botdot_content_" . md5($url_path . "_" . $lang);
+        $lang = BotSpot_WP_Language::get_current_language();
+        $cache_key = "botspot_content_" . md5($url_path . "_" . $lang);
 
         // Check transient cache
         $cached = get_transient($cache_key);
@@ -141,7 +141,7 @@ class BotDot_WP_Content_Fetcher
         ];
 
         // Cache with configured TTL
-        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotDot_WP_Options::get("cache_ttl", 3600);
+        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotSpot_WP_Options::get("cache_ttl", 3600);
         set_transient($cache_key, $data, $ttl);
 
         self::log_debug(
@@ -170,16 +170,16 @@ class BotDot_WP_Content_Fetcher
      */
     public static function fetch_jsonld($url_path)
     {
-        $lang = BotDot_WP_Language::get_current_language();
-        $cache_key_jsonld = "botdot_jsonld_" . md5($url_path . "_" . $lang);
+        $lang = BotSpot_WP_Language::get_current_language();
+        $cache_key_jsonld = "botspot_jsonld_" . md5($url_path . "_" . $lang);
 
         // Check per-request cache first
         if (isset(self::$request_cache[$cache_key_jsonld])) {
             return self::$request_cache[$cache_key_jsonld];
         }
 
-        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
+        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
 
         if (empty($api_key)) {
             self::log_debug("Cannot fetch JSON-LD: API key not configured");
@@ -238,7 +238,7 @@ class BotDot_WP_Content_Fetcher
         ];
 
         // Cache with configured TTL
-        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotDot_WP_Options::get("cache_ttl", 3600);
+        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotSpot_WP_Options::get("cache_ttl", 3600);
         set_transient($cache_key_jsonld, $data, $ttl);
 
         self::log_debug(
@@ -268,13 +268,13 @@ class BotDot_WP_Content_Fetcher
             return false;
         }
 
-        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
+        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
 
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/check";
         $endpoint = add_query_arg("path", $url_path, $endpoint);
 
-        $lang = BotDot_WP_Language::get_current_language();
+        $lang = BotSpot_WP_Language::get_current_language();
         if (!empty($lang)) {
             $endpoint = add_query_arg("lang", $lang, $endpoint);
         }
@@ -318,13 +318,13 @@ class BotDot_WP_Content_Fetcher
      */
     public static function test_connection()
     {
-        $locus_api_url = BotDot_WP_Options::get_locus_api_url();
-        $api_key = BotDot_WP_Options::get("api_key");
+        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
+        $api_key = BotSpot_WP_Options::get("api_key");
 
         if (empty($api_key)) {
             return [
                 "success" => false,
-                "message" => __("API key is not configured", "botdot-wp"),
+                "message" => __("API key is not configured", "botspot-wp"),
             ];
         }
 
@@ -341,7 +341,7 @@ class BotDot_WP_Content_Fetcher
         if (is_wp_error($response)) {
             return [
                 "success" => false,
-                "message" => sprintf(__("Connection failed: %s", "botdot-wp"), $response->get_error_message()),
+                "message" => sprintf(__("Connection failed: %s", "botspot-wp"), $response->get_error_message()),
             ];
         }
 
@@ -350,20 +350,20 @@ class BotDot_WP_Content_Fetcher
         if ($status_code === 200) {
             return [
                 "success" => true,
-                "message" => __("Connected to bot.spot successfully", "botdot-wp"),
+                "message" => __("Connected to bot.spot successfully", "botspot-wp"),
             ];
         }
 
         if ($status_code === 401 || $status_code === 403) {
             return [
                 "success" => false,
-                "message" => __("Authentication failed. Check your API key.", "botdot-wp"),
+                "message" => __("Authentication failed. Check your API key.", "botspot-wp"),
             ];
         }
 
         return [
             "success" => false,
-            "message" => sprintf(__("Connection returned HTTP %d", "botdot-wp"), $status_code),
+            "message" => sprintf(__("Connection returned HTTP %d", "botspot-wp"), $status_code),
         ];
     }
 
@@ -376,18 +376,18 @@ class BotDot_WP_Content_Fetcher
     public static function clear_cache($path = null)
     {
         if ($path !== null) {
-            delete_transient("botdot_content_" . md5($path));
+            delete_transient("botspot_content_" . md5($path));
             self::log_debug(sprintf("Cleared cache for path: %s", $path));
             return;
         }
 
-        // Clear all botdot_content_ transients
+        // Clear all botspot_content_ transients
         global $wpdb;
         $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                $wpdb->esc_like("_transient_botdot_content_") . "%",
-                $wpdb->esc_like("_transient_timeout_botdot_content_") . "%",
+                $wpdb->esc_like("_transient_botspot_content_") . "%",
+                $wpdb->esc_like("_transient_timeout_botspot_content_") . "%",
             ),
         );
         self::log_debug("Cleared all content caches");
@@ -401,8 +401,8 @@ class BotDot_WP_Content_Fetcher
      */
     private static function log_debug($message)
     {
-        if (BotDot_WP_Options::get("debug_mode")) {
-            BotDot_WP_Logger::log_debug("[ContentFetcher] " . $message);
+        if (BotSpot_WP_Options::get("debug_mode")) {
+            BotSpot_WP_Logger::log_debug("[ContentFetcher] " . $message);
         }
     }
 
@@ -414,6 +414,6 @@ class BotDot_WP_Content_Fetcher
      */
     private static function log_error($message)
     {
-        BotDot_WP_Logger::log_error("[ContentFetcher] " . $message);
+        BotSpot_WP_Logger::log_error("[ContentFetcher] " . $message);
     }
 }
