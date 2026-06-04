@@ -6,8 +6,8 @@
 set -e
 
 # Configuration
-PLUGIN_SLUG="botdot-wp"
-VERSION=$(grep "Version:" botdot-wp.php | awk '{print $3}' | head -1)
+PLUGIN_SLUG="botspot-wp"
+VERSION=$(grep "Version:" botspot-wp.php | awk '{print $3}' | head -1)
 BUILD_DIR="build"
 DIST_DIR="dist"
 
@@ -87,7 +87,7 @@ fi
 echo -e "${YELLOW}Copying plugin files...${NC}"
 
 # Copy main plugin file
-cp botdot-wp.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp botspot-wp.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
 # Rewrite build-time URLs in the copy (never touch the source tree).
 # Source tree always holds the staging URLs; production builds sed-rewrite
@@ -97,17 +97,17 @@ echo -e "${YELLOW}==> Rewriting build-time URLs for target '${TARGET}'${NC}"
 sed -i.bak \
     -e "s|https://locus-staging-api.bot.spot|${LOCUS_API_URL}|g" \
     -e "s|https://staging-locus-connectors.bot.spot|${CONNECTOR_URL}|g" \
-    "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php"
-rm -f "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php.bak"
+    "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php"
+rm -f "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php.bak"
 
 # Sanity check: confirm the rewritten file still has both defines and they
 # point at the expected URLs.
-if ! grep -q "define('BOTDOT_WP_LOCUS_API_URL', '${LOCUS_API_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php"; then
-    echo -e "${RED}ERROR: BOTDOT_WP_LOCUS_API_URL rewrite failed${NC}"
+if ! grep -q "define('BOTSPOT_WP_LOCUS_API_URL', '${LOCUS_API_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php"; then
+    echo -e "${RED}ERROR: BOTSPOT_WP_LOCUS_API_URL rewrite failed${NC}"
     exit 1
 fi
-if ! grep -q "define('BOTDOT_WP_CONNECTOR_URL', '${CONNECTOR_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botdot-wp.php"; then
-    echo -e "${RED}ERROR: BOTDOT_WP_CONNECTOR_URL rewrite failed${NC}"
+if ! grep -q "define('BOTSPOT_WP_CONNECTOR_URL', '${CONNECTOR_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php"; then
+    echo -e "${RED}ERROR: BOTSPOT_WP_CONNECTOR_URL rewrite failed${NC}"
     exit 1
 fi
 

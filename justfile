@@ -1,9 +1,9 @@
-PLUGIN_SLUG := "botdot-wp"
+PLUGIN_SLUG := "botspot-wp"
 BUCKET := "botspot-plugins"
 GCS_PREFIX := "gs://" + BUCKET + "/" + PLUGIN_SLUG
 
 # Read version from the plugin header (single source of truth).
-VERSION := `grep "Version:" botdot-wp.php | awk '{print $3}' | head -1`
+VERSION := `grep "Version:" botspot-wp.php | awk '{print $3}' | head -1`
 
 default:
     @just --list
@@ -43,7 +43,7 @@ tag:
     git push origin "v{{VERSION}}"
 
 # Full release: build both targets, upload to versioned path, promote latest, tag.
-# Run after bumping the version in botdot-wp.php and updating the changelog.
+# Run after bumping the version in botspot-wp.php and updating the changelog.
 release: build upload-versioned promote-latest tag
     @echo "Released v{{VERSION}} to {{GCS_PREFIX}}/v{{VERSION}}/ and latest/."
 
