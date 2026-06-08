@@ -963,6 +963,7 @@
     display: inline-block !important;
     vertical-align: middle;
     position: relative;
+    z-index: 1;
     cursor: pointer;
     transition: all 0.2s ease;
     border-radius: 0 !important;
@@ -1011,6 +1012,7 @@
     content: "" !important;
     position: absolute !important;
     inset: 2px !important;
+    z-index: 2 !important;
     background: var(--bsa-mint) !important;
     box-shadow: 0 0 8px rgba(209, 254, 246, 0.7) !important;
     border: none !important;
@@ -1031,6 +1033,7 @@
     content: "" !important;
     position: absolute !important;
     inset: 2px !important;
+    z-index: 2 !important;
     background: var(--bsa-mint) !important;
     box-shadow: 0 0 8px rgba(209, 254, 246, 0.7) !important;
     border: none !important;
