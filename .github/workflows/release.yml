@@ -5,11 +5,16 @@ on:
     tags:
       - 'v*'
 
+env:
+  PLUGIN_SLUG: botspot-wp
+  BUCKET: botspot-plugins
+
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +32,34 @@ jobs:
       - name: Build production zip
         run: TARGET=production ./build.sh
 
+      - name: Build staging zip
+        run: TARGET=staging ./build.sh
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/599732672447/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+          service_account: wp-plugin-release@bot-backends.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload to versioned path
+        run: |
+          gcloud storage cp \
+            "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}.zip" \
+            "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}-staging.zip" \
+            "gs://${BUCKET}/${PLUGIN_SLUG}/v${{ steps.version.outputs.version }}/"
+
+      - name: Promote to latest
+        run: |
+          gcloud storage cp "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}.zip" "gs://${BUCKET}/${PLUGIN_SLUG}/latest/${PLUGIN_SLUG}.zip"
+          gcloud storage cp "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}-staging.zip" "gs://${BUCKET}/${PLUGIN_SLUG}/latest/${PLUGIN_SLUG}-staging.zip"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/botspot-wp-${{ steps.version.outputs.version }}.zip
+          files: |
+            dist/${{ env.PLUGIN_SLUG }}-${{ steps.version.outputs.version }}.zip
+            dist/${{ env.PLUGIN_SLUG }}-${{ steps.version.outputs.version }}-staging.zip
           generate_release_notes: true
