@@ -74,18 +74,18 @@ $bsa_cache_ttl = (int) BotSpot_WP_Options::get("cache_ttl", 3600);
 
                 <div class="bsa-sidebar-section">
                     <h4 class="bsa-sidebar-section__title"><?php _e("Options", "botspot-wp"); ?></h4>
-                    <div class="bsa-sidebar-toggles">
-                        <label class="bsa-toggle-row">
+                    <div class="bsa-check-list">
+                        <label class="bsa-check">
+                            <input type="checkbox" name="botspot_wp_debug_mode" value="1" <?php checked($bsa_debug_mode); ?> />
                             <span><?php _e("Debug logging", "botspot-wp"); ?></span>
-                            <input type="checkbox" class="bsa-toggle" name="botspot_wp_debug_mode" value="1" <?php checked($bsa_debug_mode); ?> />
                         </label>
-                        <label class="bsa-toggle-row">
+                        <label class="bsa-check">
+                            <input type="checkbox" data-bsa-option="verbose_runtime" />
                             <span><?php _e("Verbose runtime", "botspot-wp"); ?></span>
-                            <input type="checkbox" class="bsa-toggle" data-bsa-option="verbose_runtime" />
                         </label>
-                        <label class="bsa-toggle-row">
+                        <label class="bsa-check bsa-check--disabled">
+                            <input type="checkbox" data-bsa-option="persist_logs" disabled title="<?php esc_attr_e("Currently logs use transients (auto-expire). DB persistence coming soon.", "botspot-wp"); ?>" />
                             <span><?php _e("Persist logs to DB", "botspot-wp"); ?></span>
-                            <input type="checkbox" class="bsa-toggle" data-bsa-option="persist_logs" disabled title="<?php esc_attr_e("Currently logs use transients (auto-expire). DB persistence coming soon.", "botspot-wp"); ?>" />
                         </label>
                     </div>
                 </div>
