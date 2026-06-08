@@ -31,9 +31,13 @@ jobs:
 
       - name: Build production zip
         run: TARGET=production ./build.sh
+        env:
+          COMPOSER_AUTH: ''
 
       - name: Build staging zip
         run: TARGET=staging ./build.sh
+        env:
+          COMPOSER_AUTH: ''
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
