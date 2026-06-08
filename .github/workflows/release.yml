@@ -29,15 +29,14 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+      - name: Clear composer GitHub token
+        run: composer config --global --unset github-oauth.github.com || true
+
       - name: Build production zip
         run: TARGET=production ./build.sh
-        env:
-          COMPOSER_AUTH: ''
 
       - name: Build staging zip
         run: TARGET=staging ./build.sh
-        env:
-          COMPOSER_AUTH: ''
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
