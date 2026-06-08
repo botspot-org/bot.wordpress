@@ -2054,3 +2054,91 @@
     text-transform: uppercase;
     color: var(--bsa-color-muted, #6b7280);
 }
+
+/* ============================================================
+   FINAL WP CHECKBOX OVERRIDE
+   Must stay at the very end of the CSS file.
+   Prevents WordPress admin checkbox styles from leaking in.
+   ============================================================ */
+
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"],
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"] {
+    all: unset !important;
+    box-sizing: border-box !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+
+    display: inline-block !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    vertical-align: middle !important;
+    box-shadow: none !important;
+}
+
+/* Kill WordPress injected checkmarks */
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]::before,
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:checked::before,
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]::before,
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:checked::before {
+    content: "" !important;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* Unchecked state */
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:not(:checked)::after,
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:not(:checked)::after {
+    content: none !important;
+    display: none !important;
+}
+
+/* Checked state: custom filled square, no tick */
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle),
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:checked {
+    border-color: rgba(209, 254, 246, 0.7) !important;
+    background: transparent !important;
+    box-shadow: 0 0 10px rgba(209, 254, 246, 0.25) !important;
+}
+
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle)::after,
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:checked::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 3px !important;
+    display: block !important;
+    background: var(--bsa-mint) !important;
+    box-shadow: 0 0 8px rgba(209, 254, 246, 0.8) !important;
+    transform: none !important;
+    border: 0 !important;
+}
+
+/* Keep toggle styling separate */
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle {
+    width: 28px !important;
+    height: 14px !important;
+}
+
+body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle::before {
+    display: none !important;
+    content: "" !important;
+}
