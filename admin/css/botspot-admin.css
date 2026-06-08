@@ -49,8 +49,8 @@
     --bsa-bg-soft: rgba(255, 255, 255, 0.02);
     --bsa-bg-softer: rgba(255, 255, 255, 0.01);
 
-    --bsa-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --bsa-font-mono: 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --bsa-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --bsa-font-mono: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
 
     background: var(--bsa-void);
     color: var(--bsa-text);
@@ -740,7 +740,7 @@
 .botspot-admin-root .bsa-sidebar-result {
     margin-top: 12px;
     padding: 10px;
-    border-radius: 6px;
+    border-radius: 0;
     font-size: 12px;
     line-height: 1.4;
     word-break: break-word;
