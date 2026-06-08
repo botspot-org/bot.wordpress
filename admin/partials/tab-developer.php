@@ -109,6 +109,18 @@ $bsa_cache_ttl = (int) BotSpot_WP_Options::get("cache_ttl", 3600);
                 <div class="bsa-sidebar-section bsa-sidebar-section--env">
                     <h4 class="bsa-sidebar-section__title"><?php _e("Environment", "botspot-wp"); ?></h4>
                     <dl class="bsa-env">
+                        <?php if (!empty($bsa_webhook_id)): ?>
+                        <div class="bsa-env__row">
+                            <dt><?php _e("webhook", "botspot-wp"); ?></dt>
+                            <dd class="bsa-tabular-nums"><?php echo esc_html($bsa_webhook_id); ?></dd>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($bsa_tenant_id)): ?>
+                        <div class="bsa-env__row">
+                            <dt><?php _e("org", "botspot-wp"); ?></dt>
+                            <dd class="bsa-tabular-nums"><?php echo esc_html($bsa_tenant_id); ?></dd>
+                        </div>
+                        <?php endif; ?>
                         <div class="bsa-env__row">
                             <dt>plugin</dt>
                             <dd class="bsa-tabular-nums"><?php echo esc_html(BOTSPOT_WP_VERSION); ?></dd>

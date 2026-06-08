@@ -75,19 +75,6 @@ if (!defined("WPINC")) {
             </div>
 
             <div class="bsa-result bsa-hidden" data-bsa-result="test-connection"></div>
-
-            <?php if ($bsa_is_connected && !empty($bsa_tenant_id)): ?>
-            <div class="bsa-connection-info">
-                <div class="bsa-kv">
-                    <span class="bsa-kv__key"><?php _e("Webhook ID", "botspot-wp"); ?></span>
-                    <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_webhook_id); ?></code>
-                </div>
-                <div class="bsa-kv">
-                    <span class="bsa-kv__key"><?php _e("Tenant ID", "botspot-wp"); ?></span>
-                    <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_tenant_id); ?></code>
-                </div>
-            </div>
-            <?php endif; ?>
         </section>
 
         <!-- Right: setup guide + next step -->
