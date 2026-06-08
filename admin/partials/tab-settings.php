@@ -173,7 +173,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     </span>
                 </label>
             </div>
-            <p class="bsa-settings-row__note" id="bsa-footer-detection-note" style="display: none; margin-top: 12px; padding: 10px; background: #fff8e5; border-left: 3px solid #ffb900; font-size: 13px;">
+            <p class="bsa-settings-row__note" id="bsa-footer-detection-note" style="display: none;">
                 <strong><?php _e("Note:", "botspot-wp"); ?></strong>
                 <?php _e("Footer detection relies on common HTML patterns (<code>&lt;footer&gt;</code>, <code>role=\"contentinfo\"</code>, etc.). If your theme uses a non-standard footer, add the attribute <code>data-botspot-footer</code> to your footer element for reliable placement.", "botspot-wp"); ?>
             </p>

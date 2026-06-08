@@ -549,3 +549,7 @@ ENV/
 GEMINI.md
 
 .env
+
+##### Internal docs (not for public repo)
+docs/
+context/

@@ -982,21 +982,21 @@
 }
 
 .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle) {
-    background: var(--bsa-mint);
-    border-color: var(--bsa-mint);
-    box-shadow: 0 0 10px rgba(209, 254, 246, 0.35);
+    border-color: rgba(209, 254, 246, 0.5);
+    box-shadow: 0 0 10px rgba(209, 254, 246, 0.2);
 }
 
 .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle)::after {
     content: "";
     position: absolute;
-    left: 3px;
-    top: 0;
-    width: 4px;
-    height: 8px;
-    border: solid var(--bsa-void);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    inset: 2px;
+    background: var(--bsa-mint);
+    box-shadow: 0 0 8px rgba(209, 254, 246, 0.7);
+}
+
+.botspot-admin-root input[type="radio"]:checked {
+    border-color: rgba(209, 254, 246, 0.5);
+    box-shadow: 0 0 10px rgba(209, 254, 246, 0.2);
 }
 
 .botspot-admin-root input[type="radio"]:checked::after {
@@ -1005,29 +1005,6 @@
     inset: 2px;
     background: var(--bsa-mint);
     box-shadow: 0 0 8px rgba(209, 254, 246, 0.7);
-}
-
-/* Radios rendered as checkmarks (used in Placement / SEO compatibility
-   to match the Content-to-sync checkmark aesthetic). */
-.botspot-admin-root input[type="radio"].bsa-check-as-check:checked {
-    background: var(--bsa-mint);
-    border-color: var(--bsa-mint);
-    box-shadow: 0 0 10px rgba(209, 254, 246, 0.35);
-}
-
-.botspot-admin-root input[type="radio"].bsa-check-as-check:checked::after {
-    content: "";
-    position: absolute;
-    inset: auto;
-    left: 3px;
-    top: 0;
-    width: 4px;
-    height: 8px;
-    border: solid var(--bsa-void);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-    background: transparent;
-    box-shadow: none;
 }
 
 /* Connected status pill shown inline on the Connect tab */
@@ -1122,6 +1099,25 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.botspot-admin-root .bsa-settings-row__note {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(251, 191, 36, 0.08);
+    border-left: 2px solid rgba(251, 191, 36, 0.5);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.botspot-admin-root .bsa-settings-row__note strong {
+    color: #fbbf24;
+}
+
+.botspot-admin-root .bsa-settings-row__note code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 4px;
+    font-size: 10px;
 }
 
 /* ============================================================
