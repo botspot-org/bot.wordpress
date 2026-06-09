@@ -115,6 +115,7 @@ fi
 cp README.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
 cp THEME-INTEGRATION.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
 cp readme.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp THIRD-PARTY-LICENSES.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
 # Copy uninstall script
 cp uninstall.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
@@ -131,6 +132,8 @@ cp -r public "${BUILD_DIR}/${PLUGIN_SLUG}/"
 # Copy Strauss-prefixed vendor (runtime dependency: crawler-detect + crawler-user-agents)
 mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/vendor"
 cp -r vendor/botspot-prefixed "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed"
+cp vendor/jaybizzle/crawler-detect/LICENSE "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed/jaybizzle/crawler-detect/LICENSE"
+cp vendor/monperrus/crawler-user-agents/LICENSE "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed/monperrus/crawler-user-agents/LICENSE"
 
 # Create languages directory (even if empty, for i18n readiness)
 mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/languages"

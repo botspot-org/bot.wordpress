@@ -99,13 +99,12 @@ define('BOTSPOT_WP_TEXT_DOMAIN', 'botspot-wp');
 /**
  * Locus API URL (overridable via wp-config.php).
  *
- * The URL is a build-time sentinel (@LOCUS_API_URL@) that build.sh rewrites
- * to the appropriate staging or production URL based on the TARGET env var
- * or the --production flag. Source-tree default is staging so that local
- * development and zero-config builds work without any flags.
+ * The source-tree default is production for WordPress.org safety. Local or
+ * staging environments can override this constant in wp-config.php or build
+ * a staging ZIP explicitly with TARGET=staging ./build.sh.
  */
 if (!defined('BOTSPOT_WP_LOCUS_API_URL')) {
-    define('BOTSPOT_WP_LOCUS_API_URL', 'https://locus-staging-api.bot.spot');
+    define('BOTSPOT_WP_LOCUS_API_URL', 'https://locus-api.bot.spot');
 }
 
 /**
@@ -113,7 +112,7 @@ if (!defined('BOTSPOT_WP_LOCUS_API_URL')) {
  * Same build-time rewrite rule as BOTSPOT_WP_LOCUS_API_URL.
  */
 if (!defined('BOTSPOT_WP_CONNECTOR_URL')) {
-    define('BOTSPOT_WP_CONNECTOR_URL', 'https://staging-locus-connectors.bot.spot');
+    define('BOTSPOT_WP_CONNECTOR_URL', 'https://locus-connectors.bot.spot');
 }
 
 /**

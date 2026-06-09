@@ -39,6 +39,10 @@
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
+    function safeCount(value) {
+        var n = Number(value || 0);
+        return isFinite(n) && n >= 0 ? String(Math.floor(n)) : "0";
+    }
 
     // ------------------------------------------------------------
     // AJAX helper (returns a Promise of parsed JSON)
@@ -705,15 +709,15 @@
         }
         var totals = data.totals || { all: 0, by_bot_class: {} };
         var rows = (data.by_artifact || []).map(function (a) {
-            var title = a.title || '(unknown)';
-            var link = a.permalink ? ('<a href="' + a.permalink + '" target="_blank" rel="noopener">' + title + '</a>') : title;
-            return '<tr><td>' + link + '</td><td>' + (a.total || 0) + '</td></tr>';
+            var title = escapeHtml(a.title || '(unknown)');
+            var link = a.permalink ? ('<a href="' + escapeHtml(a.permalink) + '" target="_blank" rel="noopener">' + title + '</a>') : title;
+            return '<tr><td>' + link + '</td><td>' + safeCount(a.total) + '</td></tr>';
         }).join('');
         var classRows = Object.keys(totals.by_bot_class || {}).map(function (cls) {
-            return '<tr><td>' + cls + '</td><td>' + totals.by_bot_class[cls] + '</td></tr>';
+            return '<tr><td>' + escapeHtml(cls) + '</td><td>' + safeCount(totals.by_bot_class[cls]) + '</td></tr>';
         }).join('');
         el.innerHTML =
-            '<p><strong>' + (totals.all || 0) + '</strong> total impressions (' + currentWindow + ')</p>' +
+            '<p><strong>' + safeCount(totals.all) + '</strong> total impressions (' + escapeHtml(currentWindow) + ')</p>' +
             '<table class="bsa-analytics__table"><thead><tr><th>Bot class</th><th>Count</th></tr></thead><tbody>' + classRows + '</tbody></table>' +
             '<h4>Top content</h4>' +
             '<table class="bsa-analytics__table"><thead><tr><th>Title</th><th>Hits</th></tr></thead><tbody>' + rows + '</tbody></table>';

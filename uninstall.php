@@ -24,6 +24,9 @@ $options = [
     "botspot_wp_webhook_id",
     "botspot_wp_connection_id",
     "botspot_wp_tenant_id",
+    "botspot_wp_platform_settings",
+    "botspot_wp_local_settings_backup",
+    "botspot_wp_migrated_from_botdot",
     // Sync
     "botspot_wp_auto_sync_enabled",
     "botspot_wp_sync_sensitivity",
@@ -40,6 +43,10 @@ $options = [
     "botspot_wp_cache_ttl",
     // Debug
     "botspot_wp_debug_mode",
+    "botspot_wp_fatal_errors",
+    // Analytics
+    "botspot_wp_last_flush_at",
+    "botspot_wp_last_flush_id",
 ];
 
 foreach ($options as $option) {
@@ -51,14 +58,34 @@ foreach ($options as $option) {
  */
 delete_transient("botspot_wp_recent_errors");
 delete_transient("botspot_wp_activation_notice");
+delete_transient("botspot_wp_settings_updated_notice");
+delete_transient("botspot_wp_status_snapshot");
+delete_transient("botspot_flush_lock");
+delete_transient("botspot_impressions_24h");
+delete_transient("botspot_impressions_7d");
+delete_transient("botspot_impressions_30d");
 
-// Clear all botspot_content_ transients
+// Clear all BotSpot-owned transients.
 global $wpdb;
 $wpdb->query(
     $wpdb->prepare(
-        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+        "DELETE FROM {$wpdb->options}
+         WHERE option_name LIKE %s
+            OR option_name LIKE %s
+            OR option_name LIKE %s
+            OR option_name LIKE %s
+            OR option_name LIKE %s
+            OR option_name LIKE %s
+            OR option_name LIKE %s
+            OR option_name LIKE %s",
         $wpdb->esc_like("_transient_botspot_content_") . "%",
         $wpdb->esc_like("_transient_timeout_botspot_content_") . "%",
+        $wpdb->esc_like("_transient_botspot_jsonld_") . "%",
+        $wpdb->esc_like("_transient_timeout_botspot_jsonld_") . "%",
+        $wpdb->esc_like("_transient_botspot_impressions_") . "%",
+        $wpdb->esc_like("_transient_timeout_botspot_impressions_") . "%",
+        $wpdb->esc_like("_transient_botspot_wp_") . "%",
+        $wpdb->esc_like("_transient_timeout_botspot_wp_") . "%",
     ),
 );
 
@@ -74,3 +101,7 @@ $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_artifact_id"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_enrichment_tier"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_enrichment_status"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_pre_enrich_jsonld"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_impressions_pending"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_impressions_inflight"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_impressions_inflight_batch"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_impressions_inflight_at"]);

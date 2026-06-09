@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 3.0.1
+Stable tag: 3.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -65,7 +65,7 @@ The plugin stores BotSpot access credentials and sync metadata in the WordPress 
 
 == Installation ==
 
-1. Upload the `botdot-wp` folder to the `/wp-content/plugins/` directory, or install the plugin from the WordPress Plugin Directory.
+1. Upload the `botspot-wp` folder to the `/wp-content/plugins/` directory, or install the plugin from the WordPress Plugin Directory.
 2. Activate the plugin through the Plugins screen in WordPress.
 3. Open the BotSpot menu in the WordPress admin.
 4. Sign in to BotSpot and create an access key.
@@ -106,6 +106,17 @@ Previously fetched content can be served from WordPress transients while cache e
 
 Yes. Each subsite connects to BotSpot independently with its own access key. Network administrators cannot configure BotSpot network-wide; each subsite administrator manages their own connection and settings.
 
+== Source and Build ==
+
+The plugin source and build instructions are maintained in the public BotSpot WordPress plugin repository. The submitted ZIP is generated from the source tree by running `TARGET=production ./build.sh`.
+
+The production build includes Strauss-prefixed runtime copies of these Composer dependencies under `vendor/botspot-prefixed/`:
+
+* `jaybizzle/crawler-detect` - MIT License.
+* `monperrus/crawler-user-agents` - MIT License.
+
+Third-party license notices are included in `THIRD-PARTY-LICENSES.txt` and preserved in the packaged vendor directories.
+
 == Screenshots ==
 
 1. Connect tab for entering a BotSpot access key.
@@ -113,6 +124,15 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.0.7 =
+
+* Uses production BotSpot API URLs by default for WordPress.org submission builds while still allowing explicit staging overrides for development.
+* Fixes analytics API configuration so aggregate impression flushes and admin impression cards use the build-time BotSpot API endpoint.
+* Preserves third-party MIT license notices for prefixed runtime dependencies in the production package.
+* Improves uninstall cleanup for current BotSpot options, transients, and analytics metadata.
+* Removes automatic remote webhook calls from activation and deactivation; remote registration remains part of the explicit Connect flow.
+* Hardens admin analytics rendering by escaping API-derived values before inserting them into the page.
 
 = 3.0.0 =
 
@@ -165,6 +185,6 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Upgrade Notice ==
 
-= 2.9.2 =
+= 3.0.7 =
 
-Update to the latest stable release for current sync, rendering, cache, and diagnostic behavior.
+Update for WordPress.org submission readiness, production API defaults, analytics endpoint fixes, cleaner uninstall behavior, and packaged third-party license notices.

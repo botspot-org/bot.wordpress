@@ -217,7 +217,7 @@ class BotSpot_WP_Analytics_Flusher
      */
     private static function send_batch($batch_id, $items)
     {
-        $api_url = BotSpot_WP_Options::get('api_url', '');
+        $api_url = BotSpot_WP_Options::get_locus_api_url();
         $api_key = BotSpot_WP_Options::get('api_key', '');
         if (empty($api_url) || empty($api_key)) {
             return false;

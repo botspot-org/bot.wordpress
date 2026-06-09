@@ -1321,7 +1321,7 @@ class BotSpot_WP_Admin
             BotSpot_WP_Analytics_Flusher::flush(false);
         }
 
-        $api_url = BotSpot_WP_Options::get('api_url', '');
+        $api_url = BotSpot_WP_Options::get_locus_api_url();
         $api_key = BotSpot_WP_Options::get('api_key', '');
         if (empty($api_url) || empty($api_key)) {
             wp_send_json_error(['message' => 'API not configured']);
