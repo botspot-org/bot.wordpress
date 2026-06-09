@@ -229,10 +229,12 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <p class="bsa-settings-row__desc"><?php _e("Automatically push content changes to bot.spot on save.", "botspot-wp"); ?></p>
             </div>
             <div class="bsa-settings-row__body">
-                <label class="bsa-check">
-                    <input type="checkbox" name="botspot_wp_auto_sync_enabled" value="1" <?php checked($bsa_auto_sync); ?> />
-                    <span><?php _e("Enable auto-sync", "botspot-wp"); ?></span>
-                </label>
+                <div class="bsa-check-list">
+                    <label class="bsa-check">
+                        <input type="checkbox" name="botspot_wp_auto_sync_enabled" value="1" <?php checked($bsa_auto_sync); ?> />
+                        <span><?php _e("Enable auto-sync", "botspot-wp"); ?></span>
+                    </label>
+                </div>
             </div>
         </section>
 

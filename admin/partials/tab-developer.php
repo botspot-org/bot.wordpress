@@ -5,6 +5,11 @@
  * @package BotSpot_WP
  * @subpackage BotSpot_WP/admin/partials
  * @since 2.2.0
+ *
+ * Variables from parent partial:
+ * - $bsa_is_connected (bool)
+ * - $bsa_webhook_id (string)
+ * - $bsa_tenant_id (string)
  */
 
 if (!defined("WPINC")) {
@@ -104,6 +109,24 @@ $bsa_cache_ttl = (int) BotSpot_WP_Options::get("cache_ttl", 3600);
                         <span class="bsa-ttl-label"><?php _e("seconds", "botspot-wp"); ?></span>
                     </div>
                     <p class="bsa-ttl-help"><?php _e("How long frontend output is cached. Default: 3600.", "botspot-wp"); ?></p>
+                </div>
+
+                <div class="bsa-sidebar-section">
+                    <h4 class="bsa-sidebar-section__title"><?php _e("Connection IDs", "botspot-wp"); ?></h4>
+                    <?php if ($bsa_is_connected && !empty($bsa_tenant_id)): ?>
+                    <div class="bsa-connection-info bsa-connection-info--sidebar">
+                        <div class="bsa-kv">
+                            <span class="bsa-kv__key"><?php _e("Webhook ID", "botspot-wp"); ?></span>
+                            <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_webhook_id); ?></code>
+                        </div>
+                        <div class="bsa-kv">
+                            <span class="bsa-kv__key"><?php _e("Tenant ID", "botspot-wp"); ?></span>
+                            <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_tenant_id); ?></code>
+                        </div>
+                    </div>
+                    <?php else: ?>
+                    <p class="bsa-ttl-help"><?php _e("Connect this site to view assigned IDs.", "botspot-wp"); ?></p>
+                    <?php endif; ?>
                 </div>
 
                 <div class="bsa-sidebar-section bsa-sidebar-section--env">
