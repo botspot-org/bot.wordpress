@@ -26,8 +26,8 @@ $bsa_sync_sensitivity = BotSpot_WP_Options::get("sync_sensitivity", "medium");
 $bsa_appendix_enabled = (bool) BotSpot_WP_Options::get("appendix_enabled", true);
 $bsa_jsonld_enabled = (bool) BotSpot_WP_Options::get("jsonld_enabled", true);
 
-// Platform-managed by default when connected - settings controlled from bot.spot dashboard
-$bsa_is_platform_managed = !empty(BotSpot_WP_Options::get("webhook_id"));
+$bsa_platform_settings = get_option("botspot_wp_platform_settings", []);
+$bsa_is_platform_managed = !empty($bsa_platform_settings);
 $bsa_dashboard_url = "https://platform.bot.spot";
 
 // Custom post types (exclude built-ins we handle explicitly)
