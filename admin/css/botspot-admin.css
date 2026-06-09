@@ -9,17 +9,17 @@
 /* ============================================================
    HIDE WP CHROME within our settings page
    ============================================================ */
-.toplevel_page_botdot-wp .wrap > h1:first-of-type,
-.toplevel_page_botdot-wp .wrap > .notice,
-.toplevel_page_botdot-wp #wpbody-content > .notice {
+.toplevel_page_botspot-wp .wrap > h1:first-of-type,
+.toplevel_page_botspot-wp .wrap > .notice,
+.toplevel_page_botspot-wp #wpbody-content > .notice {
     display: none !important;
 }
 
-.toplevel_page_botdot-wp #wpbody-content {
+.toplevel_page_botspot-wp #wpbody-content {
     padding-top: 0;
 }
 
-.toplevel_page_botdot-wp .wrap {
+.toplevel_page_botspot-wp .wrap {
     margin: 0;
     padding: 0;
 }
@@ -1030,14 +1030,11 @@
     left: 50% !important;
     width: 10px !important;
     height: 10px !important;
-    margin-top: -5px !important;
-    margin-left: -5px !important;
-    display: block !important;
     z-index: 2 !important;
     background: var(--bsa-mint) !important;
     box-shadow: 0 0 8px rgba(209, 254, 246, 0.7) !important;
     border: none !important;
-    transform: none !important;
+    transform: translate(-50%, -50%) !important;
 }
 
 .botspot-admin-root input[type="radio"]:checked {
@@ -1057,14 +1054,11 @@
     left: 50% !important;
     width: 10px !important;
     height: 10px !important;
-    margin-top: -5px !important;
-    margin-left: -5px !important;
-    display: block !important;
     z-index: 2 !important;
     background: var(--bsa-mint) !important;
     box-shadow: 0 0 8px rgba(209, 254, 246, 0.7) !important;
     border: none !important;
-    transform: none !important;
+    transform: translate(-50%, -50%) !important;
 }
 
 /* Connected status pill shown inline on the Connect tab */
@@ -2089,9 +2083,7 @@
    ============================================================ */
 
 body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"],
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"],
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"],
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"] {
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"] {
     all: unset !important;
     box-sizing: border-box !important;
     appearance: none !important;
@@ -2122,11 +2114,7 @@ body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"] {
 body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"]::before,
 body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"]:checked::before,
 body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]::before,
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:checked::before,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]::before,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:checked::before,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]::before,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:checked::before {
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:checked::before {
     content: "" !important;
     display: none !important;
     width: 0 !important;
@@ -2139,52 +2127,42 @@ body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:checked::be
 }
 
 /* Unchecked state */
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"]:not(.bsa-toggle):not(:checked)::after,
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:not(:checked)::after,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:not(.bsa-toggle):not(:checked)::after,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:not(:checked)::after {
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"]:not(:checked)::after,
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:not(:checked)::after {
     content: none !important;
     display: none !important;
 }
 
 /* Checked state: custom filled square, no tick */
 body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle),
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:checked,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle),
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:checked {
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:checked {
     border-color: rgba(209, 254, 246, 0.7) !important;
     background: transparent !important;
     box-shadow: 0 0 10px rgba(209, 254, 246, 0.25) !important;
 }
 
 body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle)::after,
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:checked::after,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"]:checked:not(.bsa-toggle)::after,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="radio"]:checked::after {
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="radio"]:checked::after {
     content: "" !important;
     position: absolute !important;
     top: 50% !important;
     left: 50% !important;
     width: 10px !important;
     height: 10px !important;
-    margin-top: -5px !important;
-    margin-left: -5px !important;
     display: block !important;
     background: var(--bsa-mint) !important;
     box-shadow: 0 0 8px rgba(209, 254, 246, 0.8) !important;
-    transform: none !important;
+    transform: translate(-50%, -50%) !important;
     border: 0 !important;
 }
 
 /* Keep toggle styling separate */
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle {
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle {
     width: 28px !important;
     height: 14px !important;
 }
 
-body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle::before,
-body.toplevel_page_botdot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle::before {
+body.toplevel_page_botspot-wp .botspot-admin-root input[type="checkbox"].bsa-toggle::before {
     display: none !important;
     content: "" !important;
 }
