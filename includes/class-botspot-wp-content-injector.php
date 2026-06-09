@@ -1129,24 +1129,56 @@ class BotSpot_WP_Content_Injector
         $allowed = wp_kses_allowed_html("post");
 
         // Appendix-specific elements
-        $allowed["section"] = ["id" => true, "class" => true, "role" => true, "aria-label" => true];
+        $allowed["section"] = ["id" => true, "class" => true, "role" => true, "aria-label" => true, "style" => true];
+        $allowed["style"] = ["id" => true, "type" => true];
         $allowed["details"] = ["class" => true, "open" => true, "id" => true, "data-type" => true];
-        $allowed["summary"] = ["class" => true, "id" => true];
+        $allowed["summary"] = ["class" => true, "id" => true, "data-icon-position" => true];
+        $allowed["span"] = ["class" => true, "data-shape" => true, "aria-hidden" => true, "style" => true];
+        $allowed["p"] = ["class" => true, "style" => true];
+        $allowed["div"] = ["class" => true, "id" => true, "role" => true, "aria-labelledby" => true, "style" => true];
+        $allowed["ul"] = ["class" => true];
+        $allowed["li"] = ["class" => true];
+        $allowed["strong"] = ["class" => true];
         $allowed["dl"] = ["class" => true, "id" => true];
         $allowed["dt"] = ["class" => true, "id" => true];
         $allowed["dd"] = ["class" => true, "id" => true];
         $allowed["svg"] = ["width" => true, "height" => true, "viewbox" => true, "fill" => true, "xmlns" => true, "class" => true];
         $allowed["path"] = ["d" => true, "stroke" => true, "stroke-width" => true, "stroke-linecap" => true, "stroke-linejoin" => true, "fill" => true];
-        // Remote appendix HTML should rely on the plugin's bundled stylesheet,
-        // not service-supplied inline CSS or style tags.
-        unset($allowed["style"]);
-        foreach ($allowed as $tag => $attrs) {
-            if (is_array($attrs) && isset($allowed[$tag]["style"])) {
-                unset($allowed[$tag]["style"]);
-            }
-        }
 
-        return wp_kses($html, $allowed);
+        $allow_appendix_css = function ($properties) {
+            return array_merge($properties, [
+                "--ba-bg",
+                "--ba-text",
+                "--ba-border-w",
+                "--ba-max-w",
+                "--ba-radius",
+                "--ba-master-height",
+                "--ba-master-py",
+                "--ba-padding-x",
+                "--ba-font",
+                "--ba-base-size",
+                "--ba-master-size",
+                "--ba-master-weight",
+                "--ba-master-tracking",
+                "--ba-item-size",
+                "--ba-item-weight",
+                "--ba-content-size",
+                "--ba-icon-size",
+                "--ba-divider",
+                "flex",
+                "flex-basis",
+                "flex-grow",
+                "flex-shrink",
+                "min-width",
+                "text-align",
+            ]);
+        };
+
+        add_filter("safe_style_css", $allow_appendix_css);
+        $sanitized = wp_kses($html, $allowed);
+        remove_filter("safe_style_css", $allow_appendix_css);
+
+        return $sanitized;
     }
 
     /**

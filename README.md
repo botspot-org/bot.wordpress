@@ -161,7 +161,7 @@ define('WP_DEBUG_DISPLAY', false);
 ## Changelog
 
 
-### 3.1.0
+### 3.1.1
 - **Submission readiness**: Hardened production packaging, metadata, third-party license notices, JSON-LD encoding, sync authorization, SSL verification, analytics rendering, lifecycle remote-call behavior, and uninstall cleanup for WordPress.org review.
 
 See `readme.txt` for WordPress.org release notes.
