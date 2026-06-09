@@ -105,10 +105,10 @@ class BotSpot_WP_Public
         }
 
         vc_map([
-            "name" => __("bot.spot Appendix", "botspot-wp"),
-            "base" => "botdot_appendix",
-            "description" => __("Insert AI-discoverable appendix content", "botspot-wp"),
-            "category" => __("Content", "botspot-wp"),
+            "name" => __("bot.spot Appendix", "botspot"),
+            "base" => "botspot_appendix",
+            "description" => __("Insert AI-discoverable appendix content", "botspot"),
+            "category" => __("Content", "botspot"),
             "icon" => "icon-wpb-botspot",
             "params" => [],
         ]);
@@ -142,7 +142,7 @@ class BotSpot_WP_Public
      */
     public function register_tinymce_button($buttons)
     {
-        array_push($buttons, "botdot_appendix");
+        array_push($buttons, "botspot_appendix");
         return $buttons;
     }
 
@@ -155,7 +155,7 @@ class BotSpot_WP_Public
      */
     public function register_tinymce_plugin($plugins)
     {
-        $plugins["botdot_appendix"] = BOTSPOT_WP_PLUGIN_URL . "public/js/botspot-wp-tinymce.js";
+        $plugins["botspot_appendix"] = BOTSPOT_WP_PLUGIN_URL . "public/js/botspot-wp-tinymce.js";
         return $plugins;
     }
 
@@ -171,6 +171,11 @@ class BotSpot_WP_Public
         }
 
         register_block_type("botspot-wp/appendix", [
+            "render_callback" => [$this, "render_appendix_shortcode"],
+            "attributes" => [],
+        ]);
+
+        register_block_type("botdot-wp/appendix", [
             "render_callback" => [$this, "render_appendix_shortcode"],
             "attributes" => [],
         ]);

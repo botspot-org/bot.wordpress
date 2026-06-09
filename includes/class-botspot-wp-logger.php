@@ -58,9 +58,11 @@ class BotSpot_WP_Logger
     public static function log_error($message, $context = [])
     {
         // ALWAYS log errors to PHP error_log - errors should never be silent
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional plugin error logging, also surfaced in the admin log viewer.
         error_log("[BotSpot WP] ERROR: " . $message);
         if (!empty($context)) {
-            error_log("[BotSpot WP] Context: " . print_r($context, true));
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional plugin error logging, also surfaced in the admin log viewer.
+            error_log("[BotSpot WP] Context: " . wp_json_encode($context));
         }
 
         // Store in transient for admin display
@@ -82,9 +84,11 @@ class BotSpot_WP_Logger
         }
 
         // Write to PHP error_log
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging is gated by the plugin's debug setting.
         error_log("[BotSpot WP] DEBUG: " . $message);
         if (!empty($context)) {
-            error_log("[BotSpot WP] Context: " . print_r($context, true));
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging is gated by the plugin's debug setting.
+            error_log("[BotSpot WP] Context: " . wp_json_encode($context));
         }
 
         // Store in transient for display in plugin dashboard
@@ -104,9 +108,11 @@ class BotSpot_WP_Logger
     public static function log_warning($message, $context = [])
     {
         // ALWAYS log warnings to PHP error_log - warnings should never be silent
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional plugin warning logging, also surfaced in the admin log viewer.
         error_log("[BotSpot WP] WARNING: " . $message);
         if (!empty($context)) {
-            error_log("[BotSpot WP] Context: " . print_r($context, true));
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional plugin warning logging, also surfaced in the admin log viewer.
+            error_log("[BotSpot WP] Context: " . wp_json_encode($context));
         }
 
         // Store in transient for admin display

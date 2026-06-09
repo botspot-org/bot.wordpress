@@ -201,6 +201,7 @@ class BotSpot_WP_Webhook_Handler
         } else {
             global $wpdb;
 
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Webhook invalidates plugin-owned content transients by path prefix.
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -209,6 +210,7 @@ class BotSpot_WP_Webhook_Handler
                 )
             );
 
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Webhook invalidates plugin-owned JSON-LD transients by path prefix.
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -246,7 +248,7 @@ class BotSpot_WP_Webhook_Handler
                 "X-API-Key" => $api_key,
                 "Content-Type" => "application/json",
             ],
-            "body" => json_encode([
+            "body" => wp_json_encode([
                 "url" => rest_url("botspot/v1/webhook"),
                 "events" => ["appendix.updated", "settings.updated"],
                 "name" => "WordPress: " . home_url(),
@@ -268,8 +270,8 @@ class BotSpot_WP_Webhook_Handler
             return false;
         }
 
-        update_option("botspot_wp_webhook_id", $body["id"]);
-        update_option("botspot_wp_webhook_secret", $body["secret"]);
+        BotSpot_WP_Options::set("webhook_id", $body["id"]);
+        BotSpot_WP_Options::set("webhook_secret", $body["secret"]);
 
         return true;
     }
@@ -358,7 +360,7 @@ class BotSpot_WP_Webhook_Handler
                 "X-Site-URL" => home_url(),
                 "Content-Type" => "application/json",
             ],
-            "body" => json_encode(["settings" => $local_settings]),
+            "body" => wp_json_encode(["settings" => $local_settings]),
             "timeout" => 15,
         ]);
 

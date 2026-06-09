@@ -70,7 +70,7 @@ class BotSpot_WP_Activator {
             BotSpot_WP_Options::set('jsonld_conflict_mode', 'merge');
         }
         if (!BotSpot_WP_Options::exists('injection_position')) {
-            BotSpot_WP_Options::set('injection_position', 'bottom');
+            BotSpot_WP_Options::set('injection_position', 'bottom_of_content');
         }
         if (!BotSpot_WP_Options::exists('inject_on_post_types')) {
             BotSpot_WP_Options::set('inject_on_post_types', array('post', 'page'));
@@ -93,14 +93,8 @@ class BotSpot_WP_Activator {
             wp_schedule_event(time() + 3600, 'hourly', 'botspot_flush_analytics');
         }
 
-        // Register webhook for cache invalidation (if API key is configured)
-        if (BotSpot_WP_Options::get('api_key')) {
-            require_once BOTSPOT_WP_PLUGIN_PATH . 'includes/class-botspot-wp-webhook-handler.php';
-            BotSpot_WP_Webhook_Handler::register_webhook();
-        }
-
         if (BotSpot_WP_Options::get('debug_mode')) {
-            BotSpot_WP_Logger::log_debug('BotSpot WP v3.0.0 activated.');
+            BotSpot_WP_Logger::log_debug('BotSpot WP ' . BOTSPOT_WP_VERSION . ' activated.');
         }
     }
 
@@ -117,19 +111,36 @@ class BotSpot_WP_Activator {
         }
 
         // 1. Migrate options: botdot_wp_* -> botspot_wp_*
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time activation migration reads legacy plugin-owned options.
         $old_options = $wpdb->get_results(
-            "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE 'botdot_wp_%'"
+            $wpdb->prepare(
+                "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $wpdb->esc_like('botdot_wp_') . '%'
+            )
         );
         foreach ($old_options as $opt) {
             $new_name = str_replace('botdot_wp_', 'botspot_wp_', $opt->option_name);
             if (false === get_option($new_name)) {
-                update_option($new_name, maybe_unserialize($opt->option_value));
+                $autoload = in_array($new_name, array(
+                    'botspot_wp_api_key',
+                    'botspot_wp_webhook_secret',
+                    'botspot_wp_webhook_id',
+                    'botspot_wp_connection_id',
+                    'botspot_wp_tenant_id',
+                ), true) ? false : null;
+                update_option($new_name, maybe_unserialize($opt->option_value), $autoload);
             }
         }
 
         // 2. Migrate post meta: _botdot_* -> _botspot_*
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time activation migration updates legacy plugin-owned post meta keys.
         $wpdb->query(
-            "UPDATE {$wpdb->postmeta} SET meta_key = REPLACE(meta_key, '_botdot_', '_botspot_') WHERE meta_key LIKE '_botdot_%'"
+            $wpdb->prepare(
+                "UPDATE {$wpdb->postmeta} SET meta_key = REPLACE(meta_key, %s, %s) WHERE meta_key LIKE %s",
+                '_botdot_',
+                '_botspot_',
+                $wpdb->esc_like('_botdot_') . '%'
+            )
         );
 
         update_option('botspot_wp_migrated_from_botdot', time());
