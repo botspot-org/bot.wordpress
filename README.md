@@ -68,7 +68,7 @@ Secret fields (API Key, Botspot Key, Webhook Secret) are never rendered in HTML 
 | **Debug Mode** | Enable verbose logging |
 | **Per-Page Injection** | Toggle injection per page via post meta |
 
-## Architecture
+## Architecture 
 
 ### Read Path (Content Injection)
 
