@@ -654,6 +654,33 @@
     var currentWindow = '7d';
     var initialized = false;
 
+    function escapeHtml(str) {
+        return String(str || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function safeNumber(value) {
+        var num = Number(value);
+        return Number.isFinite(num) ? num : 0;
+    }
+
+    function safeHref(value) {
+        if (!value) return "";
+        try {
+            var url = new URL(String(value), window.location.origin);
+            if (url.protocol === "http:" || url.protocol === "https:") {
+                return url.href;
+            }
+        } catch (err) {
+            return "";
+        }
+        return "";
+    }
+
     function postAjax(action, nonceKey, data) {
         var body = new URLSearchParams();
         body.append('action', action);
@@ -675,10 +702,10 @@
         if (!el) return;
         el.innerHTML =
             '<ul class="bsa-analytics__list">' +
-                '<li>Synced: <strong>' + (counts.synced || 0) + '</strong></li>' +
-                '<li>Pending: <strong>' + (counts.pending || 0) + '</strong></li>' +
-                '<li>Errors: <strong>' + (counts.error || 0) + '</strong></li>' +
-                '<li>Never synced: <strong>' + (counts.never || 0) + '</strong></li>' +
+                '<li>Synced: <strong>' + safeNumber(counts.synced) + '</strong></li>' +
+                '<li>Pending: <strong>' + safeNumber(counts.pending) + '</strong></li>' +
+                '<li>Errors: <strong>' + safeNumber(counts.error) + '</strong></li>' +
+                '<li>Never synced: <strong>' + safeNumber(counts.never) + '</strong></li>' +
             '</ul>';
     }
 
@@ -688,11 +715,11 @@
         if (!el) return;
         el.innerHTML =
             '<ul class="bsa-analytics__list">' +
-                '<li>NONE: <strong>' + (counts.NONE || 0) + '</strong></li>' +
-                '<li>TIER0: <strong>' + (counts.TIER0 || 0) + '</strong></li>' +
-                '<li>TIER1: <strong>' + (counts.TIER1 || 0) + '</strong></li>' +
-                '<li>TIER2: <strong>' + (counts.TIER2 || 0) + '</strong></li>' +
-                '<li>FULL: <strong>' + (counts.FULL || 0) + '</strong></li>' +
+                '<li>NONE: <strong>' + safeNumber(counts.NONE) + '</strong></li>' +
+                '<li>TIER0: <strong>' + safeNumber(counts.TIER0) + '</strong></li>' +
+                '<li>TIER1: <strong>' + safeNumber(counts.TIER1) + '</strong></li>' +
+                '<li>TIER2: <strong>' + safeNumber(counts.TIER2) + '</strong></li>' +
+                '<li>FULL: <strong>' + safeNumber(counts.FULL) + '</strong></li>' +
             '</ul>';
     }
 
@@ -705,15 +732,16 @@
         }
         var totals = data.totals || { all: 0, by_bot_class: {} };
         var rows = (data.by_artifact || []).map(function (a) {
-            var title = a.title || '(unknown)';
-            var link = a.permalink ? ('<a href="' + a.permalink + '" target="_blank" rel="noopener">' + title + '</a>') : title;
-            return '<tr><td>' + link + '</td><td>' + (a.total || 0) + '</td></tr>';
+            var title = escapeHtml(a.title || '(unknown)');
+            var href = safeHref(a.permalink);
+            var link = href ? ('<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener">' + title + '</a>') : title;
+            return '<tr><td>' + link + '</td><td>' + safeNumber(a.total) + '</td></tr>';
         }).join('');
         var classRows = Object.keys(totals.by_bot_class || {}).map(function (cls) {
-            return '<tr><td>' + cls + '</td><td>' + totals.by_bot_class[cls] + '</td></tr>';
+            return '<tr><td>' + escapeHtml(cls) + '</td><td>' + safeNumber(totals.by_bot_class[cls]) + '</td></tr>';
         }).join('');
         el.innerHTML =
-            '<p><strong>' + (totals.all || 0) + '</strong> total impressions (' + currentWindow + ')</p>' +
+            '<p><strong>' + safeNumber(totals.all) + '</strong> total impressions (' + escapeHtml(currentWindow) + ')</p>' +
             '<table class="bsa-analytics__table"><thead><tr><th>Bot class</th><th>Count</th></tr></thead><tbody>' + classRows + '</tbody></table>' +
             '<h4>Top content</h4>' +
             '<table class="bsa-analytics__table"><thead><tr><th>Title</th><th>Hits</th></tr></thead><tbody>' + rows + '</tbody></table>';

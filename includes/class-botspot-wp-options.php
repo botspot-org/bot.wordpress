@@ -62,6 +62,21 @@ class BotSpot_WP_Options
     ];
 
     /**
+     * Options that should never be autoloaded on every frontend request.
+     *
+     * @since 3.0.8
+     * @access private
+     * @var array
+     */
+    private static $non_autoloaded_options = [
+        "api_key",
+        "webhook_secret",
+        "webhook_id",
+        "connection_id",
+        "tenant_id",
+    ];
+
+    /**
      * Get plugin option with default fallback
      *
      * @since    0.1.0
@@ -92,7 +107,11 @@ class BotSpot_WP_Options
     {
         $value = self::sanitize_option_value($option_name, $value);
 
-        return update_option("botspot_wp_" . $option_name, $value);
+        return update_option(
+            "botspot_wp_" . $option_name,
+            $value,
+            !self::is_non_autoloaded_option($option_name)
+        );
     }
 
     /**
@@ -254,6 +273,19 @@ class BotSpot_WP_Options
     }
 
     /**
+     * Whether an option should be stored with autoload disabled.
+     *
+     * @since 3.0.8
+     * @access private
+     * @param string $option_name Option name without botspot_wp_ prefix.
+     * @return bool
+     */
+    private static function is_non_autoloaded_option($option_name)
+    {
+        return in_array($option_name, self::$non_autoloaded_options, true);
+    }
+
+    /**
      * Sanitize option value before saving
      *
      * @since    1.0.0
@@ -352,7 +384,7 @@ class BotSpot_WP_Options
         switch ($option_name) {
             case "api_key":
                 if (empty($value)) {
-                    return new WP_Error("empty_api_key", __("API key cannot be empty", "botspot-wp"));
+                    return new WP_Error("empty_api_key", __("API key cannot be empty", "botspot"));
                 }
                 break;
 
@@ -360,7 +392,7 @@ class BotSpot_WP_Options
                 if ($value < 60 || $value > 86400) {
                     return new WP_Error(
                         "invalid_cache_ttl",
-                        __("Cache TTL must be between 60 and 86400 seconds", "botspot-wp"),
+                        __("Cache TTL must be between 60 and 86400 seconds", "botspot"),
                     );
                 }
                 break;
@@ -370,7 +402,7 @@ class BotSpot_WP_Options
                 if (!is_array($value) || empty($value)) {
                     return new WP_Error(
                         "invalid_post_types",
-                        __("At least one post type must be selected", "botspot-wp"),
+                        __("At least one post type must be selected", "botspot"),
                     );
                 }
                 break;

@@ -62,8 +62,8 @@ class BotSpot_WP_Admin
     public function add_admin_menu()
     {
         add_menu_page(
-            __("bot.spot Settings", "botspot-wp"),
-            __("bot.spot", "botspot-wp"),
+            __("bot.spot Settings", "botspot"),
+            __("bot.spot", "botspot"),
             "manage_options",
             "botspot-wp",
             [$this, "display_settings_page"],
@@ -173,8 +173,8 @@ class BotSpot_WP_Admin
 
         // Localized data + nonces for all AJAX handlers the JS will call
         wp_localize_script("botspot-admin", "botspotAdmin", [
-            "ajaxurl" => admin_url("admin-ajax.php"),
-            "restUrl" => rest_url("botspot-wp/v1/"),
+            "ajaxurl" => esc_url_raw(admin_url("admin-ajax.php")),
+            "restUrl" => esc_url_raw(rest_url("botspot-wp/v1/")),
             "siteDomain" => wp_parse_url(home_url(), PHP_URL_HOST),
             "pluginVersion" => $this->version,
             "wpVersion" => get_bloginfo("version"),
@@ -196,12 +196,12 @@ class BotSpot_WP_Admin
                 "saveSettings" => wp_create_nonce("botspot_wp_save_settings"),
             ],
             "strings" => [
-                "allSaved" => __("All changes saved", "botspot-wp"),
-                "unsaved" => __("Unsaved changes", "botspot-wp"),
-                "testing" => __("Testing...", "botspot-wp"),
-                "testSuccess" => __("Connection successful", "botspot-wp"),
-                "testFailed" => __("Connection failed", "botspot-wp"),
-                "copied" => __("Copied to clipboard", "botspot-wp"),
+                "allSaved" => __("All changes saved", "botspot"),
+                "unsaved" => __("Unsaved changes", "botspot"),
+                "testing" => __("Testing...", "botspot"),
+                "testSuccess" => __("Connection successful", "botspot"),
+                "testFailed" => __("Connection failed", "botspot"),
+                "copied" => __("Copied to clipboard", "botspot"),
             ],
         ]);
     }
@@ -222,10 +222,10 @@ class BotSpot_WP_Admin
                 ?>
                 <div class="notice notice-info is-dismissible">
                     <p>
-                        <strong><?php _e("bot.spot:", "botspot-wp"); ?></strong>
-                        <?php _e("Your BotSpot settings were updated remotely.", "botspot-wp"); ?>
+                        <strong><?php esc_html_e("bot.spot:", "botspot"); ?></strong>
+                        <?php esc_html_e("Your BotSpot settings were updated remotely.", "botspot"); ?>
                         <a href="<?php echo esc_url(admin_url("admin.php?page=botspot-wp&tab=settings")); ?>">
-                            <?php _e("View Settings", "botspot-wp"); ?>
+                            <?php esc_html_e("View Settings", "botspot"); ?>
                         </a>
                     </p>
                 </div>
@@ -250,17 +250,29 @@ class BotSpot_WP_Admin
         ?>
         <div class="notice notice-<?php echo esc_attr($last_error["type"]); ?> is-dismissible">
             <p>
-                <strong><?php _e("bot.spot WP:", "botspot-wp"); ?></strong>
+                <strong><?php esc_html_e("bot.spot:", "botspot"); ?></strong>
                 <?php echo esc_html($last_error["message"]); ?>
-                <em>(<?php echo esc_html(sprintf(__("%s ago", "botspot-wp"), $time_ago)); ?>)</em>
+                <em>(<?php echo esc_html(sprintf(
+                    /* translators: %s: relative time since the last error */
+                    __("%s ago", "botspot"),
+                    $time_ago
+                )); ?>)</em>
             </p>
             <?php if (BotSpot_WP_Logger::get_error_count() > 1): ?>
                 <p>
-                    <?php printf(
-                        __('There are %d more errors. <a href="%s">View settings</a> for details.', "botspot-wp"),
-                        BotSpot_WP_Logger::get_error_count() - 1,
-                        admin_url("admin.php?page=botspot-wp"),
-                    ); ?>
+                    <?php
+                    printf(
+                        '%s',
+                        wp_kses_post(
+                            sprintf(
+                                /* translators: 1: number of additional errors, 2: settings URL */
+                                __('There are %1$d more errors. <a href="%2$s">View settings</a> for details.', "botspot"),
+                                BotSpot_WP_Logger::get_error_count() - 1,
+                                esc_url(admin_url("admin.php?page=botspot-wp"))
+                            )
+                        )
+                    );
+                    ?>
                 </p>
             <?php endif; ?>
         </div>
@@ -278,7 +290,7 @@ class BotSpot_WP_Admin
         foreach ($sync_post_types as $post_type) {
             add_meta_box(
                 "botspot-wp-sync",
-                __("bot.spot Sync", "botspot-wp"),
+                __("bot.spot Sync", "botspot"),
                 [$this, "render_sync_meta_box"],
                 $post_type,
                 "side",
@@ -301,23 +313,20 @@ class BotSpot_WP_Admin
         ?>
         <div class="botspot-sync-meta-box">
             <p>
-                <strong><?php _e("Status:", "botspot-wp"); ?></strong>
+                <strong><?php esc_html_e("Status:", "botspot"); ?></strong>
                 <span style="color: <?php echo esc_attr(
                     $status_color,
                 ); ?>;"><?php echo esc_html($status_label); ?></span>
             </p>
             <?php if ($status["last_synced_at"]): ?>
                 <p>
-                    <strong><?php _e("Last synced:", "botspot-wp"); ?></strong>
-                    <?php echo esc_html(human_time_diff(strtotime($status["last_synced_at"]), time())); ?> <?php _e(
-     "ago",
-     "botspot-wp",
- ); ?>
+                    <strong><?php esc_html_e("Last synced:", "botspot"); ?></strong>
+                    <?php echo esc_html(human_time_diff(strtotime($status["last_synced_at"]), time())); ?> <?php esc_html_e("ago", "botspot"); ?>
                 </p>
             <?php endif; ?>
             <p>
                 <button type="button" class="button botspot-sync-now" data-post-id="<?php echo esc_attr($post->ID); ?>">
-                    <?php _e("Sync Now", "botspot-wp"); ?>
+                    <?php esc_html_e("Sync Now", "botspot"); ?>
                 </button>
                 <span class="botspot-sync-result"></span>
             </p>
@@ -328,34 +337,28 @@ class BotSpot_WP_Admin
                 e.preventDefault();
                 var btn = $(this);
                 var result = btn.siblings('.botspot-sync-result');
-                btn.prop('disabled', true).text('<?php _e("Syncing...", "botspot-wp"); ?>');
+                btn.prop('disabled', true).text('<?php echo esc_js(__("Syncing...", "botspot")); ?>');
                 result.html('');
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
                     data: {
                         action: 'botspot_wp_manual_sync',
-                        nonce: '<?php echo wp_create_nonce("botspot_wp_manual_sync"); ?>',
+                        nonce: '<?php echo esc_js(wp_create_nonce("botspot_wp_manual_sync")); ?>',
                         post_id: btn.data('post-id')
                     },
                     success: function(response) {
                         if (response.success) {
                             result.html('<span style="color: green;">&#10003; ' + response.data.message + '</span>');
                         } else {
-                            result.html('<span style="color: red;">&#10007; ' + (response.data.message || '<?php _e(
-                                "Sync failed",
-                                "botspot-wp",
-                            ); ?>') + '</span>');
+                            result.html('<span style="color: red;">&#10007; ' + (response.data.message || '<?php echo esc_js(__("Sync failed", "botspot")); ?>') + '</span>');
                         }
                     },
                     error: function() {
-                        result.html('<span style="color: red;">&#10007; <?php _e(
-                            "Request failed",
-                            "botspot-wp",
-                        ); ?></span>');
+                        result.html('<span style="color: red;">&#10007; <?php echo esc_js(__("Request failed", "botspot")); ?></span>');
                     },
                     complete: function() {
-                        btn.prop('disabled', false).text('<?php _e("Sync Now", "botspot-wp"); ?>');
+                        btn.prop('disabled', false).text('<?php echo esc_js(__("Sync Now", "botspot")); ?>');
                     }
                 });
             });
@@ -373,7 +376,7 @@ class BotSpot_WP_Admin
      */
     public function add_sync_column($columns)
     {
-        $columns["botspot_sync"] = __("bot.spot", "botspot-wp");
+        $columns["botspot_sync"] = __("bot.spot", "botspot");
         return $columns;
     }
 
@@ -405,9 +408,9 @@ class BotSpot_WP_Admin
                 "enriched" => "#00a32a",
             ];
             $enrichment_labels = [
-                "indexed" => __("Indexed", "botspot-wp"),
-                "enriching" => __("Enriching", "botspot-wp"),
-                "enriched" => __("Enriched", "botspot-wp"),
+                "indexed" => __("Indexed", "botspot"),
+                "enriching" => __("Enriching", "botspot"),
+                "enriched" => __("Enriched", "botspot"),
             ];
             $color = $enrichment_colors[$enrichment_status] ?? "#999";
             $label = $enrichment_labels[$enrichment_status] ?? ucfirst($enrichment_status);
@@ -420,7 +423,7 @@ class BotSpot_WP_Admin
         $label = $this->get_sync_status_label($status["status"]);
         $icon = $this->get_sync_status_icon($status["status"]);
 
-        echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">' . $icon . "</span>";
+        echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">' . wp_kses_post($icon) . "</span>";
     }
 
     /**
@@ -432,7 +435,7 @@ class BotSpot_WP_Admin
      */
     public function add_bulk_sync_action($actions)
     {
-        $actions["botspot_sync"] = __("Sync with bot.spot", "botspot-wp");
+        $actions["botspot_sync"] = __("Sync with bot.spot", "botspot");
         return $actions;
     }
 
@@ -451,8 +454,17 @@ class BotSpot_WP_Admin
             return $redirect_to;
         }
 
+        if (!current_user_can("manage_options")) {
+            return add_query_arg("botspot_sync_error", "forbidden", $redirect_to);
+        }
+
         $synced = 0;
         foreach ($post_ids as $post_id) {
+            $post_id = absint($post_id);
+            $post = $post_id ? get_post($post_id) : null;
+            if (!$post || !current_user_can("edit_post", $post_id) || !BotSpot_WP_Sync::can_sync_post($post)) {
+                continue;
+            }
             if (BotSpot_WP_Sync::manual_sync($post_id)) {
                 $synced++;
             }
@@ -473,7 +485,7 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_test_connection", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
@@ -491,14 +503,14 @@ class BotSpot_WP_Admin
             wp_send_json_success([
                 "message" => isset($result["message"])
                     ? $result["message"]
-                    : __("Connected to bot.spot successfully.", "botspot-wp"),
+                    : __("Connected to bot.spot successfully.", "botspot"),
                 "details" => ["locus_core" => $result],
             ]);
         } else {
             wp_send_json_error([
                 "message" => isset($result["message"])
                     ? $result["message"]
-                    : __("Connection failed.", "botspot-wp"),
+                    : __("Connection failed.", "botspot"),
                 "details" => ["locus_core" => $result],
             ]);
         }
@@ -514,7 +526,7 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_clear_errors", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
@@ -532,23 +544,29 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_manual_sync", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
-        $post_id = isset($_POST["post_id"]) ? absint($_POST["post_id"]) : 0;
+        $post_id = isset($_POST["post_id"]) ? absint(wp_unslash($_POST["post_id"])) : 0;
 
         if (!$post_id) {
-            wp_send_json_error(["message" => __("Invalid post ID", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Invalid post ID", "botspot")]);
+            return;
+        }
+
+        $post = get_post($post_id);
+        if (!$post || !current_user_can("edit_post", $post_id) || !BotSpot_WP_Sync::can_sync_post($post)) {
+            wp_send_json_error(["message" => __("This post is not eligible for BotSpot sync.", "botspot")]);
             return;
         }
 
         $result = BotSpot_WP_Sync::manual_sync($post_id);
 
         if ($result) {
-            wp_send_json_success(["message" => __("Synced successfully", "botspot-wp")]);
+            wp_send_json_success(["message" => __("Synced successfully", "botspot")]);
         } else {
-            wp_send_json_error(["message" => __("Sync failed. Check error log for details.", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Sync failed. Check error log for details.", "botspot")]);
         }
     }
 
@@ -566,10 +584,12 @@ class BotSpot_WP_Admin
      */
     private function maybe_save_inline_api_key($reset_connection = false)
     {
-        if (empty($_POST["api_key"])) {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This helper is only called by AJAX handlers after check_ajax_referer() and capability checks.
+        $submitted_key = isset($_POST["api_key"]) ? sanitize_text_field(wp_unslash($_POST["api_key"])) : "";
+        if ($submitted_key === "") {
             return;
         }
-        $submitted = sanitize_text_field(wp_unslash($_POST["api_key"]));
+        $submitted = $submitted_key;
         if (strpos($submitted, "sk_") !== 0) {
             return;
         }
@@ -621,7 +641,7 @@ class BotSpot_WP_Admin
             add_settings_error(
                 "botspot_wp_api_key",
                 "botspot_wp_api_key_changed",
-                __("Access key changed. Previous connection has been disconnected. Please re-connect.", "botspot-wp"),
+                __("Access key changed. Previous connection has been disconnected. Please re-connect.", "botspot"),
                 "warning"
             );
         }
@@ -703,7 +723,7 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_register_connection", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
@@ -715,7 +735,7 @@ class BotSpot_WP_Admin
 
         $api_key = BotSpot_WP_Options::get("api_key");
         if (empty($api_key)) {
-            wp_send_json_error(["message" => __("Please enter an access key.", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Please enter an access key.", "botspot")]);
             return;
         }
 
@@ -744,7 +764,8 @@ class BotSpot_WP_Admin
         if (is_wp_error($response)) {
             wp_send_json_error([
                 "message" => sprintf(
-                    __("Connection failed: %s", "botspot-wp"),
+                    /* translators: %s: connection error message */
+                    __("Connection failed: %s", "botspot"),
                     $response->get_error_message()
                 ),
             ]);
@@ -761,8 +782,12 @@ class BotSpot_WP_Admin
             // Friendly copy for auth failures — the most common cause of
             // webhook registration failing is a wrong / truncated key.
             $friendly = ($status_code === 401 || $status_code === 403)
-                ? __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botspot-wp")
-                : sprintf(__("Connection failed: %s", "botspot-wp"), $error_msg);
+                ? __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botspot")
+                : sprintf(
+                    /* translators: %s: connection error message */
+                    __("Connection failed: %s", "botspot"),
+                    $error_msg
+                );
             wp_send_json_error(["message" => $friendly]);
             return;
         }
@@ -785,7 +810,7 @@ class BotSpot_WP_Admin
         BotSpot_WP_Sync::bulk_sync();
 
         wp_send_json_success([
-            "message" => __("Connected successfully.", "botspot-wp"),
+            "message" => __("Connected successfully.", "botspot"),
             "connection_id" => isset($body["id"]) ? $body["id"] : "",
         ]);
     }
@@ -801,14 +826,14 @@ class BotSpot_WP_Admin
     {
         switch ($status) {
             case "synced":
-                return __("Synced", "botspot-wp");
+                return __("Synced", "botspot");
             case "pending":
-                return __("Pending", "botspot-wp");
+                return __("Pending", "botspot");
             case "error":
-                return __("Error", "botspot-wp");
+                return __("Error", "botspot");
             case "never":
             default:
-                return __("Never synced", "botspot-wp");
+                return __("Never synced", "botspot");
         }
     }
 
@@ -869,11 +894,11 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_get_logs", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
-        $level_filter = isset($_POST["level"]) ? sanitize_text_field($_POST["level"]) : "all";
+        $level_filter = isset($_POST["level"]) ? sanitize_text_field(wp_unslash($_POST["level"])) : "all";
         $entries = BotSpot_WP_Logger::get_logs_for_viewer($level_filter);
 
         wp_send_json_success([
@@ -899,7 +924,7 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_get_status", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
@@ -928,14 +953,14 @@ class BotSpot_WP_Admin
         if (empty($api_key)) {
             $connection = [
                 "status" => "error",
-                "label" => __("No access key", "botspot-wp"),
-                "detail" => __("Paste your bot.spot access key on the Connect tab.", "botspot-wp"),
+                "label" => __("No access key", "botspot"),
+                "detail" => __("Paste your bot.spot access key on the Connect tab.", "botspot"),
             ];
         } elseif (empty($connection_id)) {
             $connection = [
                 "status" => "warn",
-                "label" => __("Not registered", "botspot-wp"),
-                "detail" => __("Access key present but site is not yet registered with bot.spot.", "botspot-wp"),
+                "label" => __("Not registered", "botspot"),
+                "detail" => __("Access key present but site is not yet registered with bot.spot.", "botspot"),
             ];
         } else {
             // Quick health probe via content fetcher (has its own short timeout)
@@ -943,8 +968,8 @@ class BotSpot_WP_Admin
             $connection = [
                 "status" => !empty($probe["success"]) ? "ok" : "error",
                 "label" => !empty($probe["success"])
-                    ? __("Connected", "botspot-wp")
-                    : __("Unreachable", "botspot-wp"),
+                    ? __("Connected", "botspot")
+                    : __("Unreachable", "botspot"),
                 "detail" => isset($probe["message"]) ? (string) $probe["message"] : "",
             ];
         }
@@ -988,27 +1013,28 @@ class BotSpot_WP_Admin
             $sync = [
                 "status" => empty($recent_errors) ? "ok" : "warn",
                 "label" => empty($recent_errors)
-                    ? __("Sync healthy", "botspot-wp")
-                    : __("Sync has recent errors", "botspot-wp"),
-                "detail" => __("Last successful sync within 24 hours.", "botspot-wp"),
+                    ? __("Sync healthy", "botspot")
+                    : __("Sync has recent errors", "botspot"),
+                "detail" => __("Last successful sync within 24 hours.", "botspot"),
             ];
         } elseif (!empty($recent_errors)) {
             $sync = [
                 "status" => "error",
-                "label" => __("Sync failing", "botspot-wp"),
-                "detail" => __("Recent sync attempts have errored.", "botspot-wp"),
+                "label" => __("Sync failing", "botspot"),
+                "detail" => __("Recent sync attempts have errored.", "botspot"),
             ];
         } else {
             $sync = [
                 "status" => "ok",
-                "label" => __("No recent sync", "botspot-wp"),
-                "detail" => __("No posts synced in the last 24 hours.", "botspot-wp"),
+                "label" => __("No recent sync", "botspot"),
+                "detail" => __("No posts synced in the last 24 hours.", "botspot"),
             ];
         }
 
         // ---------- Runtime ----------
         // Presence of any fetcher transient indicates appendix was served recently.
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Counts plugin-owned transients for an admin-only status snapshot.
         $fetcher_hits = (int) $wpdb->get_var(
             $wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s",
@@ -1018,18 +1044,18 @@ class BotSpot_WP_Admin
         if ($fetcher_hits > 0) {
             $runtime = [
                 "status" => "ok",
-                "label" => __("Runtime active", "botspot-wp"),
+                "label" => __("Runtime active", "botspot"),
                 "detail" => sprintf(
                     /* translators: %d: cached entries */
-                    _n("%d cached appendix entry.", "%d cached appendix entries.", $fetcher_hits, "botspot-wp"),
+                    _n("%d cached appendix entry.", "%d cached appendix entries.", $fetcher_hits, "botspot"),
                     $fetcher_hits
                 ),
             ];
         } else {
             $runtime = [
                 "status" => "ok",
-                "label" => __("Runtime idle", "botspot-wp"),
-                "detail" => __("No frontend requests have cached appendix content yet.", "botspot-wp"),
+                "label" => __("Runtime idle", "botspot"),
+                "detail" => __("No frontend requests have cached appendix content yet.", "botspot"),
             ];
         }
 
@@ -1055,7 +1081,7 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_force_resync", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
@@ -1070,7 +1096,7 @@ class BotSpot_WP_Admin
         if (empty($post_ids)) {
             wp_send_json_success([
                 "queued" => 0,
-                "message" => __("No posts to sync.", "botspot-wp"),
+                "message" => __("No posts to sync.", "botspot"),
             ]);
             return;
         }
@@ -1090,7 +1116,7 @@ class BotSpot_WP_Admin
 
         if ($result === false) {
             wp_send_json_error([
-                "message" => __("Sync failed - check API key configuration.", "botspot-wp"),
+                "message" => __("Sync failed - check API key configuration.", "botspot"),
             ]);
             return;
         }
@@ -1101,7 +1127,7 @@ class BotSpot_WP_Admin
             "failed" => $result["failed"] ?? 0,
             "message" => sprintf(
                 /* translators: 1: number of posts synced */
-                __("Resync complete: %d post(s) synced.", "botspot-wp"),
+                __("Resync complete: %d post(s) synced.", "botspot"),
                 $result["processed"] ?? 0
             ),
         ]);
@@ -1152,7 +1178,7 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_clear_cache", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
@@ -1166,7 +1192,7 @@ class BotSpot_WP_Admin
                     "Cleared %d cached entry and purged external page caches.",
                     "Cleared %d cached entries and purged external page caches.",
                     max(0, $deleted),
-                    "botspot-wp"
+                    "botspot"
                 ),
                 max(0, $deleted)
             ),
@@ -1186,15 +1212,23 @@ class BotSpot_WP_Admin
         check_ajax_referer("botspot_wp_save_settings", "nonce");
 
         if (!current_user_can("manage_options")) {
-            wp_send_json_error(["message" => __("Permission denied", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Permission denied", "botspot")]);
             return;
         }
 
-        $settings = isset($_POST["settings"]) ? $_POST["settings"] : [];
+        if (!isset($_POST["settings"])) {
+            $settings = [];
+        } else {
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized recursively below after confirming the payload is an array.
+            $settings = wp_unslash($_POST["settings"]);
+        }
+
         if (!is_array($settings)) {
-            wp_send_json_error(["message" => __("Invalid settings data", "botspot-wp")]);
+            wp_send_json_error(["message" => __("Invalid settings data", "botspot")]);
             return;
         }
+
+        $settings = map_deep($settings, "sanitize_text_field");
 
         // Map of setting keys to their sanitizers
         $sanitizers = [
@@ -1233,7 +1267,7 @@ class BotSpot_WP_Admin
 
         wp_send_json_success([
             "saved" => $saved,
-            "message" => __("Settings saved.", "botspot-wp"),
+            "message" => __("Settings saved.", "botspot"),
         ]);
     }
 
@@ -1244,15 +1278,19 @@ class BotSpot_WP_Admin
     {
         check_ajax_referer('botspot_wp_get_sync_health', 'nonce');
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden']);
+            wp_send_json_error(['message' => __('Permission denied', 'botspot')]);
         }
 
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Admin-only aggregate over plugin-owned sync status post meta.
         $rows = $wpdb->get_results(
-            "SELECT meta_value AS status, COUNT(*) AS n
+            $wpdb->prepare(
+                "SELECT meta_value AS status, COUNT(*) AS n
              FROM {$wpdb->postmeta}
-             WHERE meta_key = '_botspot_sync_status'
+             WHERE meta_key = %s
              GROUP BY meta_value",
+                '_botspot_sync_status'
+            ),
             ARRAY_A
         );
 
@@ -1272,15 +1310,19 @@ class BotSpot_WP_Admin
     {
         check_ajax_referer('botspot_wp_get_enrichment_lifecycle', 'nonce');
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden']);
+            wp_send_json_error(['message' => __('Permission denied', 'botspot')]);
         }
 
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Admin-only aggregate over plugin-owned enrichment tier post meta.
         $rows = $wpdb->get_results(
-            "SELECT meta_value AS tier, COUNT(*) AS n
+            $wpdb->prepare(
+                "SELECT meta_value AS tier, COUNT(*) AS n
              FROM {$wpdb->postmeta}
-             WHERE meta_key = '_botspot_enrichment_tier'
+             WHERE meta_key = %s
              GROUP BY meta_value",
+                '_botspot_enrichment_tier'
+            ),
             ARRAY_A
         );
 
@@ -1302,10 +1344,10 @@ class BotSpot_WP_Admin
     {
         check_ajax_referer('botspot_wp_get_impressions', 'nonce');
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden']);
+            wp_send_json_error(['message' => __('Permission denied', 'botspot')]);
         }
 
-        $window = isset($_POST['window']) ? sanitize_text_field($_POST['window']) : '7d';
+        $window = isset($_POST['window']) ? sanitize_text_field(wp_unslash($_POST['window'])) : '7d';
         if (!in_array($window, ['24h', '7d', '30d'], true)) {
             $window = '7d';
         }
@@ -1321,12 +1363,12 @@ class BotSpot_WP_Admin
             BotSpot_WP_Analytics_Flusher::flush(false);
         }
 
-        $api_url = BotSpot_WP_Options::get('api_url', '');
         $api_key = BotSpot_WP_Options::get('api_key', '');
-        if (empty($api_url) || empty($api_key)) {
-            wp_send_json_error(['message' => 'API not configured']);
+        if (empty($api_key)) {
+            wp_send_json_error(['message' => __('API not configured', 'botspot')]);
         }
 
+        $api_url = BotSpot_WP_Options::get_locus_api_url();
         $url = rtrim($api_url, '/') . '/api/v1/analytics/impressions?since=' . $window . '&limit=10';
         $response = wp_remote_get($url, [
             'timeout' => 15,
@@ -1368,7 +1410,7 @@ class BotSpot_WP_Admin
     {
         check_ajax_referer('botspot_wp_force_flush', 'nonce');
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden']);
+            wp_send_json_error(['message' => __('Permission denied', 'botspot')]);
         }
 
         $result = BotSpot_WP_Analytics_Flusher::flush(true);

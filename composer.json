@@ -1,6 +1,6 @@
 {
-  "name": "botspot/botdot-wp",
-  "description": "BotSpot WordPress plugin",
+  "name": "botspot/botspot",
+  "description": "BotSpot plugin",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {
@@ -34,6 +34,11 @@
         "monperrus/crawler-user-agents"
       ],
       "delete_vendor_files": false
+    }
+  },
+  "config": {
+    "platform": {
+      "php": "7.4.33"
     }
   }
 }

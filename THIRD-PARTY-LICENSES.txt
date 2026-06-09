@@ -1,0 +1,44 @@
+Third-Party Licenses
+====================
+
+BotSpot is licensed under GPLv2 or later. The release package also includes runtime dependency code and generated autoload files from the projects listed below.
+
+jaybizzle/crawler-detect
+------------------------
+
+- Package: jaybizzle/crawler-detect
+- License: MIT
+- Source: https://github.com/JayBizzle/Crawler-Detect
+- Use: Local crawler/bot classification support.
+
+The dependency license file is preserved in release builds at vendor/botspot-prefixed/jaybizzle/crawler-detect/LICENSE.
+
+monperrus/crawler-user-agents
+-----------------------------
+
+- Package: monperrus/crawler-user-agents
+- License: MIT
+- Source: https://github.com/monperrus/crawler-user-agents
+- Use: Crawler user-agent data consumed by crawler detection.
+
+The dependency license file is preserved in release builds at vendor/botspot-prefixed/monperrus/crawler-user-agents/LICENSE.
+
+Composer Autoload Files
+-----------------------
+
+- Project: Composer
+- License: MIT
+- Source: https://github.com/composer/composer
+- Use: Generated PHP autoload runtime files.
+
+Composer-generated autoload files are included only as needed to load the plugin runtime dependencies.
+
+Strauss-Prefixed Runtime Code
+-----------------------------
+
+- Project: Strauss
+- License: MIT
+- Source: https://github.com/BrianHenryIE/strauss
+- Use: Build-time namespace prefixing for Composer dependencies.
+
+Strauss is a build tool and is not included as a runtime dependency. Generated dependency files are included in vendor/botspot-prefixed/ so the plugin can run without conflicting with other WordPress plugins.

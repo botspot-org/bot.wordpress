@@ -98,6 +98,7 @@ class BotSpot_WP
         ];
         foreach ($aliases as $old_hook => $new_hook) {
             add_filter($old_hook, function ($value, ...$args) use ($new_hook) {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Dynamic hook is limited to the plugin's legacy-to-current hook alias map above.
                 return apply_filters($new_hook, $value, ...$args);
             }, 10, 99);
         }

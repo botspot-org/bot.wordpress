@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 env:
-  PLUGIN_SLUG: botspot-wp
+  PLUGIN_SLUG: botspot
   BUCKET: botspot-plugins
 
 jobs:
