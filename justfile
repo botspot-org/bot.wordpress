@@ -12,9 +12,9 @@ default:
 build-prod:
     ./build.sh --production
 
-# Build the staging zip (default URLs).
+# Build the staging zip.
 build-staging:
-    ./build.sh
+    ./build.sh --staging
 
 # Build both prod and staging zips.
 build: build-prod build-staging
