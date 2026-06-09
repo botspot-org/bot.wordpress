@@ -1,7 +1,6 @@
 <?php
 /**
  * Plugin Name: BotSpot
- * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
  * Version: 3.1.0
  * Author: BotSpot Team
