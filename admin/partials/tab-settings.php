@@ -229,10 +229,12 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <p class="bsa-settings-row__desc"><?php _e("Automatically push content changes to bot.spot on save.", "botspot-wp"); ?></p>
             </div>
             <div class="bsa-settings-row__body">
-                <label class="bsa-toggle-row">
-                    <input type="checkbox" class="bsa-toggle" name="botspot_wp_auto_sync_enabled" value="1" <?php checked($bsa_auto_sync); ?> />
-                    <span><?php _e("Enable auto-sync", "botspot-wp"); ?></span>
-                </label>
+                <div class="bsa-check-list">
+                    <label class="bsa-check">
+                        <input type="checkbox" name="botspot_wp_auto_sync_enabled" value="1" <?php checked($bsa_auto_sync); ?> />
+                        <span><?php _e("Enable auto-sync", "botspot-wp"); ?></span>
+                    </label>
+                </div>
             </div>
         </section>
 
@@ -291,14 +293,16 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     </span>
                 </div>
                 <?php else: ?>
-                <label class="bsa-toggle-row">
-                    <input type="checkbox" class="bsa-toggle" name="botspot_wp_appendix_enabled" value="1" <?php checked($bsa_appendix_enabled); ?> />
-                    <span><?php _e("HTML appendix", "botspot-wp"); ?></span>
-                </label>
-                <label class="bsa-toggle-row">
-                    <input type="checkbox" class="bsa-toggle" name="botspot_wp_jsonld_enabled" value="1" <?php checked($bsa_jsonld_enabled); ?> />
-                    <span><?php _e("JSON-LD structured data", "botspot-wp"); ?></span>
-                </label>
+                <div class="bsa-check-list">
+                    <label class="bsa-check">
+                        <input type="checkbox" name="botspot_wp_appendix_enabled" value="1" <?php checked($bsa_appendix_enabled); ?> />
+                        <span><?php _e("HTML appendix", "botspot-wp"); ?></span>
+                    </label>
+                    <label class="bsa-check">
+                        <input type="checkbox" name="botspot_wp_jsonld_enabled" value="1" <?php checked($bsa_jsonld_enabled); ?> />
+                        <span><?php _e("JSON-LD structured data", "botspot-wp"); ?></span>
+                    </label>
+                </div>
                 <?php endif; ?>
             </div>
         </section>

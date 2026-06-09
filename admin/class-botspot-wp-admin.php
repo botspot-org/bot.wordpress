@@ -1000,7 +1000,7 @@ class BotSpot_WP_Admin
             ];
         } else {
             $sync = [
-                "status" => "warn",
+                "status" => "ok",
                 "label" => __("No recent sync", "botspot-wp"),
                 "detail" => __("No posts synced in the last 24 hours.", "botspot-wp"),
             ];
@@ -1027,7 +1027,7 @@ class BotSpot_WP_Admin
             ];
         } else {
             $runtime = [
-                "status" => "warn",
+                "status" => "ok",
                 "label" => __("Runtime idle", "botspot-wp"),
                 "detail" => __("No frontend requests have cached appendix content yet.", "botspot-wp"),
             ];

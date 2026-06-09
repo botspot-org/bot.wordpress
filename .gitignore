@@ -16,7 +16,10 @@
 /readme.html
 /wp-*.php
 /xmlrpc.php
-
+.
+# Internal docs (not for public repo)
+docs/
+context/
 # Configuration
 wp-config.php
 

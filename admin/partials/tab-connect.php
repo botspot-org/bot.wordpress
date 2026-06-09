@@ -9,8 +9,6 @@
  * Variables from parent partial:
  * - $bsa_has_api_key (bool)
  * - $bsa_is_connected (bool)
- * - $bsa_webhook_id (string)
- * - $bsa_tenant_id (string)
  */
 
 if (!defined("WPINC")) {
@@ -76,18 +74,6 @@ if (!defined("WPINC")) {
 
             <div class="bsa-result bsa-hidden" data-bsa-result="test-connection"></div>
 
-            <?php if ($bsa_is_connected && !empty($bsa_tenant_id)): ?>
-            <div class="bsa-connection-info">
-                <div class="bsa-kv">
-                    <span class="bsa-kv__key"><?php _e("Webhook ID", "botspot-wp"); ?></span>
-                    <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_webhook_id); ?></code>
-                </div>
-                <div class="bsa-kv">
-                    <span class="bsa-kv__key"><?php _e("Tenant ID", "botspot-wp"); ?></span>
-                    <code class="bsa-kv__value bsa-mono"><?php echo esc_html($bsa_tenant_id); ?></code>
-                </div>
-            </div>
-            <?php endif; ?>
         </section>
 
         <!-- Right: setup guide + next step -->
@@ -140,13 +126,13 @@ if (!defined("WPINC")) {
                         <span class="bsa-next-step__label"><?php _e("Next step", "botspot-wp"); ?></span>
                     </div>
                     <h3 class="bsa-next-step__title">
-                        <?php _e("Open bot.spot to generate, review, and publish your content.", "botspot-wp"); ?>
+                        <?php _e("Open bot.optimizer to generate, review, and publish your content.", "botspot-wp"); ?>
                     </h3>
                     <p class="bsa-next-step__desc">
-                        <?php _e("Your appendix, schema, and styling live in the platform. This plugin handles syncing and injection automatically.", "botspot-wp"); ?>
+                        <?php _e("Your appendix, schema, and styling live in bot.optimizer. This plugin handles syncing and injection automatically.", "botspot-wp"); ?>
                     </p>
-                    <a href="https://platform.bot.spot/integrations" target="_blank" rel="noopener" class="bsa-btn bsa-btn--ghost">
-                        <?php _e("Open bot.spot", "botspot-wp"); ?>
+                    <a href="https://platform.bot.spot/optimizer" target="_blank" rel="noopener" class="bsa-btn bsa-btn--ghost">
+                        <?php _e("Open bot.optimizer", "botspot-wp"); ?>
                         <svg class="bsa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="square" d="M7 17L17 7M17 7H9M17 7v8"/></svg>
                     </a>
                 </div>
