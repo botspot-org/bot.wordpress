@@ -5,9 +5,9 @@
  * Loaded by admin/partials/botspot-wp-admin-settings.php when the
  * Analytics tab is active. All data is fetched asynchronously by
  * admin/js/botspot-admin.js via AJAX to the handlers in
- * admin/class-botspot-wp-admin.php.
+ * admin/class-bspt-admin.php.
  *
- * @package BotSpot_WP
+ * @package Bspt
  */
 
 if (!defined('ABSPATH')) {

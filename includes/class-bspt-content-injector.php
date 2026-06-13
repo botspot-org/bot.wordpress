@@ -7,8 +7,8 @@
  * @link       https://bot.spot
  * @since      1.0.0
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
 
 // If this file is called directly, abort.
@@ -19,15 +19,15 @@ if (!defined("WPINC")) {
 /**
  * Unified content injector for JSON-LD and appendix HTML.
  *
- * Replaces the old BotSpot_WP_Injector and appendix injection logic
- * from BotSpot_WP_Public with a single class that handles both.
+ * Replaces the old Bspt_Injector and appendix injection logic
+ * from Bspt_Public with a single class that handles both.
  *
  * @since      1.0.0
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  * @author     BotSpot Team
  */
-class BotSpot_WP_Content_Injector
+class Bspt_Content_Injector
 {
     /**
      * The plugin name.
@@ -166,11 +166,11 @@ class BotSpot_WP_Content_Injector
         $this->locus_jsonld_fetched = true;
         $path = $this->get_current_url_path();
 
-        $appendix_enabled = BotSpot_WP_Options::get("appendix_enabled");
+        $appendix_enabled = Bspt_Options::get("appendix_enabled");
         if (!$appendix_enabled) {
-            $data = BotSpot_WP_Content_Fetcher::fetch_jsonld($path);
+            $data = Bspt_Content_Fetcher::fetch_jsonld($path);
         } else {
-            $data = BotSpot_WP_Content_Fetcher::fetch($path);
+            $data = Bspt_Content_Fetcher::fetch($path);
         }
 
         if (!$data || !isset($data["jsonld"]) || $data["jsonld"] === null) {
@@ -191,7 +191,7 @@ class BotSpot_WP_Content_Injector
         }
 
         // Apply filter
-        $jsonld = apply_filters("botspot_wp_appendix_jsonld", $jsonld);
+        $jsonld = apply_filters("bspt_appendix_jsonld", $jsonld);
 
         if (empty($jsonld)) {
             $this->locus_jsonld_cache = null;
@@ -214,7 +214,7 @@ class BotSpot_WP_Content_Injector
     private function get_delivery_mode()
     {
         $path = $this->get_current_url_path();
-        $data = BotSpot_WP_Content_Fetcher::fetch($path);
+        $data = Bspt_Content_Fetcher::fetch($path);
         if (!$data || empty($data["delivery_mode"])) {
             return "full";
         }
@@ -247,40 +247,17 @@ class BotSpot_WP_Content_Injector
             $jsonld = $decoded;
         }
 
-        $jsonld = apply_filters("botspot_wp_appendix_jsonld", $jsonld);
+        $jsonld = apply_filters("bspt_appendix_jsonld", $jsonld);
         if (empty($jsonld)) {
             return;
         }
 
-        $json_string = $this->encode_jsonld($jsonld);
-        if ($json_string === false) {
-            return;
-        }
+        $json_string = wp_json_encode($jsonld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json_string = str_replace("</script>", "<\/script>", $json_string);
 
         echo "\n<!-- BotSpot JSON-LD -->\n";
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- encode_jsonld() emits JSON encoded with HEX flags to prevent script breakout.
         echo '<script type="application/ld+json">' . $json_string . "</script>";
         echo "\n<!-- /BotSpot JSON-LD -->\n";
-    }
-
-    /**
-     * Encode JSON-LD with script-breakout-safe flags.
-     *
-     * @since 3.0.8
-     * @param mixed $jsonld Decoded JSON-LD value.
-     * @return string|false
-     */
-    private function encode_jsonld($jsonld)
-    {
-        return wp_json_encode(
-            $jsonld,
-            JSON_UNESCAPED_SLASHES
-                | JSON_UNESCAPED_UNICODE
-                | JSON_HEX_TAG
-                | JSON_HEX_AMP
-                | JSON_HEX_APOS
-                | JSON_HEX_QUOT
-        );
     }
 
     /**
@@ -299,7 +276,7 @@ class BotSpot_WP_Content_Injector
         // Respect the "off" option as a full disable, regardless of SEO plugin
         // presence. "merge" and "replace" modes are legacy; in the peer-schema
         // model both behave the same (emit the standalone tag).
-        $conflict_mode = BotSpot_WP_Options::get("jsonld_conflict_mode", "merge");
+        $conflict_mode = Bspt_Options::get("jsonld_conflict_mode", "merge");
         if ($conflict_mode === "off") {
             $this->log_debug("JSON-LD conflict mode is 'off', skipping injection");
             return;
@@ -307,7 +284,7 @@ class BotSpot_WP_Content_Injector
 
         // When appendix is enabled, the render response carries delivery_mode.
         // Honor it here so disabled suppresses JSON-LD too.
-        if (BotSpot_WP_Options::get("appendix_enabled")) {
+        if (Bspt_Options::get("appendix_enabled")) {
             $mode = $this->get_delivery_mode();
             if ($mode === "disabled") {
                 $this->log_debug("delivery_mode=disabled, skipping JSON-LD injection");
@@ -315,7 +292,7 @@ class BotSpot_WP_Content_Injector
             }
             // For jsonld_only and full, emit JSON-LD via the shared render response.
             $path = $this->get_current_url_path();
-            $data = BotSpot_WP_Content_Fetcher::fetch($path);
+            $data = Bspt_Content_Fetcher::fetch($path);
             $jsonld_raw = ($data && isset($data["jsonld"])) ? $data["jsonld"] : null;
             $this->emit_jsonld_from_response($jsonld_raw);
             $this->log_debug(sprintf("JSON-LD injected via wp_head (delivery_mode=%s)", $mode));
@@ -327,13 +304,12 @@ class BotSpot_WP_Content_Injector
             return;
         }
 
-        $json_string = $this->encode_jsonld($decoded);
-        if ($json_string === false) {
-            return;
-        }
+        $json_string = wp_json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        // Prevent script-tag breakout
+        $json_string = str_replace("</script>", "<\/script>", $json_string);
 
         echo "\n<!-- BotSpot JSON-LD -->\n";
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- encode_jsonld() emits JSON encoded with HEX flags to prevent script breakout.
         echo '<script type="application/ld+json">' . $json_string . "</script>";
         echo "\n<!-- /BotSpot JSON-LD -->\n";
 
@@ -421,7 +397,7 @@ class BotSpot_WP_Content_Injector
 
         $path = $this->get_current_url_path();
         $this->log_debug(sprintf("Fetching appendix for path: %s", $path));
-        $data = BotSpot_WP_Content_Fetcher::fetch($path);
+        $data = Bspt_Content_Fetcher::fetch($path);
 
         // Dispatch on delivery_mode before consuming html.
         $delivery_mode = ($data && isset($data["delivery_mode"]) && $data["delivery_mode"]) ? $data["delivery_mode"] : "full";
@@ -453,7 +429,7 @@ class BotSpot_WP_Content_Injector
         $html = $this->sanitize_html($data["html"]);
 
         // Apply filter
-        $html = apply_filters("botspot_wp_appendix_html", $html);
+        $html = apply_filters("bspt_appendix_html", $html);
 
         if (!empty($html)) {
             $this->appendix_injected = true;
@@ -475,15 +451,15 @@ class BotSpot_WP_Content_Injector
 
             // --- Analytics: increment impression counters ---
             try {
-                $ua = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : '';
-                $bot_class = BotSpot_WP_Bot_Classifier::classify($ua);
+                $ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+                $bot_class = Bspt_Bot_Classifier::classify($ua);
                 $post_id = get_the_ID();
                 if ($post_id) {
-                    BotSpot_WP_Analytics_Flusher::increment_post($post_id, $bot_class);
+                    Bspt_Analytics_Flusher::increment_post($post_id, $bot_class);
                 }
             } catch (Throwable $e) {
                 // Analytics must NEVER break the render path.
-                BotSpot_WP_Logger::log_error('Analytics increment failed: ' . $e->getMessage());
+                Bspt_Logger::log_error('Analytics increment failed: ' . $e->getMessage());
             }
         }
 
@@ -566,8 +542,8 @@ class BotSpot_WP_Content_Injector
             // Manual placement; no JS reposition needed.
             return;
         }
-        ?>
-<script>
+
+        $script = <<<'JS'
 (function () {
     var SELECTORS = [
         "[data-botspot-footer]",
@@ -620,8 +596,11 @@ class BotSpot_WP_Content_Injector
         place();
     }
 })();
-</script>
-        <?php
+JS;
+
+        wp_register_script("bspt-placement", false, [], BSPT_VERSION, true);
+        wp_enqueue_script("bspt-placement");
+        wp_add_inline_script("bspt-placement", $script);
     }
 
     /**
@@ -639,7 +618,6 @@ class BotSpot_WP_Content_Injector
     {
         // Already injected by the_content path, nothing to do.
         if ($this->appendix_injected) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
             echo $this->bsa_debug_comment("wp_footer", "already_injected");
             return;
         }
@@ -648,14 +626,12 @@ class BotSpot_WP_Content_Injector
         // Otherwise the_content's gate (in_the_loop, queried-object) already
         // chose not to inject and we should respect that.
         if (!$this->is_page_builder_active()) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
             echo $this->bsa_debug_comment("wp_footer", "no_page_builder_skip");
             return;
         }
 
         $position = $this->resolve_injection_position();
         if ($position === "manual") {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
             echo $this->bsa_debug_comment("wp_footer", "position_manual");
             return;
         }
@@ -673,7 +649,7 @@ class BotSpot_WP_Content_Injector
      */
     private function resolve_injection_position()
     {
-        $stored = BotSpot_WP_Options::get("injection_position", "bottom_of_content");
+        $stored = Bspt_Options::get("injection_position", "bottom_of_content");
         $allowed = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
         if (!is_string($stored) || !in_array($stored, $allowed, true)) {
             $this->log_debug(sprintf(
@@ -692,9 +668,7 @@ class BotSpot_WP_Content_Injector
      */
     private function bsa_debug_active()
     {
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only diagnostic flag; it does not mutate state or reveal secrets.
-        $debug = isset($_GET["bsa-debug"]) ? sanitize_text_field(wp_unslash($_GET["bsa-debug"])) : "";
-        return $debug === "1";
+        return isset($_GET["bsa-debug"]) && (string) $_GET["bsa-debug"] === "1";
     }
 
     /**
@@ -710,43 +684,14 @@ class BotSpot_WP_Content_Injector
         if (!$this->bsa_debug_active()) {
             return "";
         }
-        $payload = array_merge(
-            [
-                "where" => sanitize_key($where),
-                "reason" => sanitize_key($reason),
-            ],
-            $this->sanitize_debug_payload($extra)
-        );
+        $payload = array_merge(["where" => $where, "reason" => $reason], $extra);
         $json = wp_json_encode($payload);
         if ($json === false) {
-            $json = '{"where":"' . esc_html(sanitize_key($where)) . '","reason":"json_encode_failed"}';
+            $json = '{"where":"' . esc_html($where) . '","reason":"json_encode_failed"}';
         }
         // Strip "--" so the payload can never close the comment early.
         $safe = str_replace("--", "-_-", $json);
         return "\n<!-- bsa-appendix:" . $safe . " -->\n";
-    }
-
-    /**
-     * Sanitize diagnostic values before encoding them into an HTML comment.
-     *
-     * @param mixed $value Debug payload value.
-     * @return mixed Sanitized debug payload value.
-     */
-    private function sanitize_debug_payload($value)
-    {
-        if (is_array($value)) {
-            $clean = [];
-            foreach ($value as $key => $item) {
-                $clean[sanitize_key($key)] = $this->sanitize_debug_payload($item);
-            }
-            return $clean;
-        }
-
-        if (is_bool($value) || is_int($value) || is_float($value) || $value === null) {
-            return $value;
-        }
-
-        return sanitize_text_field((string) $value);
     }
 
     /**
@@ -766,8 +711,8 @@ class BotSpot_WP_Content_Injector
             "post_type" => get_post_type(),
             "queried_id" => (int) get_queried_object_id(),
             "current_id" => (int) get_the_ID(),
-            "appendix_enabled" => (bool) BotSpot_WP_Options::get("appendix_enabled"),
-            "inject_on_post_types" => BotSpot_WP_Options::get("inject_on_post_types", ["post", "page"]),
+            "appendix_enabled" => (bool) Bspt_Options::get("appendix_enabled"),
+            "inject_on_post_types" => Bspt_Options::get("inject_on_post_types", ["post", "page"]),
             "injection_position" => $this->resolve_injection_position(),
             "appendix_injected_flag" => $this->appendix_injected,
             "shortcode_used_flag" => $this->shortcode_used,
@@ -790,13 +735,11 @@ class BotSpot_WP_Content_Injector
     private function inject_footer_position($position)
     {
         if ($this->appendix_injected) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
             echo $this->bsa_debug_comment("wp_footer", "already_injected", $this->bsa_debug_state());
             return;
         }
 
         if (!$this->should_inject_appendix()) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
             echo $this->bsa_debug_comment("wp_footer", "should_not_inject", $this->bsa_debug_state());
             return;
         }
@@ -804,7 +747,6 @@ class BotSpot_WP_Content_Injector
         // Check for manual placement
         global $post;
         if ($post && $this->has_manual_placement($post->post_content)) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
             echo $this->bsa_debug_comment("wp_footer", "manual_placement");
             return;
         }
@@ -816,7 +758,7 @@ class BotSpot_WP_Content_Injector
 
         $path = $this->get_current_url_path();
         $this->log_debug(sprintf("Fetching appendix for footer injection (%s), path: %s", $position, $path));
-        $data = BotSpot_WP_Content_Fetcher::fetch($path);
+        $data = Bspt_Content_Fetcher::fetch($path);
 
         $delivery_mode = ($data && isset($data["delivery_mode"]) && $data["delivery_mode"]) ? $data["delivery_mode"] : "full";
         if (!in_array($delivery_mode, ["disabled", "jsonld_only", "full"], true)) {
@@ -824,9 +766,7 @@ class BotSpot_WP_Content_Injector
         }
         if ($delivery_mode === "disabled" || $delivery_mode === "jsonld_only") {
             $this->log_debug(sprintf("delivery_mode=%s, skipping footer appendix HTML injection", $delivery_mode));
-            $debug_context = ["delivery_mode" => $delivery_mode];
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
-            echo $this->bsa_debug_comment("wp_footer", "delivery_mode_skip", $debug_context);
+            echo $this->bsa_debug_comment("wp_footer", "delivery_mode_skip", ["delivery_mode" => $delivery_mode]);
             return;
         }
 
@@ -839,40 +779,33 @@ class BotSpot_WP_Content_Injector
                 $api_status,
                 $api_reason
             ));
-            $debug_context = [
+            echo $this->bsa_debug_comment("wp_footer", "fetch_null", [
                 "path" => $path,
                 "api_status" => $api_status,
                 "api_reason" => $api_reason,
                 "data_present" => $data ? true : false,
-            ];
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
-            echo $this->bsa_debug_comment("wp_footer", "fetch_null", $debug_context);
+            ]);
             return;
         }
 
         $html = $this->sanitize_html($data["html"]);
 
         // Apply filter
-        $html = apply_filters("botspot_wp_appendix_html", $html);
+        $html = apply_filters("bspt_appendix_html", $html);
 
         if (!empty($html)) {
             $this->appendix_injected = true;
-            $appendix_markup = sprintf(
+            printf(
                 '<div data-bsa-appendix data-bsa-position="%s">%s</div>',
                 esc_attr($position),
                 $html
             );
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $appendix_markup contains appendix HTML sanitized by sanitize_html() before trusted site filters.
-            echo $appendix_markup;
-            $debug_context = [
+            echo $this->bsa_debug_comment("wp_footer", "injected_fallback", [
                 "bytes" => strlen($html),
                 "position" => $position,
-            ];
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
-            echo $this->bsa_debug_comment("wp_footer", "injected_fallback", $debug_context);
+            ]);
             $this->log_debug(sprintf("Appendix injected via wp_footer fallback (%d bytes, position=%s)", strlen($html), $position));
         } else {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bsa_debug_comment() strips comment terminators and only returns inert HTML comments.
             echo $this->bsa_debug_comment("wp_footer", "html_empty_after_sanitize");
         }
     }
@@ -912,7 +845,7 @@ class BotSpot_WP_Content_Injector
         }
 
         $path = $this->get_current_url_path();
-        $data = BotSpot_WP_Content_Fetcher::fetch($path);
+        $data = Bspt_Content_Fetcher::fetch($path);
 
         $delivery_mode = ($data && isset($data["delivery_mode"]) && $data["delivery_mode"]) ? $data["delivery_mode"] : "full";
         if (!in_array($delivery_mode, ["disabled", "jsonld_only", "full"], true)) {
@@ -930,7 +863,7 @@ class BotSpot_WP_Content_Injector
         $html = $this->sanitize_html($data["html"]);
 
         // Apply filter
-        $html = apply_filters("botspot_wp_appendix_html", $html);
+        $html = apply_filters("bspt_appendix_html", $html);
 
         return $html;
     }
@@ -943,7 +876,7 @@ class BotSpot_WP_Content_Injector
      */
     private function should_inject_jsonld()
     {
-        if (!BotSpot_WP_Options::get("jsonld_enabled")) {
+        if (!Bspt_Options::get("jsonld_enabled")) {
             return false;
         }
 
@@ -958,7 +891,7 @@ class BotSpot_WP_Content_Injector
      */
     private function should_inject_appendix()
     {
-        if (!BotSpot_WP_Options::get("appendix_enabled")) {
+        if (!Bspt_Options::get("appendix_enabled")) {
             return false;
         }
 
@@ -1004,7 +937,7 @@ class BotSpot_WP_Content_Injector
         // Check post type
         $post_type = get_post_type();
         if ($post_type) {
-            $allowed_types = BotSpot_WP_Options::get("inject_on_post_types", ["post", "page"]);
+            $allowed_types = Bspt_Options::get("inject_on_post_types", ["post", "page"]);
             if (!in_array($post_type, $allowed_types)) {
                 // Allow front page even if post type doesn't match
                 if (!is_front_page()) {
@@ -1019,7 +952,7 @@ class BotSpot_WP_Content_Injector
         }
 
         // Apply filter
-        return apply_filters("botspot_wp_should_inject", true);
+        return apply_filters("bspt_should_inject", true);
     }
 
     /**
@@ -1059,7 +992,7 @@ class BotSpot_WP_Content_Injector
             $post_obj = get_post($queried_id);
             if ($post_obj && isset($post_obj->post_content)) {
                 $raw = (string) $post_obj->post_content;
-                if (function_exists("has_block") && (has_block("botspot-wp/appendix", $raw) || has_block("botdot-wp/appendix", $raw))) {
+                if (function_exists("has_block") && has_block("botspot-wp/appendix", $raw)) {
                     return true;
                 }
                 if (has_shortcode($raw, "botdot_appendix") || has_shortcode($raw, "botspot_appendix")) {
@@ -1068,7 +1001,7 @@ class BotSpot_WP_Content_Injector
             }
         }
 
-        if (function_exists("has_block") && (has_block("botspot-wp/appendix", $content) || has_block("botdot-wp/appendix", $content))) {
+        if (function_exists("has_block") && has_block("botspot-wp/appendix", $content)) {
             return true;
         }
 
@@ -1090,11 +1023,11 @@ class BotSpot_WP_Content_Injector
     {
         global $wp;
         $current_url = home_url(add_query_arg([], $wp->request));
-        $parsed = wp_parse_url($current_url);
+        $parsed = parse_url($current_url);
         $path = isset($parsed["path"]) ? $parsed["path"] : "/";
 
         // Remove home path if WordPress is in a subdirectory
-        $home_path = wp_parse_url(home_url(), PHP_URL_PATH);
+        $home_path = parse_url(home_url(), PHP_URL_PATH);
         if ($home_path && $home_path !== "/") {
             $path = str_replace($home_path, "", $path);
         }
@@ -1108,7 +1041,7 @@ class BotSpot_WP_Content_Injector
         }
 
         // Apply filter
-        $path = apply_filters("botspot_wp_url_path", $path);
+        $path = apply_filters("bspt_url_path", $path);
 
         return $path;
     }
@@ -1129,56 +1062,21 @@ class BotSpot_WP_Content_Injector
         $allowed = wp_kses_allowed_html("post");
 
         // Appendix-specific elements
-        $allowed["section"] = ["id" => true, "class" => true, "role" => true, "aria-label" => true, "style" => true];
-        $allowed["style"] = ["id" => true, "type" => true];
+        $allowed["section"] = ["id" => true, "class" => true, "style" => true, "role" => true, "aria-label" => true];
         $allowed["details"] = ["class" => true, "open" => true, "id" => true, "data-type" => true];
-        $allowed["summary"] = ["class" => true, "id" => true, "data-icon-position" => true];
-        $allowed["span"] = ["class" => true, "data-shape" => true, "aria-hidden" => true, "style" => true];
-        $allowed["p"] = ["class" => true, "style" => true];
-        $allowed["div"] = ["class" => true, "id" => true, "role" => true, "aria-labelledby" => true, "style" => true];
-        $allowed["ul"] = ["class" => true];
-        $allowed["li"] = ["class" => true];
-        $allowed["strong"] = ["class" => true];
+        $allowed["summary"] = ["class" => true, "id" => true];
         $allowed["dl"] = ["class" => true, "id" => true];
         $allowed["dt"] = ["class" => true, "id" => true];
         $allowed["dd"] = ["class" => true, "id" => true];
         $allowed["svg"] = ["width" => true, "height" => true, "viewbox" => true, "fill" => true, "xmlns" => true, "class" => true];
         $allowed["path"] = ["d" => true, "stroke" => true, "stroke-width" => true, "stroke-linecap" => true, "stroke-linejoin" => true, "fill" => true];
+        $allowed["style"] = ["id" => true, "type" => true];
 
-        $allow_appendix_css = function ($properties) {
-            return array_merge($properties, [
-                "--ba-bg",
-                "--ba-text",
-                "--ba-border-w",
-                "--ba-max-w",
-                "--ba-radius",
-                "--ba-master-height",
-                "--ba-master-py",
-                "--ba-padding-x",
-                "--ba-font",
-                "--ba-base-size",
-                "--ba-master-size",
-                "--ba-master-weight",
-                "--ba-master-tracking",
-                "--ba-item-size",
-                "--ba-item-weight",
-                "--ba-content-size",
-                "--ba-icon-size",
-                "--ba-divider",
-                "flex",
-                "flex-basis",
-                "flex-grow",
-                "flex-shrink",
-                "min-width",
-                "text-align",
-            ]);
-        };
+        // Allow style attribute on span/div (for CSS custom property wrappers)
+        $allowed["span"]["style"] = true;
+        $allowed["div"]["style"] = true;
 
-        add_filter("safe_style_css", $allow_appendix_css);
-        $sanitized = wp_kses($html, $allowed);
-        remove_filter("safe_style_css", $allow_appendix_css);
-
-        return $sanitized;
+        return wp_kses($html, $allowed);
     }
 
     /**
@@ -1189,8 +1087,8 @@ class BotSpot_WP_Content_Injector
      */
     private function log_debug($message)
     {
-        if (BotSpot_WP_Options::get("debug_mode")) {
-            BotSpot_WP_Logger::log_debug("[ContentInjector] " . $message);
+        if (Bspt_Options::get("debug_mode")) {
+            Bspt_Logger::log_debug("[ContentInjector] " . $message);
         }
     }
 }

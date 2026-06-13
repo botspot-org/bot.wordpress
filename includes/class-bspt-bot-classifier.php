@@ -13,14 +13,14 @@
  * app/services/analytics/constants.py (locus-core). A CI check
  * compares the two lists for drift.
  *
- * @package BotSpot_WP
+ * @package Bspt
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class BotSpot_WP_Bot_Classifier
+class Bspt_Bot_Classifier
 {
     /**
      * Canonical class names. Must match BOT_CLASS_NAMES in locus-core.

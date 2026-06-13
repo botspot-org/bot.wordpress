@@ -5,8 +5,8 @@
  * @link       https://bot.spot
  * @since      0.1.0
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
 
 // If this file is called directly, abort.
@@ -21,11 +21,11 @@ if (!defined('WPINC')) {
  * the plugin, and register them with the WordPress API. Call the
  * run function to execute the list of actions and filters.
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  * @author     BotSpot Team
  */
-class BotSpot_WP_Loader {
+class Bspt_Loader {
 
     /**
      * The array of actions registered with WordPress.

@@ -5,8 +5,8 @@
  * @link       https://bot.spot
  * @since      0.2.0
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/public
+ * @package    Bspt
+ * @subpackage Bspt/public
  */
 
 // If this file is called directly, abort.
@@ -18,13 +18,13 @@ if (!defined("WPINC")) {
  * The public-facing functionality of the plugin.
  *
  * Handles shortcode registration, Gutenberg block, WPBakery, TinyMCE,
- * and style enqueuing. Content injection is delegated to BotSpot_WP_Content_Injector.
+ * and style enqueuing. Content injection is delegated to Bspt_Content_Injector.
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/public
+ * @package    Bspt
+ * @subpackage Bspt/public
  * @author     BotSpot Team
  */
-class BotSpot_WP_Public
+class Bspt_Public
 {
     /**
      * The plugin name.
@@ -49,7 +49,7 @@ class BotSpot_WP_Public
      *
      * @since    1.0.0
      * @access   private
-     * @var      BotSpot_WP_Content_Injector|null
+     * @var      Bspt_Content_Injector|null
      */
     private $content_injector = null;
 
@@ -59,7 +59,7 @@ class BotSpot_WP_Public
      * @since    0.2.0
      * @param    string                          $plugin_name        The name of this plugin.
      * @param    string                          $version            The version of this plugin.
-     * @param    BotSpot_WP_Content_Injector|null $content_injector   Optional shared content injector instance.
+     * @param    Bspt_Content_Injector|null $content_injector   Optional shared content injector instance.
      */
     public function __construct($plugin_name, $version, $content_injector = null)
     {
@@ -72,12 +72,12 @@ class BotSpot_WP_Public
      * Get the content injector instance
      *
      * @since    1.0.0
-     * @return   BotSpot_WP_Content_Injector
+     * @return   Bspt_Content_Injector
      */
     private function get_content_injector()
     {
         if ($this->content_injector === null) {
-            $this->content_injector = new BotSpot_WP_Content_Injector($this->plugin_name, $this->version);
+            $this->content_injector = new Bspt_Content_Injector($this->plugin_name, $this->version);
         }
         return $this->content_injector;
     }
@@ -105,10 +105,10 @@ class BotSpot_WP_Public
         }
 
         vc_map([
-            "name" => __("bot.spot Appendix", "botspot"),
-            "base" => "botspot_appendix",
-            "description" => __("Insert AI-discoverable appendix content", "botspot"),
-            "category" => __("Content", "botspot"),
+            "name" => __("bot.spot Appendix", "botspot-wp"),
+            "base" => "botdot_appendix",
+            "description" => __("Insert AI-discoverable appendix content", "botspot-wp"),
+            "category" => __("Content", "botspot-wp"),
             "icon" => "icon-wpb-botspot",
             "params" => [],
         ]);
@@ -142,7 +142,7 @@ class BotSpot_WP_Public
      */
     public function register_tinymce_button($buttons)
     {
-        array_push($buttons, "botspot_appendix");
+        array_push($buttons, "botdot_appendix");
         return $buttons;
     }
 
@@ -155,7 +155,7 @@ class BotSpot_WP_Public
      */
     public function register_tinymce_plugin($plugins)
     {
-        $plugins["botspot_appendix"] = BOTSPOT_WP_PLUGIN_URL . "public/js/botspot-wp-tinymce.js";
+        $plugins["botdot_appendix"] = BSPT_PLUGIN_URL . "public/js/botspot-wp-tinymce.js";
         return $plugins;
     }
 
@@ -174,11 +174,6 @@ class BotSpot_WP_Public
             "render_callback" => [$this, "render_appendix_shortcode"],
             "attributes" => [],
         ]);
-
-        register_block_type("botdot-wp/appendix", [
-            "render_callback" => [$this, "render_appendix_shortcode"],
-            "attributes" => [],
-        ]);
     }
 
     /**
@@ -194,7 +189,7 @@ class BotSpot_WP_Public
 
         wp_enqueue_script(
             $this->plugin_name . "-gutenberg",
-            BOTSPOT_WP_PLUGIN_URL . "public/js/botspot-wp-gutenberg.js",
+            BSPT_PLUGIN_URL . "public/js/botspot-wp-gutenberg.js",
             ["wp-blocks", "wp-element", "wp-editor", "wp-components"],
             $this->version,
             true,
@@ -216,7 +211,8 @@ class BotSpot_WP_Public
      */
     public function render_appendix_shortcode($atts)
     {
-        return $this->get_content_injector()->render_shortcode($atts);
+        $html = $this->get_content_injector()->render_shortcode($atts);
+        return wp_kses_post($html);
     }
 
     /**
@@ -226,13 +222,13 @@ class BotSpot_WP_Public
      */
     public function enqueue_styles()
     {
-        if (!BotSpot_WP_Options::get("appendix_enabled") && !BotSpot_WP_Options::get("jsonld_enabled")) {
+        if (!Bspt_Options::get("appendix_enabled") && !Bspt_Options::get("jsonld_enabled")) {
             return;
         }
 
         wp_enqueue_style(
             $this->plugin_name . "-appendix",
-            BOTSPOT_WP_PLUGIN_URL . "public/css/botspot-wp-appendix.css",
+            BSPT_PLUGIN_URL . "public/css/botspot-wp-appendix.css",
             [],
             $this->version,
             "all",

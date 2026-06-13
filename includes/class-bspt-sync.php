@@ -7,8 +7,8 @@
  * @link       https://bot.spot
  * @since      1.0.0
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
 
 // If this file is called directly, abort.
@@ -23,11 +23,11 @@ if (!defined("WPINC")) {
  * to push content to locus-core via the IngestPayload API.
  *
  * @since      1.0.0
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  * @author     BotSpot Team
  */
-class BotSpot_WP_Sync
+class Bspt_Sync
 {
     /**
      * Register REST API webhook endpoint
@@ -56,7 +56,7 @@ class BotSpot_WP_Sync
     {
         $signature = $request->get_header("X-Webhook-Signature");
         $raw_body = $request->get_body();
-        $secret = BotSpot_WP_Options::get("webhook_secret");
+        $secret = Bspt_Options::get("webhook_secret");
 
         if (!$secret || !$signature) {
             return new WP_REST_Response(["error" => "Unauthorized"], 401);
@@ -111,8 +111,8 @@ class BotSpot_WP_Sync
         // When new enrichment lands, drop plugin transients + external page caches for
         // this post so the next request re-fetches and cache plugins store the
         // injected appendix/JSON-LD instead of the pre-enrichment snapshot.
-        if ($tier_advanced && class_exists("BotSpot_WP_Cache")) {
-            BotSpot_WP_Cache::purge_post($post_id);
+        if ($tier_advanced && class_exists("Bspt_Cache")) {
+            Bspt_Cache::purge_post($post_id);
         }
 
         return new WP_REST_Response(["status" => "ok", "post_id" => $post_id, "purged" => $tier_advanced], 200);
@@ -139,12 +139,12 @@ class BotSpot_WP_Sync
         }
 
         // Skip if auto-sync is disabled
-        if (!BotSpot_WP_Options::get("auto_sync_enabled")) {
+        if (!Bspt_Options::get("auto_sync_enabled")) {
             return;
         }
 
         // Skip non-synced post types
-        $sync_post_types = BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
         if (!in_array($post->post_type, $sync_post_types)) {
             return;
         }
@@ -155,7 +155,7 @@ class BotSpot_WP_Sync
         }
 
         // Apply filter to allow skipping specific posts
-        if (!apply_filters("botspot_wp_should_sync", true, $post_id, $post)) {
+        if (!apply_filters("bspt_should_sync", true, $post_id, $post)) {
             return;
         }
 
@@ -220,8 +220,8 @@ class BotSpot_WP_Sync
         } else {
             update_post_meta($post_id, "_botspot_sync_status", "error");
             // Schedule a single retry in 5 minutes
-            if (!wp_next_scheduled("botspot_wp_retry_sync", [$post_id])) {
-                wp_schedule_single_event(time() + 300, "botspot_wp_retry_sync", [$post_id]);
+            if (!wp_next_scheduled("bspt_retry_sync", [$post_id])) {
+                wp_schedule_single_event(time() + 300, "bspt_retry_sync", [$post_id]);
             }
         }
     }
@@ -252,7 +252,7 @@ class BotSpot_WP_Sync
             return;
         }
 
-        $sync_post_types = BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
         if (!in_array($post->post_type, $sync_post_types)) {
             return;
         }
@@ -283,7 +283,7 @@ class BotSpot_WP_Sync
             return;
         }
 
-        $sync_post_types = BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
         if (!in_array($post->post_type, $sync_post_types)) {
             return;
         }
@@ -308,7 +308,7 @@ class BotSpot_WP_Sync
      */
     public static function send_webhook($post, $event, $change_meta = null)
     {
-        $api_key = BotSpot_WP_Options::get("api_key");
+        $api_key = Bspt_Options::get("api_key");
 
         if (empty($api_key)) {
             self::log_error("Cannot send content: API key not configured");
@@ -337,7 +337,7 @@ class BotSpot_WP_Sync
         }
 
         // Apply filter to allow payload modification
-        $payload = apply_filters("botspot_wp_sync_payload", $payload, $post, $event);
+        $payload = apply_filters("bspt_sync_payload", $payload, $post, $event);
 
         $json_body = wp_json_encode($payload);
 
@@ -345,10 +345,10 @@ class BotSpot_WP_Sync
             "Content-Type" => "application/json",
             "X-API-Key" => $api_key,
             "X-Source-Type" => "wordpress",
-            "X-Plugin-Version" => defined('BOTSPOT_WP_VERSION') ? BOTSPOT_WP_VERSION : 'unknown',
+            "X-Plugin-Version" => defined('BSPT_VERSION') ? BSPT_VERSION : 'unknown',
         ];
 
-        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
+        $locus_api_url = Bspt_Options::get_locus_api_url();
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/connector/ingest";
 
         self::log_debug(sprintf("Sending %s for post %d to %s", $event, $post->ID, $endpoint));
@@ -417,7 +417,7 @@ class BotSpot_WP_Sync
             ];
         }
 
-        $tenant_id = BotSpot_WP_Options::get("tenant_id");
+        $tenant_id = Bspt_Options::get("tenant_id");
 
         // Truncate fields to match DB column limits (safety net)
         $title = mb_substr($post->post_title, 0, 500);
@@ -430,7 +430,7 @@ class BotSpot_WP_Sync
 
         // Fetch rendered HTML from the live page for reliable content extraction
         $content = self::fetch_rendered_content($post, $permalink);
-        $page_builder = BotSpot_WP_Page_Builder::detect_builder($post->ID);
+        $page_builder = Bspt_Page_Builder::detect_builder($post->ID);
 
         $payload = [
             "source_type" => "wordpress",
@@ -441,7 +441,7 @@ class BotSpot_WP_Sync
             "metadata" => [
                 "title" => $title,
                 "author" => $author,
-                "language" => BotSpot_WP_Language::get_post_language($post->ID),
+                "language" => Bspt_Language::get_post_language($post->ID),
                 "published_at" => $published_at,
                 "updated_at" => $updated_at,
                 "tags" => is_array($tags) ? array_values($tags) : [],
@@ -489,7 +489,7 @@ class BotSpot_WP_Sync
     {
         // Skip fetch for non-published posts (preview URLs won't work)
         if ($post->post_status !== 'publish') {
-            return BotSpot_WP_Page_Builder::extract_content($post);
+            return Bspt_Page_Builder::extract_content($post);
         }
 
         // Add cache-busting param to ensure fresh content
@@ -510,7 +510,7 @@ class BotSpot_WP_Sync
                 $post->ID,
                 $response->get_error_message()
             ));
-            return BotSpot_WP_Page_Builder::extract_content($post);
+            return Bspt_Page_Builder::extract_content($post);
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -520,12 +520,12 @@ class BotSpot_WP_Sync
                 $post->ID,
                 $status_code
             ));
-            return BotSpot_WP_Page_Builder::extract_content($post);
+            return Bspt_Page_Builder::extract_content($post);
         }
 
         $html = wp_remote_retrieve_body($response);
         if (empty($html)) {
-            return BotSpot_WP_Page_Builder::extract_content($post);
+            return Bspt_Page_Builder::extract_content($post);
         }
 
         // Extract main content from the HTML
@@ -539,7 +539,7 @@ class BotSpot_WP_Sync
                 $post->ID,
                 mb_strlen($stripped)
             ));
-            return BotSpot_WP_Page_Builder::extract_content($post);
+            return Bspt_Page_Builder::extract_content($post);
         }
 
         return $content;
@@ -679,7 +679,7 @@ class BotSpot_WP_Sync
          * @param array|null $jsonld    The extracted JSON-LD data.
          * @param int        $post_id   The post ID.
          */
-        return apply_filters("botspot_wp_source_jsonld", $jsonld, $post_id);
+        return apply_filters("bspt_source_jsonld", $jsonld, $post_id);
     }
 
     /**
@@ -838,13 +838,13 @@ class BotSpot_WP_Sync
      */
     public static function register_page_stubs($post_types = null)
     {
-        $api_key = BotSpot_WP_Options::get("api_key");
+        $api_key = Bspt_Options::get("api_key");
         if (empty($api_key)) {
             return false;
         }
 
-        $sync_post_types = $post_types ?: BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
-        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
+        $sync_post_types = $post_types ?: Bspt_Options::get("sync_post_types", ["post", "page"]);
+        $locus_api_url = Bspt_Options::get_locus_api_url();
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/sites/pages/stubs";
 
         // Get site domain
@@ -931,18 +931,18 @@ class BotSpot_WP_Sync
      */
     public static function bulk_sync($post_type = null)
     {
-        $api_key = BotSpot_WP_Options::get("api_key");
+        $api_key = Bspt_Options::get("api_key");
 
         if (empty($api_key)) {
             return false;
         }
 
-        $sync_post_types = $post_type ? [$post_type] : BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $sync_post_types = $post_type ? [$post_type] : Bspt_Options::get("sync_post_types", ["post", "page"]);
 
         // Register page stubs first for immediate platform visibility
         self::register_page_stubs($sync_post_types);
 
-        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
+        $locus_api_url = Bspt_Options::get_locus_api_url();
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/connector/ingest/batch";
         $batch_size = 100;
         $offset = 0;
@@ -954,7 +954,7 @@ class BotSpot_WP_Sync
             "Content-Type" => "application/json",
             "X-API-Key" => $api_key,
             "X-Source-Type" => "wordpress",
-            "X-Plugin-Version" => defined('BOTSPOT_WP_VERSION') ? BOTSPOT_WP_VERSION : 'unknown',
+            "X-Plugin-Version" => defined('BSPT_VERSION') ? BSPT_VERSION : 'unknown',
         ];
 
         while (true) {
@@ -1138,12 +1138,12 @@ class BotSpot_WP_Sync
             return false;
         }
 
-        $sync_post_types = BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
         if (!in_array($post->post_type, $sync_post_types, true)) {
             return false;
         }
 
-        return (bool) apply_filters("botspot_wp_should_sync", true, $post->ID, $post);
+        return (bool) apply_filters("bspt_should_sync", true, $post->ID, $post);
     }
 
     /**
@@ -1155,7 +1155,7 @@ class BotSpot_WP_Sync
      */
     private static function compute_content_hash($post)
     {
-        $content = BotSpot_WP_Page_Builder::extract_content($post);
+        $content = Bspt_Page_Builder::extract_content($post);
         $data = $post->post_title . $content . $post->post_excerpt;
         return hash("sha256", $data);
     }
@@ -1170,7 +1170,7 @@ class BotSpot_WP_Sync
      */
     private static function compute_change_percentage($post, $post_id)
     {
-        $content = BotSpot_WP_Page_Builder::extract_content($post);
+        $content = Bspt_Page_Builder::extract_content($post);
         $current_words = str_word_count(
             wp_strip_all_tags($post->post_title . " " . $content . " " . $post->post_excerpt),
         );
@@ -1199,7 +1199,7 @@ class BotSpot_WP_Sync
      */
     private static function get_threshold()
     {
-        $sensitivity = BotSpot_WP_Options::get("sync_sensitivity", "medium");
+        $sensitivity = Bspt_Options::get("sync_sensitivity", "medium");
 
         switch ($sensitivity) {
             case "high":
@@ -1257,8 +1257,8 @@ class BotSpot_WP_Sync
      */
     private static function log_debug($message)
     {
-        if (BotSpot_WP_Options::get("debug_mode")) {
-            BotSpot_WP_Logger::log_debug("[Sync] " . $message);
+        if (Bspt_Options::get("debug_mode")) {
+            Bspt_Logger::log_debug("[Sync] " . $message);
         }
     }
 
@@ -1270,6 +1270,6 @@ class BotSpot_WP_Sync
      */
     private static function log_error($message)
     {
-        BotSpot_WP_Logger::log_error("[Sync] " . $message);
+        Bspt_Logger::log_error("[Sync] " . $message);
     }
 }

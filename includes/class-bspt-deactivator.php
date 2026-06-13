@@ -5,8 +5,8 @@
  * @link       https://bot.spot
  * @since      0.1.0
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
 
 // If this file is called directly, abort.
@@ -20,11 +20,11 @@ if (!defined('WPINC')) {
  * Clears transients and temporary data.
  *
  * @since      0.1.0
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  * @author     BotSpot Team
  */
-class BotSpot_WP_Deactivator {
+class Bspt_Deactivator {
 
     /**
      * Plugin deactivation actions.
@@ -33,10 +33,10 @@ class BotSpot_WP_Deactivator {
      */
     public static function deactivate() {
         // Clear error transients
-        BotSpot_WP_Logger::clear_errors();
+        Bspt_Logger::clear_errors();
 
         // Clear activation notice transient
-        delete_transient('botspot_wp_activation_notice');
+        delete_transient('bspt_activation_notice');
 
         // Unschedule analytics flush wp-cron event
         $timestamp = wp_next_scheduled('botspot_flush_analytics');
@@ -44,8 +44,12 @@ class BotSpot_WP_Deactivator {
             wp_unschedule_event($timestamp, 'botspot_flush_analytics');
         }
 
-        if (BotSpot_WP_Options::get('debug_mode')) {
-            BotSpot_WP_Logger::log_debug('BotSpot WP deactivated.');
+        // Deregister webhook from locus-core
+        require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-webhook-handler.php';
+        Bspt_Webhook_Handler::deregister_webhook();
+
+        if (Bspt_Options::get('debug_mode')) {
+            Bspt_Logger::log_debug('BotSpot WP deactivated.');
         }
     }
 }

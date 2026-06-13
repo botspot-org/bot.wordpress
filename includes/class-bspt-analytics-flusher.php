@@ -12,20 +12,20 @@
  *   _botspot_impressions_inflight_at      (int — unix timestamp when inflight was created)
  *
  * Options used:
- *   botspot_wp_last_flush_at  (int unix timestamp)
- *   botspot_wp_last_flush_id  (string UUID)
+ *   bspt_last_flush_at  (int unix timestamp)
+ *   bspt_last_flush_id  (string UUID)
  *
  * Transients used:
  *   botspot_flush_lock       (single-flight lock, 10-minute TTL)
  *
- * @package BotSpot_WP
+ * @package Bspt
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class BotSpot_WP_Analytics_Flusher
+class Bspt_Analytics_Flusher
 {
     const MAX_ITEMS_PER_BATCH = 1000;
     const LOCK_TRANSIENT = 'botspot_flush_lock';
@@ -38,8 +38,8 @@ class BotSpot_WP_Analytics_Flusher
     const META_INFLIGHT_BATCH = '_botspot_impressions_inflight_batch';
     const META_INFLIGHT_AT = '_botspot_impressions_inflight_at';
 
-    const OPTION_LAST_FLUSH_AT = 'botspot_wp_last_flush_at';
-    const OPTION_LAST_FLUSH_ID = 'botspot_wp_last_flush_id';
+    const OPTION_LAST_FLUSH_AT = 'bspt_last_flush_at';
+    const OPTION_LAST_FLUSH_ID = 'bspt_last_flush_id';
 
     /**
      * Increment the per-post pending counter. Called from the injector hot path.
@@ -48,7 +48,7 @@ class BotSpot_WP_Analytics_Flusher
      * Known limitation, documented in the spec (Non-atomic counter increment).
      *
      * @param int    $post_id
-     * @param string $bot_class  One of BotSpot_WP_Bot_Classifier::CANONICAL_CLASSES
+     * @param string $bot_class  One of Bspt_Bot_Classifier::CANONICAL_CLASSES
      */
     public static function increment_post($post_id, $bot_class)
     {
@@ -97,7 +97,7 @@ class BotSpot_WP_Analytics_Flusher
         try {
             return self::do_flush();
         } catch (Throwable $e) {
-            BotSpot_WP_Logger::log_error('Analytics flush failed: ' . $e->getMessage());
+            Bspt_Logger::log_error('Analytics flush failed: ' . $e->getMessage());
             return ['status' => 'error', 'message' => $e->getMessage()];
         } finally {
             delete_transient(self::LOCK_TRANSIENT);
@@ -139,16 +139,14 @@ class BotSpot_WP_Analytics_Flusher
     {
         global $wpdb;
         $threshold = time() - self::ORPHAN_THRESHOLD;
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Scans plugin-owned inflight analytics meta to recover crashed flushes.
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT post_id, meta_value FROM {$wpdb->postmeta}
-                 WHERE meta_key = %s
-                 AND CAST(meta_value AS UNSIGNED) < %d",
-                self::META_INFLIGHT_AT,
-                $threshold
-            )
+        $sql = $wpdb->prepare(
+            "SELECT post_id, meta_value FROM {$wpdb->postmeta}
+             WHERE meta_key = %s
+             AND CAST(meta_value AS UNSIGNED) < %d",
+            self::META_INFLIGHT_AT,
+            $threshold
         );
+        $rows = $wpdb->get_results($sql);
         foreach ($rows as $row) {
             $post_id = (int) $row->post_id;
             // Rebuild orphan's batch_id and merge back into pending
@@ -171,14 +169,11 @@ class BotSpot_WP_Analytics_Flusher
         global $wpdb;
 
         // Find all posts with non-empty pending counters.
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Reads plugin-owned pending analytics meta for the flush batch.
-        $post_ids = $wpdb->get_col(
-            $wpdb->prepare(
-                "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT %d",
-                self::META_PENDING,
-                self::MAX_ITEMS_PER_BATCH
-            )
-        );
+        $post_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT %d",
+            self::META_PENDING,
+            self::MAX_ITEMS_PER_BATCH
+        ));
 
         $items = [];
         $now = time();
@@ -222,12 +217,12 @@ class BotSpot_WP_Analytics_Flusher
      */
     private static function send_batch($batch_id, $items)
     {
-        $api_key = BotSpot_WP_Options::get('api_key', '');
-        if (empty($api_key)) {
+        $api_url = Bspt_Options::get('api_url', '');
+        $api_key = Bspt_Options::get('api_key', '');
+        if (empty($api_url) || empty($api_key)) {
             return false;
         }
 
-        $api_url = BotSpot_WP_Options::get_locus_api_url();
         $url = rtrim($api_url, '/') . '/api/v1/analytics/impressions/batch';
         $body = [
             'batch_id'   => $batch_id,
@@ -246,13 +241,13 @@ class BotSpot_WP_Analytics_Flusher
         ]);
 
         if (is_wp_error($response)) {
-            BotSpot_WP_Logger::log_error('Analytics batch POST failed: ' . $response->get_error_message());
+            Bspt_Logger::log_error('Analytics batch POST failed: ' . $response->get_error_message());
             return false;
         }
 
         $code = (int) wp_remote_retrieve_response_code($response);
         if ($code !== 200) {
-            BotSpot_WP_Logger::log_error("Analytics batch POST got HTTP $code");
+            Bspt_Logger::log_error("Analytics batch POST got HTTP $code");
             return false;
         }
 
@@ -267,14 +262,11 @@ class BotSpot_WP_Analytics_Flusher
     private static function clear_inflight($batch_id)
     {
         global $wpdb;
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Finds plugin-owned inflight analytics rows for a completed batch.
-        $post_ids = $wpdb->get_col(
-            $wpdb->prepare(
-                "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
-                self::META_INFLIGHT_BATCH,
-                $batch_id
-            )
-        );
+        $post_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
+            self::META_INFLIGHT_BATCH,
+            $batch_id
+        ));
         foreach ($post_ids as $post_id) {
             delete_post_meta((int) $post_id, self::META_INFLIGHT);
             delete_post_meta((int) $post_id, self::META_INFLIGHT_BATCH);
@@ -290,14 +282,11 @@ class BotSpot_WP_Analytics_Flusher
     private static function merge_inflight_to_pending($batch_id)
     {
         global $wpdb;
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Finds plugin-owned inflight analytics rows to retry a failed batch.
-        $post_ids = $wpdb->get_col(
-            $wpdb->prepare(
-                "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
-                self::META_INFLIGHT_BATCH,
-                $batch_id
-            )
-        );
+        $post_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
+            self::META_INFLIGHT_BATCH,
+            $batch_id
+        ));
         foreach ($post_ids as $post_id) {
             self::merge_post_inflight_to_pending((int) $post_id);
         }
