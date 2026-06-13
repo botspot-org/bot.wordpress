@@ -215,7 +215,7 @@ class Bspt_Sync
             update_post_meta(
                 $post_id,
                 "_botspot_sync_word_count",
-                str_word_count(strip_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt)),
+                str_word_count(wp_strip_all_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt)),
             );
         } else {
             update_post_meta($post_id, "_botspot_sync_status", "error");
@@ -319,6 +319,11 @@ class Bspt_Sync
         if (in_array($event, ["content.deleted", "content.status_changed"])) {
             self::log_debug(sprintf("Post %d: skipping %s event (no delete endpoint)", $post->ID, $event));
             return true;
+        }
+
+        if (!self::can_sync_post($post)) {
+            self::log_debug(sprintf("Post %d: not eligible for sync", $post->ID));
+            return false;
         }
 
         $payload = self::build_ingest_payload($post);
@@ -492,7 +497,6 @@ class Bspt_Sync
 
         $response = wp_remote_get($url, [
             'timeout' => 15,
-            'sslverify' => false,
             'user-agent' => 'BotSpot-WP-Sync/1.0',
             'headers' => [
                 'Cache-Control' => 'no-cache',
@@ -984,7 +988,7 @@ class Bspt_Sync
                 $post_hashes[$post->ID] = [
                     "hash" => self::compute_content_hash($post),
                     "word_count" => str_word_count(
-                        strip_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt),
+                        wp_strip_all_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt),
                     ),
                 ];
             }
@@ -1082,6 +1086,11 @@ class Bspt_Sync
             return false;
         }
 
+        if (!self::can_sync_post($post)) {
+            self::log_debug(sprintf("Post %d: manual sync skipped because the post is not published or not selected for sync", $post_id));
+            return false;
+        }
+
         $current_hash = self::compute_content_hash($post);
         $previous_hash = get_post_meta($post_id, "_botspot_sync_hash", true);
 
@@ -1103,13 +1112,38 @@ class Bspt_Sync
             update_post_meta(
                 $post_id,
                 "_botspot_sync_word_count",
-                str_word_count(strip_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt)),
+                str_word_count(wp_strip_all_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt)),
             );
         } else {
             update_post_meta($post_id, "_botspot_sync_status", "error");
         }
 
         return $result;
+    }
+
+    /**
+     * Whether a post is eligible to be sent to BotSpot.
+     *
+     * @since 3.0.8
+     * @param WP_Post $post The post object.
+     * @return bool
+     */
+    public static function can_sync_post($post)
+    {
+        if (!$post instanceof WP_Post) {
+            return false;
+        }
+
+        if ($post->post_status !== "publish") {
+            return false;
+        }
+
+        $sync_post_types = BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
+        if (!in_array($post->post_type, $sync_post_types, true)) {
+            return false;
+        }
+
+        return (bool) apply_filters("botspot_wp_should_sync", true, $post->ID, $post);
     }
 
     /**
@@ -1138,7 +1172,7 @@ class Bspt_Sync
     {
         $content = Bspt_Page_Builder::extract_content($post);
         $current_words = str_word_count(
-            strip_tags($post->post_title . " " . $content . " " . $post->post_excerpt),
+            wp_strip_all_tags($post->post_title . " " . $content . " " . $post->post_excerpt),
         );
 
         // Get cached word count from previous sync

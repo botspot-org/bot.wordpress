@@ -324,7 +324,7 @@ class Bspt_Content_Fetcher
         if (empty($api_key)) {
             return [
                 "success" => false,
-                "message" => __("API key is not configured", "botspot-wp"),
+                "message" => __("API key is not configured", "botspot"),
             ];
         }
 
@@ -341,7 +341,11 @@ class Bspt_Content_Fetcher
         if (is_wp_error($response)) {
             return [
                 "success" => false,
-                "message" => sprintf(__("Connection failed: %s", "botspot-wp"), $response->get_error_message()),
+                "message" => sprintf(
+                    /* translators: %s: WordPress HTTP API error message */
+                    __("Connection failed: %s", "botspot"),
+                    $response->get_error_message()
+                ),
             ];
         }
 
@@ -350,20 +354,24 @@ class Bspt_Content_Fetcher
         if ($status_code === 200) {
             return [
                 "success" => true,
-                "message" => __("Connected to bot.spot successfully", "botspot-wp"),
+                "message" => __("Connected to bot.spot successfully", "botspot"),
             ];
         }
 
         if ($status_code === 401 || $status_code === 403) {
             return [
                 "success" => false,
-                "message" => __("Authentication failed. Check your API key.", "botspot-wp"),
+                "message" => __("Authentication failed. Check your API key.", "botspot"),
             ];
         }
 
         return [
             "success" => false,
-            "message" => sprintf(__("Connection returned HTTP %d", "botspot-wp"), $status_code),
+            "message" => sprintf(
+                /* translators: %d: HTTP status code */
+                __("Connection returned HTTP %d", "botspot"),
+                $status_code
+            ),
         ];
     }
 
@@ -383,6 +391,7 @@ class Bspt_Content_Fetcher
 
         // Clear all botspot_content_ transients
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Deletes plugin-owned content cache transients by prefix.
         $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",

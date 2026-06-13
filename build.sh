@@ -1,22 +1,26 @@
 #!/bin/bash
 
-# BotSpot WP Plugin Build Script
+# BotSpot Plugin Build Script
 # Creates a distributable WordPress plugin zip file
 
 set -e
 
 # Configuration
-PLUGIN_SLUG="botspot-wp"
-VERSION=$(grep "Version:" botspot-wp.php | awk '{print $3}' | head -1)
+PLUGIN_SLUG="botspot"
+MAIN_PLUGIN_FILE="botspot.php"
+VERSION=$(grep "Version:" "${MAIN_PLUGIN_FILE}" | awk '{print $3}' | head -1)
 BUILD_DIR="build"
 DIST_DIR="dist"
 
-# Build target — defaults to staging, override with:
-#   TARGET=production ./build.sh
-#   or the alias flag: ./build.sh --production
-TARGET="${TARGET:-staging}"
+# Build target — defaults to production for release safety. Use staging only
+# when explicitly requested:
+#   TARGET=staging ./build.sh
+#   or the alias flag: ./build.sh --staging
+TARGET="${TARGET:-production}"
 if [ "$1" = "--production" ] || [ "$1" = "--prod" ]; then
     TARGET="production"
+elif [ "$1" = "--staging" ] || [ "$1" = "--stage" ]; then
+    TARGET="staging"
 fi
 
 # Per-target URLs — env-var overridable for anyone running a private locus.
@@ -44,7 +48,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Building BotSpot WP Plugin v${VERSION} [${TARGET}]${NC}"
+echo -e "${GREEN}Building BotSpot Plugin v${VERSION} [${TARGET}]${NC}"
 echo "  API:        ${LOCUS_API_URL}"
 echo "  Connectors: ${CONNECTOR_URL}"
 echo "========================================"
@@ -87,7 +91,7 @@ fi
 echo -e "${YELLOW}Copying plugin files...${NC}"
 
 # Copy main plugin file
-cp botspot-wp.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp "${MAIN_PLUGIN_FILE}" "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
 # Rewrite build-time URLs in the copy (never touch the source tree).
 # Source tree always holds the staging URLs; production builds sed-rewrite
@@ -97,24 +101,24 @@ echo -e "${YELLOW}==> Rewriting build-time URLs for target '${TARGET}'${NC}"
 sed -i.bak \
     -e "s|https://locus-staging-api.bot.spot|${LOCUS_API_URL}|g" \
     -e "s|https://staging-locus-connectors.bot.spot|${CONNECTOR_URL}|g" \
-    "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php"
-rm -f "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php.bak"
+    "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}"
+rm -f "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}.bak"
 
 # Sanity check: confirm the rewritten file still has both defines and they
 # point at the expected URLs.
-if ! grep -q "define('BOTSPOT_WP_LOCUS_API_URL', '${LOCUS_API_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php"; then
+if ! grep -q "define('BOTSPOT_WP_LOCUS_API_URL', '${LOCUS_API_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}"; then
     echo -e "${RED}ERROR: BOTSPOT_WP_LOCUS_API_URL rewrite failed${NC}"
     exit 1
 fi
-if ! grep -q "define('BOTSPOT_WP_CONNECTOR_URL', '${CONNECTOR_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/botspot-wp.php"; then
+if ! grep -q "define('BOTSPOT_WP_CONNECTOR_URL', '${CONNECTOR_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}"; then
     echo -e "${RED}ERROR: BOTSPOT_WP_CONNECTOR_URL rewrite failed${NC}"
     exit 1
 fi
 
-# Copy README and documentation
-cp README.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
-cp THEME-INTEGRATION.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
+# Copy public package metadata and documentation
 cp readme.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp LICENSE.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp THIRD-PARTY-LICENSES.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
 # Copy uninstall script
 cp uninstall.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
@@ -131,6 +135,12 @@ cp -r public "${BUILD_DIR}/${PLUGIN_SLUG}/"
 # Copy Strauss-prefixed vendor (runtime dependency: crawler-detect + crawler-user-agents)
 mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/vendor"
 cp -r vendor/botspot-prefixed "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed"
+
+# Preserve upstream license files alongside the prefixed runtime packages.
+mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed/jaybizzle/crawler-detect"
+mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed/monperrus/crawler-user-agents"
+cp vendor/jaybizzle/crawler-detect/LICENSE "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed/jaybizzle/crawler-detect/LICENSE"
+cp vendor/monperrus/crawler-user-agents/LICENSE "${BUILD_DIR}/${PLUGIN_SLUG}/vendor/botspot-prefixed/monperrus/crawler-user-agents/LICENSE"
 
 # Create languages directory (even if empty, for i18n readiness)
 mkdir -p "${BUILD_DIR}/${PLUGIN_SLUG}/languages"

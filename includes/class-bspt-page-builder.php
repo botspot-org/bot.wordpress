@@ -533,7 +533,7 @@ class Bspt_Page_Builder
                 $html .= '<h2>' . $content . '</h2>' . "\n";
             } else {
                 // If content already has HTML tags, use as-is
-                if ($content !== strip_tags($content)) {
+                if ($content !== wp_strip_all_tags($content)) {
                     $html .= $content . "\n";
                 } else {
                     $html .= '<p>' . $content . '</p>' . "\n";

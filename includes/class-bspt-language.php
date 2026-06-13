@@ -47,6 +47,7 @@ class Bspt_Language
             // WPML: apply_filters returns ['language_code' => 'fi', ...]
             if (has_filter("wpml_post_language_details")) {
                 $details = apply_filters(
+                    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party WPML integration hook.
                     "wpml_post_language_details",
                     null,
                     (int) $post_id,
@@ -89,6 +90,7 @@ class Bspt_Language
 
         // WPML: current language via filter.
         if (has_filter("wpml_current_language")) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party WPML integration hook.
             $lang = apply_filters("wpml_current_language", null);
             if (is_string($lang) && $lang !== "") {
                 return substr($lang, 0, 2);

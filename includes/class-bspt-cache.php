@@ -25,6 +25,7 @@ class Bspt_Cache
     public static function purge_plugin_transients_all()
     {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bulk-deletes only plugin-owned transient rows by fixed prefixes.
         $deleted = $wpdb->query(
             "DELETE FROM {$wpdb->options}
              WHERE option_name LIKE '_transient_botspot_content_%'
@@ -78,12 +79,15 @@ class Bspt_Cache
         clean_post_cache($post_id);
 
         // LiteSpeed Cache
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
         do_action("litespeed_purge_post", $post_id);
 
         // W3 Total Cache
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
         do_action("w3tc_flush_post", $post_id);
 
         // WP Rocket
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
         do_action("rocket_clean_post", $post_id);
 
         // WP Super Cache
@@ -119,9 +123,11 @@ class Bspt_Cache
     public static function purge_page_caches_all()
     {
         // LiteSpeed Cache
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
         do_action("litespeed_purge_all");
 
         // W3 Total Cache
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
         do_action("w3tc_flush_all");
 
         // WP Rocket

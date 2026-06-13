@@ -10,7 +10,7 @@
   var registerBlockType = wp.blocks.registerBlockType;
   var createElement = wp.element.createElement;
 
-  registerBlockType("botdot-wp/appendix", {
+  registerBlockType("botspot-wp/appendix", {
     title: "BotSpot Appendix",
     description: "Insert AI-discoverable appendix content from bot.spot",
     icon: createElement(

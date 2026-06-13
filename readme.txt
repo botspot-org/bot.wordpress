@@ -1,10 +1,10 @@
-=== BotSpot WordPress ===
-Contributors: botspot
+=== BotSpot ===
+Contributors: haavardmk
 Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
-Tested up to: 6.7
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.0.1
+Stable tag: 3.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Sync WordPress content to BotSpot and render BotSpot appendix content and JSON-L
 
 == Description ==
 
-BotSpot WordPress connects your WordPress site to the BotSpot platform. It syncs selected published content to BotSpot and renders the resulting appendix HTML and JSON-LD structured data on your public pages.
+BotSpot connects your WordPress site to the BotSpot platform. It syncs selected published content to BotSpot and renders the resulting appendix HTML and JSON-LD structured data on your public pages.
 
 The plugin is designed for sites that use BotSpot as a software-as-a-service platform for content enrichment and structured data generation. A BotSpot account and access key are required before content can be synced or rendered.
 
@@ -63,9 +63,25 @@ Site administrators can view which post types are synced and which post types re
 
 The plugin stores BotSpot access credentials and sync metadata in the WordPress database. On uninstall, plugin options and plugin-owned post metadata are removed.
 
+The plugin does not add BotSpot attribution links or credits to public pages by default. Service-rendered appendix output may include BotSpot-managed branding or attribution only if that behavior is configured in BotSpot.
+
+== Source and Build ==
+
+The plugin source is distributed as human-readable PHP, JavaScript, and CSS. Runtime PHP dependencies are installed with Composer and prefixed during release builds with Strauss to avoid dependency conflicts in WordPress environments.
+
+Production release archives are generated with `./build.sh` or `TARGET=production ./build.sh`. The generated ZIP includes the WordPress.org `readme.txt`, the plugin license, third-party license notices, and the Strauss-prefixed runtime dependency files needed by the plugin.
+
+== Third-Party Licenses ==
+
+This plugin bundles or generates runtime code from the following GPL-compatible packages:
+
+* `jaybizzle/crawler-detect` - MIT License.
+* `monperrus/crawler-user-agents` - MIT License.
+* Composer autoload/runtime metadata and Strauss-prefixed generated dependency files - see `THIRD-PARTY-LICENSES.txt` in the plugin package.
+
 == Installation ==
 
-1. Upload the `botdot-wp` folder to the `/wp-content/plugins/` directory, or install the plugin from the WordPress Plugin Directory.
+1. Upload the `botspot` folder to the `/wp-content/plugins/` directory, or install the plugin from the WordPress Plugin Directory.
 2. Activate the plugin through the Plugins screen in WordPress.
 3. Open the BotSpot menu in the WordPress admin.
 4. Sign in to BotSpot and create an access key.
@@ -76,7 +92,7 @@ The plugin stores BotSpot access credentials and sync metadata in the WordPress 
 
 = Do I need a BotSpot account? =
 
-Yes. BotSpot WordPress is an interface to the BotSpot software-as-a-service platform. An access key is required before content can be synced or rendered.
+Yes. BotSpot is an interface to the BotSpot software-as-a-service platform. An access key is required before content can be synced or rendered.
 
 = Does the plugin send data to an external service? =
 
@@ -113,6 +129,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.1.1 =
+
+* Hardened release packaging, metadata, third-party license notices, analytics rendering, JSON-LD output encoding, sync authorization, SSL verification, lifecycle behavior, and uninstall cleanup for WordPress.org submission readiness.
 
 = 3.0.0 =
 
@@ -165,6 +185,6 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Upgrade Notice ==
 
-= 2.9.2 =
+= 3.0.9 =
 
-Update to the latest stable release for current sync, rendering, cache, and diagnostic behavior.
+Update for WordPress.org submission-readiness fixes across packaging, security hardening, analytics, lifecycle behavior, and cleanup.
