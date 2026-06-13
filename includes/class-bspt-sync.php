@@ -1138,12 +1138,12 @@ class Bspt_Sync
             return false;
         }
 
-        $sync_post_types = BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
+        $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
         if (!in_array($post->post_type, $sync_post_types, true)) {
             return false;
         }
 
-        return (bool) apply_filters("botspot_wp_should_sync", true, $post->ID, $post);
+        return (bool) apply_filters("bspt_should_sync", true, $post->ID, $post);
     }
 
     /**
