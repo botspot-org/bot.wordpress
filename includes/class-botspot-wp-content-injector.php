@@ -542,8 +542,8 @@ class BotSpot_WP_Content_Injector
             // Manual placement; no JS reposition needed.
             return;
         }
-        ?>
-<script>
+
+        $script = <<<'JS'
 (function () {
     var SELECTORS = [
         "[data-botspot-footer]",
@@ -596,8 +596,11 @@ class BotSpot_WP_Content_Injector
         place();
     }
 })();
-</script>
-        <?php
+JS;
+
+        wp_register_script("botspot-placement", false, [], BOTSPOT_WP_VERSION, true);
+        wp_enqueue_script("botspot-placement");
+        wp_add_inline_script("botspot-placement", $script);
     }
 
     /**

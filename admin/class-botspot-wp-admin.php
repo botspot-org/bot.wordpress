@@ -151,7 +151,25 @@ class BotSpot_WP_Admin
      */
     public function enqueue_admin_assets($hook)
     {
-        // Only load on our settings page (top-level menu registers as toplevel_page_{slug})
+        // Enqueue sync metabox script on post edit screens
+        if (in_array($hook, ["post.php", "post-new.php"], true)) {
+            wp_enqueue_script(
+                "botspot-sync-metabox",
+                BOTSPOT_WP_PLUGIN_URL . "admin/js/botspot-sync-metabox.js",
+                ["jquery"],
+                $this->version,
+                true
+            );
+            wp_localize_script("botspot-sync-metabox", "botspotMetabox", [
+                "nonce" => wp_create_nonce("botspot_wp_manual_sync"),
+                "syncing" => __("Syncing...", "botspot-wp"),
+                "syncNow" => __("Sync Now", "botspot-wp"),
+                "failed" => __("Sync failed", "botspot-wp"),
+                "requestFailed" => __("Request failed", "botspot-wp"),
+            ]);
+        }
+
+        // Settings page assets
         if ($hook !== "toplevel_page_botspot-wp") {
             return;
         }
@@ -204,6 +222,22 @@ class BotSpot_WP_Admin
                 "copied" => __("Copied to clipboard", "botspot-wp"),
             ],
         ]);
+
+        // Settings page footer detection note toggle
+        $toggle_script = <<<'JS'
+(function() {
+    var radios = document.querySelectorAll('input[name="botspot_wp_injection_position"]');
+    var note = document.getElementById('bsa-footer-detection-note');
+    if (!radios.length || !note) return;
+    function toggle() {
+        var val = document.querySelector('input[name="botspot_wp_injection_position"]:checked');
+        note.style.display = (val && (val.value === 'above_footer' || val.value === 'bottom_of_page')) ? 'block' : 'none';
+    }
+    radios.forEach(function(r) { r.addEventListener('change', toggle); });
+    toggle();
+})();
+JS;
+        wp_add_inline_script("botspot-admin", $toggle_script);
     }
 
     /**
@@ -322,45 +356,6 @@ class BotSpot_WP_Admin
                 <span class="botspot-sync-result"></span>
             </p>
         </div>
-        <script type="text/javascript">
-        jQuery(document).ready(function($) {
-            $('.botspot-sync-now').on('click', function(e) {
-                e.preventDefault();
-                var btn = $(this);
-                var result = btn.siblings('.botspot-sync-result');
-                btn.prop('disabled', true).text('<?php _e("Syncing...", "botspot-wp"); ?>');
-                result.html('');
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'botspot_wp_manual_sync',
-                        nonce: '<?php echo wp_create_nonce("botspot_wp_manual_sync"); ?>',
-                        post_id: btn.data('post-id')
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            result.html('<span style="color: green;">&#10003; ' + response.data.message + '</span>');
-                        } else {
-                            result.html('<span style="color: red;">&#10007; ' + (response.data.message || '<?php _e(
-                                "Sync failed",
-                                "botspot-wp",
-                            ); ?>') + '</span>');
-                        }
-                    },
-                    error: function() {
-                        result.html('<span style="color: red;">&#10007; <?php _e(
-                            "Request failed",
-                            "botspot-wp",
-                        ); ?></span>');
-                    },
-                    complete: function() {
-                        btn.prop('disabled', false).text('<?php _e("Sync Now", "botspot-wp"); ?>');
-                    }
-                });
-            });
-        });
-        </script>
         <?php
     }
 
@@ -723,7 +718,7 @@ class BotSpot_WP_Admin
         // The WebhookRead response includes id, secret, and org_id, so we get
         // everything we need in a single call - no locus-connectors dependency.
         $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
-        $webhook_url = home_url("/wp-json/botspot-wp/v1/webhook");
+        $webhook_url = rest_url("botspot-wp/v1/webhook");
 
         $response = wp_remote_post(
             rtrim($locus_api_url, "/") . "/api/v1/webhooks",

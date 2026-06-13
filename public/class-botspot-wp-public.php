@@ -211,7 +211,8 @@ class BotSpot_WP_Public
      */
     public function render_appendix_shortcode($atts)
     {
-        return $this->get_content_injector()->render_shortcode($atts);
+        $html = $this->get_content_injector()->render_shortcode($atts);
+        return wp_kses_post($html);
     }
 
     /**
