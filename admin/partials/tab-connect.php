@@ -2,8 +2,8 @@
 /**
  * Connect tab — access key entry, connect, setup guide.
  *
- * @package BotSpot_WP
- * @subpackage BotSpot_WP/admin/partials
+ * @package Bspt
+ * @subpackage Bspt/admin/partials
  * @since 2.2.0
  *
  * Variables from parent partial:
@@ -41,7 +41,7 @@ if (!defined("WPINC")) {
                     <input
                         id="bsa-api-key"
                         type="password"
-                        name="botspot_wp_api_key"
+                        name="bspt_api_key"
                         class="bsa-input-group__input bsa-mono bsa-tabular-nums"
                         value=""
                         placeholder="<?php echo $bsa_has_api_key ? "••••••••••••••••••••••••" : "sk_live_xxxxxxxxxxxxxxxxxxxxxxxx"; ?>"

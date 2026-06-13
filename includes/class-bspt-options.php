@@ -5,8 +5,8 @@
  * @link       https://bot.spot
  * @since      0.1.0
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
 
 // If this file is called directly, abort.
@@ -21,11 +21,11 @@ if (!defined("WPINC")) {
  * with proper defaults, validation, and type casting.
  *
  * @since      0.1.0
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  * @author     BotSpot Team
  */
-class BotSpot_WP_Options
+class Bspt_Options
 {
     /**
      * Default plugin options
@@ -65,7 +65,7 @@ class BotSpot_WP_Options
      * Get plugin option with default fallback
      *
      * @since    0.1.0
-     * @param    string    $option_name    The option name (without botspot_wp_ prefix).
+     * @param    string    $option_name    The option name (without bspt_ prefix).
      * @param    mixed     $default        Optional. Default value if option doesn't exist.
      * @return   mixed                     The option value.
      */
@@ -75,7 +75,7 @@ class BotSpot_WP_Options
             $default = isset(self::$defaults[$option_name]) ? self::$defaults[$option_name] : null;
         }
 
-        $value = get_option("botspot_wp_" . $option_name, $default);
+        $value = get_option("bspt_" . $option_name, $default);
 
         return self::cast_option_value($option_name, $value);
     }
@@ -84,7 +84,7 @@ class BotSpot_WP_Options
      * Set plugin option
      *
      * @since    0.1.0
-     * @param    string    $option_name    The option name (without botspot_wp_ prefix).
+     * @param    string    $option_name    The option name (without bspt_ prefix).
      * @param    mixed     $value          The option value.
      * @return   bool                      True if the value was updated, false otherwise.
      */
@@ -92,26 +92,26 @@ class BotSpot_WP_Options
     {
         $value = self::sanitize_option_value($option_name, $value);
 
-        return update_option("botspot_wp_" . $option_name, $value);
+        return update_option("bspt_" . $option_name, $value);
     }
 
     /**
      * Delete plugin option
      *
      * @since    0.1.0
-     * @param    string    $option_name    The option name (without botspot_wp_ prefix).
+     * @param    string    $option_name    The option name (without bspt_ prefix).
      * @return   bool                      True if the option was deleted, false otherwise.
      */
     public static function delete($option_name)
     {
-        return delete_option("botspot_wp_" . $option_name);
+        return delete_option("bspt_" . $option_name);
     }
 
     /**
      * Get multiple options at once
      *
      * @since    0.1.0
-     * @param    array     $option_names    Array of option names (without botspot_wp_ prefix).
+     * @param    array     $option_names    Array of option names (without bspt_ prefix).
      * @return   array                      Associative array of option values.
      */
     public static function get_multiple($option_names)
@@ -149,12 +149,12 @@ class BotSpot_WP_Options
      * Check if an option exists
      *
      * @since    0.1.0
-     * @param    string    $option_name    The option name (without botspot_wp_ prefix).
+     * @param    string    $option_name    The option name (without bspt_ prefix).
      * @return   bool                      True if option exists, false otherwise.
      */
     public static function exists($option_name)
     {
-        return get_option("botspot_wp_" . $option_name) !== false;
+        return get_option("bspt_" . $option_name) !== false;
     }
 
     /**
@@ -178,7 +178,7 @@ class BotSpot_WP_Options
      * Reset option to default value
      *
      * @since    0.1.0
-     * @param    string    $option_name    The option name (without botspot_wp_ prefix).
+     * @param    string    $option_name    The option name (without bspt_ prefix).
      * @return   bool                      True if option was reset successfully.
      */
     public static function reset_to_default($option_name)
@@ -331,7 +331,7 @@ class BotSpot_WP_Options
      * Get default value for an option
      *
      * @since    0.1.0
-     * @param    string    $option_name    The option name (without botspot_wp_ prefix).
+     * @param    string    $option_name    The option name (without bspt_ prefix).
      * @return   mixed                     The default value, or null if not found.
      */
     public static function get_default($option_name)
@@ -389,7 +389,7 @@ class BotSpot_WP_Options
      */
     public static function migrate_injection_toggles()
     {
-        $legacy = get_option("botspot_wp_injection_enabled");
+        $legacy = get_option("bspt_injection_enabled");
         if ($legacy !== false) {
             $enabled = (bool) $legacy;
             if (!self::exists("appendix_enabled")) {
@@ -398,7 +398,7 @@ class BotSpot_WP_Options
             if (!self::exists("jsonld_enabled")) {
                 self::set("jsonld_enabled", $enabled);
             }
-            delete_option("botspot_wp_injection_enabled");
+            delete_option("bspt_injection_enabled");
         }
     }
 
@@ -412,7 +412,7 @@ class BotSpot_WP_Options
      */
     public static function migrate_remove_botspot_key()
     {
-        delete_option("botspot_wp_botspot_key");
+        delete_option("bspt_botspot_key");
     }
 
     /**
@@ -423,7 +423,7 @@ class BotSpot_WP_Options
      */
     public static function get_locus_api_url()
     {
-        return BOTSPOT_WP_LOCUS_API_URL;
+        return BSPT_LOCUS_API_URL;
     }
 
     /**
@@ -434,7 +434,7 @@ class BotSpot_WP_Options
      */
     public static function get_connector_url()
     {
-        return BOTSPOT_WP_CONNECTOR_URL;
+        return BSPT_CONNECTOR_URL;
     }
 
     /**

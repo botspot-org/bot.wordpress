@@ -7,8 +7,8 @@
  * @link       https://bot.spot
  * @since      2.9.2
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
 
 if (!defined("WPINC")) {
@@ -21,10 +21,10 @@ if (!defined("WPINC")) {
  * Supports: Elementor, Divi, WPBakery, Beaver Builder, Bricks.
  *
  * @since      2.9.2
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
-class BotSpot_WP_Page_Builder
+class Bspt_Page_Builder
 {
     /**
      * Extract content from a post, handling page builder data

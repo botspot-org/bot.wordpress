@@ -6,8 +6,8 @@
  * cache plugins) so the same logic is used from both the manual "Clear cache"
  * button and the webhook that fires when locus-core finishes enriching a post.
  *
- * @package BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package Bspt
+ * @subpackage Bspt/includes
  * @since 2.6.4
  */
 
@@ -15,7 +15,7 @@ if (!defined("WPINC")) {
     die();
 }
 
-class BotSpot_WP_Cache
+class Bspt_Cache
 {
     /**
      * Delete all plugin-owned transients for every post (content + jsonld).
@@ -49,8 +49,8 @@ class BotSpot_WP_Cache
             return;
         }
         $langs = [];
-        if (class_exists("BotSpot_WP_Language")) {
-            $langs[] = BotSpot_WP_Language::get_current_language();
+        if (class_exists("Bspt_Language")) {
+            $langs[] = Bspt_Language::get_current_language();
         }
         $langs[] = substr(get_locale(), 0, 2);
         $langs = array_unique(array_filter($langs));
@@ -110,7 +110,7 @@ class BotSpot_WP_Cache
          *
          * @param int $post_id
          */
-        do_action("botspot_wp_after_purge_post", $post_id);
+        do_action("bspt_after_purge_post", $post_id);
     }
 
     /**
@@ -144,7 +144,7 @@ class BotSpot_WP_Cache
             cache_enabler_clear_complete_cache();
         }
 
-        do_action("botspot_wp_after_purge_all");
+        do_action("bspt_after_purge_all");
     }
 
     /**
@@ -156,7 +156,7 @@ class BotSpot_WP_Cache
     {
         $deleted = self::purge_plugin_transients_all();
         self::purge_page_caches_all();
-        delete_transient("botspot_wp_status_snapshot");
+        delete_transient("bspt_status_snapshot");
         return $deleted;
     }
 

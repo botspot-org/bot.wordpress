@@ -8,8 +8,8 @@
  * @link       https://bot.spot
  * @since      1.0.0
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  */
 
 // If this file is called directly, abort.
@@ -20,15 +20,15 @@ if (!defined("WPINC")) {
 /**
  * Unified content fetcher for locus-core appendix rendering.
  *
- * Replaces the old BotSpot_WP_Fetcher and BotSpot_WP_Appendix_Fetcher
+ * Replaces the old Bspt_Fetcher and Bspt_Appendix_Fetcher
  * with a single fetcher that returns both HTML and JSON-LD.
  *
  * @since      1.0.0
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/includes
+ * @package    Bspt
+ * @subpackage Bspt/includes
  * @author     BotSpot Team
  */
-class BotSpot_WP_Content_Fetcher
+class Bspt_Content_Fetcher
 {
     /**
      * Per-request cache to avoid duplicate HTTP calls within a single page load.
@@ -55,15 +55,15 @@ class BotSpot_WP_Content_Fetcher
             return self::$request_cache[$url_path];
         }
 
-        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
-        $api_key = BotSpot_WP_Options::get("api_key");
+        $locus_api_url = Bspt_Options::get_locus_api_url();
+        $api_key = Bspt_Options::get("api_key");
 
         if (empty($api_key)) {
             self::log_debug("Cannot fetch: API key not configured");
             return null;
         }
 
-        $lang = BotSpot_WP_Language::get_current_language();
+        $lang = Bspt_Language::get_current_language();
         $cache_key = "botspot_content_" . md5($url_path . "_" . $lang);
 
         // Check transient cache
@@ -141,7 +141,7 @@ class BotSpot_WP_Content_Fetcher
         ];
 
         // Cache with configured TTL
-        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotSpot_WP_Options::get("cache_ttl", 3600);
+        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : Bspt_Options::get("cache_ttl", 3600);
         set_transient($cache_key, $data, $ttl);
 
         self::log_debug(
@@ -170,7 +170,7 @@ class BotSpot_WP_Content_Fetcher
      */
     public static function fetch_jsonld($url_path)
     {
-        $lang = BotSpot_WP_Language::get_current_language();
+        $lang = Bspt_Language::get_current_language();
         $cache_key_jsonld = "botspot_jsonld_" . md5($url_path . "_" . $lang);
 
         // Check per-request cache first
@@ -178,8 +178,8 @@ class BotSpot_WP_Content_Fetcher
             return self::$request_cache[$cache_key_jsonld];
         }
 
-        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
-        $api_key = BotSpot_WP_Options::get("api_key");
+        $locus_api_url = Bspt_Options::get_locus_api_url();
+        $api_key = Bspt_Options::get("api_key");
 
         if (empty($api_key)) {
             self::log_debug("Cannot fetch JSON-LD: API key not configured");
@@ -238,7 +238,7 @@ class BotSpot_WP_Content_Fetcher
         ];
 
         // Cache with configured TTL
-        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : BotSpot_WP_Options::get("cache_ttl", 3600);
+        $ttl = isset($body["cache_ttl"]) ? (int) $body["cache_ttl"] : Bspt_Options::get("cache_ttl", 3600);
         set_transient($cache_key_jsonld, $data, $ttl);
 
         self::log_debug(
@@ -268,13 +268,13 @@ class BotSpot_WP_Content_Fetcher
             return false;
         }
 
-        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
-        $api_key = BotSpot_WP_Options::get("api_key");
+        $locus_api_url = Bspt_Options::get_locus_api_url();
+        $api_key = Bspt_Options::get("api_key");
 
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/appendix/check";
         $endpoint = add_query_arg("path", $url_path, $endpoint);
 
-        $lang = BotSpot_WP_Language::get_current_language();
+        $lang = Bspt_Language::get_current_language();
         if (!empty($lang)) {
             $endpoint = add_query_arg("lang", $lang, $endpoint);
         }
@@ -318,8 +318,8 @@ class BotSpot_WP_Content_Fetcher
      */
     public static function test_connection()
     {
-        $locus_api_url = BotSpot_WP_Options::get_locus_api_url();
-        $api_key = BotSpot_WP_Options::get("api_key");
+        $locus_api_url = Bspt_Options::get_locus_api_url();
+        $api_key = Bspt_Options::get("api_key");
 
         if (empty($api_key)) {
             return [
@@ -401,8 +401,8 @@ class BotSpot_WP_Content_Fetcher
      */
     private static function log_debug($message)
     {
-        if (BotSpot_WP_Options::get("debug_mode")) {
-            BotSpot_WP_Logger::log_debug("[ContentFetcher] " . $message);
+        if (Bspt_Options::get("debug_mode")) {
+            Bspt_Logger::log_debug("[ContentFetcher] " . $message);
         }
     }
 
@@ -414,6 +414,6 @@ class BotSpot_WP_Content_Fetcher
      */
     private static function log_error($message)
     {
-        BotSpot_WP_Logger::log_error("[ContentFetcher] " . $message);
+        Bspt_Logger::log_error("[ContentFetcher] " . $message);
     }
 }

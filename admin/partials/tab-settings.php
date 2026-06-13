@@ -2,8 +2,8 @@
 /**
  * Settings tab — Content to sync, Placement, SEO compatibility + Advanced.
  *
- * @package BotSpot_WP
- * @subpackage BotSpot_WP/admin/partials
+ * @package Bspt
+ * @subpackage Bspt/admin/partials
  * @since 2.2.0
  *
  * Variables from parent partial:
@@ -15,17 +15,17 @@ if (!defined("WPINC")) {
     die();
 }
 
-$bsa_sync_post_types = BotSpot_WP_Options::get("sync_post_types", ["post", "page"]);
-$bsa_inject_post_types = BotSpot_WP_Options::get("inject_on_post_types", ["post", "page"]);
-$bsa_injection_position = BotSpot_WP_Options::get("injection_position", "bottom_of_content");
-$bsa_jsonld_conflict = BotSpot_WP_Options::get("jsonld_conflict_mode", "merge");
-$bsa_auto_sync = (bool) BotSpot_WP_Options::get("auto_sync_enabled", true);
-$bsa_sync_sensitivity = BotSpot_WP_Options::get("sync_sensitivity", "medium");
-$bsa_appendix_enabled = (bool) BotSpot_WP_Options::get("appendix_enabled", true);
-$bsa_jsonld_enabled = (bool) BotSpot_WP_Options::get("jsonld_enabled", true);
+$bsa_sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
+$bsa_inject_post_types = Bspt_Options::get("inject_on_post_types", ["post", "page"]);
+$bsa_injection_position = Bspt_Options::get("injection_position", "bottom_of_content");
+$bsa_jsonld_conflict = Bspt_Options::get("jsonld_conflict_mode", "merge");
+$bsa_auto_sync = (bool) Bspt_Options::get("auto_sync_enabled", true);
+$bsa_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "medium");
+$bsa_appendix_enabled = (bool) Bspt_Options::get("appendix_enabled", true);
+$bsa_jsonld_enabled = (bool) Bspt_Options::get("jsonld_enabled", true);
 
 // Platform-managed by default when connected - settings controlled from bot.spot dashboard
-$bsa_is_platform_managed = !empty(BotSpot_WP_Options::get("webhook_id"));
+$bsa_is_platform_managed = !empty(Bspt_Options::get("webhook_id"));
 $bsa_dashboard_url = "https://platform.bot.spot";
 
 // Custom post types (exclude built-ins we handle explicitly)
@@ -79,15 +79,15 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <?php else: ?>
             <div class="bsa-check-list">
                 <label class="bsa-check">
-                    <input type="checkbox" name="botspot_wp_sync_post_types[]" value="post" <?php checked(in_array("post", $bsa_sync_post_types, true)); ?> />
+                    <input type="checkbox" name="bspt_sync_post_types[]" value="post" <?php checked(in_array("post", $bsa_sync_post_types, true)); ?> />
                     <span><?php _e("Posts", "botspot-wp"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="checkbox" name="botspot_wp_sync_post_types[]" value="page" <?php checked(in_array("page", $bsa_sync_post_types, true)); ?> />
+                    <input type="checkbox" name="bspt_sync_post_types[]" value="page" <?php checked(in_array("page", $bsa_sync_post_types, true)); ?> />
                     <span><?php _e("Pages", "botspot-wp"); ?></span>
                 </label>
                 <label class="bsa-check <?php echo $bsa_woocommerce_active ? "" : "bsa-check--disabled"; ?>">
-                    <input type="checkbox" name="botspot_wp_sync_post_types[]" value="product" <?php checked(in_array("product", $bsa_sync_post_types, true)); ?> <?php echo $bsa_woocommerce_active ? "" : "disabled"; ?> />
+                    <input type="checkbox" name="bspt_sync_post_types[]" value="product" <?php checked(in_array("product", $bsa_sync_post_types, true)); ?> <?php echo $bsa_woocommerce_active ? "" : "disabled"; ?> />
                     <span>
                         <?php _e("Products", "botspot-wp"); ?>
                         <span class="bsa-check__tag <?php echo $bsa_woocommerce_active ? "bsa-check__tag--active" : ""; ?>">WooCommerce</span>
@@ -99,7 +99,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     <div class="bsa-check-list bsa-check-list--nested">
                         <?php foreach ($bsa_custom_types as $pt): ?>
                         <label class="bsa-check">
-                            <input type="checkbox" name="botspot_wp_sync_post_types[]" value="<?php echo esc_attr($pt->name); ?>" <?php checked(in_array($pt->name, $bsa_sync_post_types, true)); ?> />
+                            <input type="checkbox" name="bspt_sync_post_types[]" value="<?php echo esc_attr($pt->name); ?>" <?php checked(in_array($pt->name, $bsa_sync_post_types, true)); ?> />
                             <span><?php echo esc_html($pt->label); ?></span>
                         </label>
                         <?php endforeach; ?>
@@ -151,22 +151,22 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <?php else: ?>
             <div class="bsa-check-list">
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botspot_wp_injection_position" value="bottom_of_content" <?php checked($bsa_injection_position, "bottom_of_content"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_content" <?php checked($bsa_injection_position, "bottom_of_content"); ?> />
                     <span>
                         <?php _e("Bottom of content", "botspot-wp"); ?>
                         <span class="bsa-check__tag"><?php _e("recommended", "botspot-wp"); ?></span>
                     </span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botspot_wp_injection_position" value="above_footer" <?php checked($bsa_injection_position, "above_footer"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="above_footer" <?php checked($bsa_injection_position, "above_footer"); ?> />
                     <span><?php _e("Above footer", "botspot-wp"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botspot_wp_injection_position" value="bottom_of_page" <?php checked($bsa_injection_position, "bottom_of_page"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_page" <?php checked($bsa_injection_position, "bottom_of_page"); ?> />
                     <span><?php _e("Bottom of page", "botspot-wp"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botspot_wp_injection_position" value="manual" <?php checked($bsa_injection_position, "manual"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="manual" <?php checked($bsa_injection_position, "manual"); ?> />
                     <span>
                         <?php _e("Manual placement", "botspot-wp"); ?>
                         <span class="bsa-check__tag"><code class="bsa-code">[botspot_appendix]</code></span>
@@ -190,14 +190,14 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
         <div class="bsa-settings-row__body">
             <div class="bsa-check-list">
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botspot_wp_jsonld_conflict_mode" value="merge" <?php checked($bsa_jsonld_conflict, "merge"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_jsonld_conflict_mode" value="merge" <?php checked($bsa_jsonld_conflict, "merge"); ?> />
                     <span>
                         <?php _e("Merge with existing output", "botspot-wp"); ?>
                         <span class="bsa-check__tag"><?php _e("recommended", "botspot-wp"); ?></span>
                     </span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="botspot_wp_jsonld_conflict_mode" value="replace" <?php checked($bsa_jsonld_conflict, "replace"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_jsonld_conflict_mode" value="replace" <?php checked($bsa_jsonld_conflict, "replace"); ?> />
                     <span><?php _e("Replace conflicting output", "botspot-wp"); ?></span>
                 </label>
             </div>
@@ -218,7 +218,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             </div>
             <div class="bsa-settings-row__body">
                 <label class="bsa-check">
-                    <input type="checkbox" name="botspot_wp_auto_sync_enabled" value="1" <?php checked($bsa_auto_sync); ?> />
+                    <input type="checkbox" name="bspt_auto_sync_enabled" value="1" <?php checked($bsa_auto_sync); ?> />
                     <span><?php _e("Enable auto-sync", "botspot-wp"); ?></span>
                 </label>
             </div>
@@ -232,21 +232,21 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <div class="bsa-settings-row__body">
                 <div class="bsa-radio-list">
                     <label class="bsa-radio">
-                        <input type="radio" name="botspot_wp_sync_sensitivity" value="high" <?php checked($bsa_sync_sensitivity, "high"); ?> />
+                        <input type="radio" name="bspt_sync_sensitivity" value="high" <?php checked($bsa_sync_sensitivity, "high"); ?> />
                         <div>
                             <div class="bsa-radio__title"><?php _e("High", "botspot-wp"); ?></div>
                             <div class="bsa-radio__desc"><?php _e("Sync on every save.", "botspot-wp"); ?></div>
                         </div>
                     </label>
                     <label class="bsa-radio">
-                        <input type="radio" name="botspot_wp_sync_sensitivity" value="medium" <?php checked($bsa_sync_sensitivity, "medium"); ?> />
+                        <input type="radio" name="bspt_sync_sensitivity" value="medium" <?php checked($bsa_sync_sensitivity, "medium"); ?> />
                         <div>
                             <div class="bsa-radio__title"><?php _e("Medium", "botspot-wp"); ?></div>
                             <div class="bsa-radio__desc"><?php _e("Sync on ≥10% content change.", "botspot-wp"); ?></div>
                         </div>
                     </label>
                     <label class="bsa-radio">
-                        <input type="radio" name="botspot_wp_sync_sensitivity" value="low" <?php checked($bsa_sync_sensitivity, "low"); ?> />
+                        <input type="radio" name="bspt_sync_sensitivity" value="low" <?php checked($bsa_sync_sensitivity, "low"); ?> />
                         <div>
                             <div class="bsa-radio__title"><?php _e("Low", "botspot-wp"); ?></div>
                             <div class="bsa-radio__desc"><?php _e("Sync on ≥25% content change.", "botspot-wp"); ?></div>
@@ -281,11 +281,11 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <?php else: ?>
                 <div class="bsa-check-list">
                     <label class="bsa-check">
-                        <input type="checkbox" name="botspot_wp_appendix_enabled" value="1" <?php checked($bsa_appendix_enabled); ?> />
+                        <input type="checkbox" name="bspt_appendix_enabled" value="1" <?php checked($bsa_appendix_enabled); ?> />
                         <span><?php _e("HTML appendix", "botspot-wp"); ?></span>
                     </label>
                     <label class="bsa-check">
-                        <input type="checkbox" name="botspot_wp_jsonld_enabled" value="1" <?php checked($bsa_jsonld_enabled); ?> />
+                        <input type="checkbox" name="bspt_jsonld_enabled" value="1" <?php checked($bsa_jsonld_enabled); ?> />
                         <span><?php _e("JSON-LD structured data", "botspot-wp"); ?></span>
                     </label>
                 </div>
@@ -327,7 +327,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <div class="bsa-check-list">
                     <?php foreach ($bsa_post_types as $pt): ?>
                     <label class="bsa-check">
-                        <input type="checkbox" name="botspot_wp_inject_on_post_types[]" value="<?php echo esc_attr($pt->name); ?>" <?php checked(in_array($pt->name, $bsa_inject_post_types, true)); ?> />
+                        <input type="checkbox" name="bspt_inject_on_post_types[]" value="<?php echo esc_attr($pt->name); ?>" <?php checked(in_array($pt->name, $bsa_inject_post_types, true)); ?> />
                         <span><?php echo esc_html($pt->label); ?></span>
                     </label>
                     <?php endforeach; ?>

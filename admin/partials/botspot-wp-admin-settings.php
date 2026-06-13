@@ -7,8 +7,8 @@
  * submits through WP's standard options.php with all field names present
  * in the DOM at submit time (inside hidden Advanced section or current tab).
  *
- * @package    BotSpot_WP
- * @subpackage BotSpot_WP/admin/partials
+ * @package    Bspt
+ * @subpackage Bspt/admin/partials
  * @since      2.2.0
  */
 
@@ -17,14 +17,14 @@ if (!defined("WPINC")) {
 }
 
 // Migrate legacy injection_enabled → split appendix_enabled + jsonld_enabled
-BotSpot_WP_Options::migrate_injection_toggles();
+Bspt_Options::migrate_injection_toggles();
 
 // Common data used across partials
 $bsa_site_domain = wp_parse_url(home_url(), PHP_URL_HOST);
 $bsa_post_types = get_post_types(["public" => true], "objects");
-$bsa_has_api_key = !empty(BotSpot_WP_Options::get("api_key"));
-$bsa_webhook_id = BotSpot_WP_Options::get("webhook_id");
-$bsa_tenant_id = BotSpot_WP_Options::get("tenant_id");
+$bsa_has_api_key = !empty(Bspt_Options::get("api_key"));
+$bsa_webhook_id = Bspt_Options::get("webhook_id");
+$bsa_tenant_id = Bspt_Options::get("tenant_id");
 $bsa_is_connected = $bsa_has_api_key && !empty($bsa_webhook_id);
 
 // WooCommerce detection
@@ -100,17 +100,17 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
 
             <!-- Connect tab -->
             <main class="bsa-panel" data-bsa-panel="connect">
-                <?php require BOTSPOT_WP_PLUGIN_PATH . "admin/partials/tab-connect.php"; ?>
+                <?php require BSPT_PLUGIN_PATH . "admin/partials/tab-connect.php"; ?>
             </main>
 
             <!-- Settings tab -->
             <main class="bsa-panel bsa-hidden" data-bsa-panel="settings">
-                <?php require BOTSPOT_WP_PLUGIN_PATH . "admin/partials/tab-settings.php"; ?>
+                <?php require BSPT_PLUGIN_PATH . "admin/partials/tab-settings.php"; ?>
             </main>
 
             <!-- Developer tab (includes Analytics — debug-only, not a top-level tab) -->
             <main class="bsa-panel bsa-hidden" data-bsa-panel="developer">
-                <?php require BOTSPOT_WP_PLUGIN_PATH . "admin/partials/tab-developer.php"; ?>
+                <?php require BSPT_PLUGIN_PATH . "admin/partials/tab-developer.php"; ?>
             </main>
         </form>
 

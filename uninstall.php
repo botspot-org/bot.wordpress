@@ -5,7 +5,7 @@
  * @link       https://bot.spot
  * @since      0.1.0
  *
- * @package    BotSpot_WP
+ * @package    Bspt
  */
 
 // If uninstall not called from WordPress, then exit.
@@ -18,28 +18,28 @@ if (!defined("WP_UNINSTALL_PLUGIN")) {
  */
 $options = [
     // Connection
-    "botspot_wp_api_key",
-    "botspot_wp_botspot_key", // legacy, removed in 1.3.0 but clean up if present
-    "botspot_wp_webhook_secret",
-    "botspot_wp_webhook_id",
-    "botspot_wp_connection_id",
-    "botspot_wp_tenant_id",
+    "bspt_api_key",
+    "bspt_botspot_key", // legacy, removed in 1.3.0 but clean up if present
+    "bspt_webhook_secret",
+    "bspt_webhook_id",
+    "bspt_connection_id",
+    "bspt_tenant_id",
     // Sync
-    "botspot_wp_auto_sync_enabled",
-    "botspot_wp_sync_sensitivity",
-    "botspot_wp_sync_post_types",
+    "bspt_auto_sync_enabled",
+    "bspt_sync_sensitivity",
+    "bspt_sync_post_types",
     // Display
-    "botspot_wp_injection_enabled", // legacy
-    "botspot_wp_appendix_enabled",
-    "botspot_wp_jsonld_enabled",
-    "botspot_wp_jsonld_conflict_mode",
-    "botspot_wp_injection_position",
-    "botspot_wp_inject_on_post_types",
-    "botspot_wp_page_injection_status", // legacy
+    "bspt_injection_enabled", // legacy
+    "bspt_appendix_enabled",
+    "bspt_jsonld_enabled",
+    "bspt_jsonld_conflict_mode",
+    "bspt_injection_position",
+    "bspt_inject_on_post_types",
+    "bspt_page_injection_status", // legacy
     // Cache
-    "botspot_wp_cache_ttl",
+    "bspt_cache_ttl",
     // Debug
-    "botspot_wp_debug_mode",
+    "bspt_debug_mode",
 ];
 
 foreach ($options as $option) {
@@ -49,8 +49,8 @@ foreach ($options as $option) {
 /**
  * Clear all transients
  */
-delete_transient("botspot_wp_recent_errors");
-delete_transient("botspot_wp_activation_notice");
+delete_transient("bspt_recent_errors");
+delete_transient("bspt_activation_notice");
 
 // Clear all botspot_content_ transients
 global $wpdb;

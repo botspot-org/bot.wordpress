@@ -2,8 +2,8 @@
 /**
  * Developer tab — live log viewer + actions + options + environment.
  *
- * @package BotSpot_WP
- * @subpackage BotSpot_WP/admin/partials
+ * @package Bspt
+ * @subpackage Bspt/admin/partials
  * @since 2.2.0
  */
 
@@ -11,8 +11,8 @@ if (!defined("WPINC")) {
     die();
 }
 
-$bsa_debug_mode = (bool) BotSpot_WP_Options::get("debug_mode", false);
-$bsa_cache_ttl = (int) BotSpot_WP_Options::get("cache_ttl", 3600);
+$bsa_debug_mode = (bool) Bspt_Options::get("debug_mode", false);
+$bsa_cache_ttl = (int) Bspt_Options::get("cache_ttl", 3600);
 ?>
 <div class="bsa-developer">
 
@@ -76,7 +76,7 @@ $bsa_cache_ttl = (int) BotSpot_WP_Options::get("cache_ttl", 3600);
                     <h4 class="bsa-sidebar-section__title"><?php _e("Options", "botspot-wp"); ?></h4>
                     <div class="bsa-check-list">
                         <label class="bsa-check">
-                            <input type="checkbox" name="botspot_wp_debug_mode" value="1" <?php checked($bsa_debug_mode); ?> />
+                            <input type="checkbox" name="bspt_debug_mode" value="1" <?php checked($bsa_debug_mode); ?> />
                             <span><?php _e("Debug logging", "botspot-wp"); ?></span>
                         </label>
                         <label class="bsa-check">
@@ -95,7 +95,7 @@ $bsa_cache_ttl = (int) BotSpot_WP_Options::get("cache_ttl", 3600);
                     <div class="bsa-ttl-row">
                         <input
                             type="number"
-                            name="botspot_wp_cache_ttl"
+                            name="bspt_cache_ttl"
                             value="<?php echo esc_attr($bsa_cache_ttl); ?>"
                             min="60"
                             max="86400"
@@ -123,7 +123,7 @@ $bsa_cache_ttl = (int) BotSpot_WP_Options::get("cache_ttl", 3600);
                         <?php endif; ?>
                         <div class="bsa-env__row">
                             <dt>plugin</dt>
-                            <dd class="bsa-tabular-nums"><?php echo esc_html(BOTSPOT_WP_VERSION); ?></dd>
+                            <dd class="bsa-tabular-nums"><?php echo esc_html(BSPT_VERSION); ?></dd>
                         </div>
                         <div class="bsa-env__row">
                             <dt>wordpress</dt>
