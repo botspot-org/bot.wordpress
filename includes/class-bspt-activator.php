@@ -38,6 +38,9 @@ class Bspt_Activator {
         // Migrate from botspot_wp_ prefix to bspt_ (WordPress.org compliance)
         self::migrate_prefix();
 
+        // Auto-add WooCommerce product type to existing installs
+        self::migrate_woocommerce_post_types();
+
         // Connection defaults
         if (!Bspt_Options::exists('api_key')) {
             Bspt_Options::set('api_key', '');
@@ -59,7 +62,7 @@ class Bspt_Activator {
             Bspt_Options::set('sync_sensitivity', 'medium');
         }
         if (!Bspt_Options::exists('sync_post_types')) {
-            Bspt_Options::set('sync_post_types', array('post', 'page'));
+            Bspt_Options::set('sync_post_types', self::get_default_post_types());
         }
 
         // Display defaults
@@ -76,7 +79,7 @@ class Bspt_Activator {
             Bspt_Options::set('injection_position', 'bottom');
         }
         if (!Bspt_Options::exists('inject_on_post_types')) {
-            Bspt_Options::set('inject_on_post_types', array('post', 'page'));
+            Bspt_Options::set('inject_on_post_types', self::get_default_post_types());
         }
         // Cache defaults
         if (!Bspt_Options::exists('cache_ttl')) {
@@ -91,9 +94,15 @@ class Bspt_Activator {
         // Set activation notice
         set_transient('bspt_activation_notice', true, 60);
 
+        // Migrate post meta from _botspot_* to _bspt_* (WordPress.org compliance)
+        self::migrate_post_meta_prefix();
+
+        // Migrate cron event name
+        self::migrate_cron_event();
+
         // Schedule hourly analytics flush wp-cron event
-        if (!wp_next_scheduled('botspot_flush_analytics')) {
-            wp_schedule_event(time() + 3600, 'hourly', 'botspot_flush_analytics');
+        if (!wp_next_scheduled('bspt_flush_analytics')) {
+            wp_schedule_event(time() + 3600, 'hourly', 'bspt_flush_analytics');
         }
 
         // Register webhook for cache invalidation (if API key is configured)
@@ -171,5 +180,107 @@ class Bspt_Activator {
         }
 
         update_option('bspt_migrated_from_botspot_wp', time());
+    }
+
+    /**
+     * Migrate post meta from _botspot_* prefix to _bspt_* (WordPress.org compliance).
+     *
+     * @since 3.3.0
+     */
+    private static function migrate_post_meta_prefix() {
+        global $wpdb;
+
+        if (get_option('bspt_migrated_post_meta_prefix')) {
+            return;
+        }
+
+        $wpdb->query(
+            "UPDATE {$wpdb->postmeta} SET meta_key = REPLACE(meta_key, '_botspot_', '_bspt_') WHERE meta_key LIKE '_botspot_%'"
+        );
+
+        // Also migrate transients
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$wpdb->options} SET option_name = REPLACE(option_name, 'botspot_content_', 'bspt_content_') WHERE option_name LIKE %s",
+                '%botspot_content_%'
+            )
+        );
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$wpdb->options} SET option_name = REPLACE(option_name, 'botspot_jsonld_', 'bspt_jsonld_') WHERE option_name LIKE %s",
+                '%botspot_jsonld_%'
+            )
+        );
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$wpdb->options} SET option_name = REPLACE(option_name, 'botspot_flush_lock', 'bspt_flush_lock') WHERE option_name LIKE %s",
+                '%botspot_flush_lock%'
+            )
+        );
+
+        update_option('bspt_migrated_post_meta_prefix', time());
+    }
+
+    /**
+     * Migrate cron event from botspot_flush_analytics to bspt_flush_analytics.
+     *
+     * @since 3.3.0
+     */
+    private static function migrate_cron_event() {
+        $timestamp = wp_next_scheduled('botspot_flush_analytics');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'botspot_flush_analytics');
+        }
+    }
+
+    /**
+     * Get default post types based on active plugins.
+     *
+     * @since 3.4.0
+     * @return array
+     */
+    private static function get_default_post_types() {
+        $types = array('post', 'page');
+
+        if (self::is_woocommerce_active()) {
+            $types[] = 'product';
+        }
+
+        return $types;
+    }
+
+    /**
+     * Check if WooCommerce is active.
+     *
+     * @since 3.4.0
+     * @return bool
+     */
+    private static function is_woocommerce_active() {
+        return class_exists('WooCommerce') || in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins', array())), true);
+    }
+
+    /**
+     * Migrate existing installs to include WooCommerce product type.
+     *
+     * @since 3.4.0
+     */
+    private static function migrate_woocommerce_post_types() {
+        if (get_option('bspt_migrated_woocommerce_types')) {
+            return;
+        }
+
+        if (!self::is_woocommerce_active()) {
+            return;
+        }
+
+        foreach (array('sync_post_types', 'inject_on_post_types') as $option) {
+            $types = get_option('bspt_' . $option);
+            if (is_array($types) && !in_array('product', $types, true)) {
+                $types[] = 'product';
+                update_option('bspt_' . $option, $types);
+            }
+        }
+
+        update_option('bspt_migrated_woocommerce_types', time());
     }
 }

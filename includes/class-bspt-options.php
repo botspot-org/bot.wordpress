@@ -72,12 +72,43 @@ class Bspt_Options
     public static function get($option_name, $default = null)
     {
         if ($default === null) {
-            $default = isset(self::$defaults[$option_name]) ? self::$defaults[$option_name] : null;
+            $default = self::get_dynamic_default($option_name);
         }
 
         $value = get_option("bspt_" . $option_name, $default);
 
         return self::cast_option_value($option_name, $value);
+    }
+
+    /**
+     * Get dynamic default for options that depend on environment.
+     *
+     * @since    3.4.0
+     * @param    string    $option_name    The option name.
+     * @return   mixed                     The default value.
+     */
+    private static function get_dynamic_default($option_name)
+    {
+        if ($option_name === 'sync_post_types' || $option_name === 'inject_on_post_types') {
+            $types = ['post', 'page'];
+            if (self::is_woocommerce_active()) {
+                $types[] = 'product';
+            }
+            return $types;
+        }
+
+        return isset(self::$defaults[$option_name]) ? self::$defaults[$option_name] : null;
+    }
+
+    /**
+     * Check if WooCommerce is active.
+     *
+     * @since    2.2.0
+     * @return   bool
+     */
+    public static function is_woocommerce_active()
+    {
+        return class_exists('WooCommerce') || in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins', [])), true);
     }
 
     /**
@@ -437,14 +468,4 @@ class Bspt_Options
         return BSPT_CONNECTOR_URL;
     }
 
-    /**
-     * Whether WooCommerce is active on this install.
-     *
-     * @since    2.2.0
-     * @return   bool
-     */
-    public static function is_woocommerce_active()
-    {
-        return class_exists("WooCommerce");
-    }
 }
