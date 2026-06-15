@@ -3,7 +3,7 @@
  * Plugin Name: BotSpot WordPress
  * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 3.2.0
+ * Version: 3.4.0
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: GPLv2 or later
@@ -69,7 +69,7 @@ register_shutdown_function(function () {
 /**
  * Plugin version.
  */
-define('BSPT_VERSION', '3.2.0');
+define('BSPT_VERSION', '3.4.0');
 
 /**
  * Plugin file path
@@ -129,7 +129,7 @@ define('BSPT_MIN_PHP_VERSION', '7.4');
 /**
  * The code that runs during plugin activation.
  */
-function activate_botspot_wp() {
+function bspt_activate() {
     require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-options.php';
     require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-logger.php';
     require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-activator.php';
@@ -153,7 +153,7 @@ function activate_botspot_wp() {
 /**
  * The code that runs during plugin deactivation.
  */
-function deactivate_botspot_wp() {
+function bspt_deactivate() {
     require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-options.php';
     require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-logger.php';
     require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-deactivator.php';
@@ -168,8 +168,8 @@ function deactivate_botspot_wp() {
 /**
  * Register activation and deactivation hooks
  */
-register_activation_hook(__FILE__, 'activate_botspot_wp');
-register_deactivation_hook(__FILE__, 'deactivate_botspot_wp');
+register_activation_hook(__FILE__, 'bspt_activate');
+register_deactivation_hook(__FILE__, 'bspt_deactivate');
 
 /**
  * Check system requirements before loading the plugin
