@@ -33,14 +33,12 @@ class Bspt_Sync
      * Register REST API webhook endpoint
      *
      * @since    2.1.0
+     * @deprecated 3.5.0 Routes consolidated in Bspt_Webhook_Handler
      */
     public static function register_webhook_route()
     {
-        register_rest_route("botspot-wp/v1", "/webhook", [
-            "methods" => "POST",
-            "callback" => [__CLASS__, "handle_webhook"],
-            "permission_callback" => "__return_true", // Auth via HMAC
-        ]);
+        // Routes now registered by Bspt_Webhook_Handler to avoid duplicate registration.
+        // This method is kept for backwards compatibility but does nothing.
     }
 
     /**
@@ -79,7 +77,7 @@ class Bspt_Sync
         // Fallback: lookup by artifact_id stored in post_meta
         if (!$post_id && $content_id) {
             $posts = get_posts([
-                "meta_key" => "_botspot_artifact_id",
+                "meta_key" => "_bspt_artifact_id",
                 "meta_value" => $content_id,
                 "post_type" => "any",
                 "numberposts" => 1,
@@ -95,17 +93,17 @@ class Bspt_Sync
         // Update enrichment meta (idempotent, no downgrades)
         $tier_order = ["NONE" => 0, "TIER0" => 1, "TIER1" => 2, "TIER2" => 3];
         $new_tier = $data["enrichment_tier"] ?? "TIER0";
-        $current_tier = get_post_meta($post_id, "_botspot_enrichment_tier", true) ?: "NONE";
+        $current_tier = get_post_meta($post_id, "_bspt_enrichment_tier", true) ?: "NONE";
 
         $tier_advanced = false;
         if (($tier_order[$new_tier] ?? 0) >= ($tier_order[$current_tier] ?? 0)) {
             $tier_advanced = ($tier_order[$new_tier] ?? 0) > ($tier_order[$current_tier] ?? 0);
-            update_post_meta($post_id, "_botspot_enrichment_tier", $new_tier);
-            update_post_meta($post_id, "_botspot_artifact_id", $content_id);
+            update_post_meta($post_id, "_bspt_enrichment_tier", $new_tier);
+            update_post_meta($post_id, "_bspt_artifact_id", $content_id);
 
             // Derive human-readable status
             $status_map = ["TIER0" => "indexed", "TIER1" => "enriching", "TIER2" => "enriched"];
-            update_post_meta($post_id, "_botspot_enrichment_status", $status_map[$new_tier] ?? "unknown");
+            update_post_meta($post_id, "_bspt_enrichment_status", $status_map[$new_tier] ?? "unknown");
         }
 
         // When new enrichment lands, drop plugin transients + external page caches for
@@ -161,7 +159,7 @@ class Bspt_Sync
 
         // Compute content hash
         $current_hash = self::compute_content_hash($post);
-        $previous_hash = get_post_meta($post_id, "_botspot_sync_hash", true);
+        $previous_hash = get_post_meta($post_id, "_bspt_sync_hash", true);
 
         // Determine if sync is needed based on change threshold
         if ($previous_hash && $previous_hash === $current_hash) {
@@ -176,8 +174,8 @@ class Bspt_Sync
 
             if ($change_pct < $threshold) {
                 // Store hash but don't sync (minor change)
-                update_post_meta($post_id, "_botspot_sync_hash", $current_hash);
-                update_post_meta($post_id, "_botspot_sync_status", "pending");
+                update_post_meta($post_id, "_bspt_sync_hash", $current_hash);
+                update_post_meta($post_id, "_bspt_sync_status", "pending");
                 self::log_debug(
                     sprintf(
                         "Post %d: change %.1f%% below threshold %.1f%%, storing hash but not syncing",
@@ -209,16 +207,16 @@ class Bspt_Sync
         $result = self::send_webhook($post, $event, $change_meta);
 
         if ($result) {
-            update_post_meta($post_id, "_botspot_sync_hash", $current_hash);
-            update_post_meta($post_id, "_botspot_last_synced_at", current_time("mysql"));
-            update_post_meta($post_id, "_botspot_sync_status", "synced");
+            update_post_meta($post_id, "_bspt_sync_hash", $current_hash);
+            update_post_meta($post_id, "_bspt_last_synced_at", current_time("mysql"));
+            update_post_meta($post_id, "_bspt_sync_status", "synced");
             update_post_meta(
                 $post_id,
-                "_botspot_sync_word_count",
+                "_bspt_sync_word_count",
                 str_word_count(wp_strip_all_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt)),
             );
         } else {
-            update_post_meta($post_id, "_botspot_sync_status", "error");
+            update_post_meta($post_id, "_bspt_sync_status", "error");
             // Schedule a single retry in 5 minutes
             if (!wp_next_scheduled("bspt_retry_sync", [$post_id])) {
                 wp_schedule_single_event(time() + 300, "bspt_retry_sync", [$post_id]);
@@ -266,7 +264,7 @@ class Bspt_Sync
             // Unpublished or trashed
             $event = $new_status === "trash" ? "content.deleted" : "content.status_changed";
             self::send_webhook($post, $event);
-            update_post_meta($post->ID, "_botspot_sync_status", "synced");
+            update_post_meta($post->ID, "_bspt_sync_status", "synced");
         }
     }
 
@@ -291,10 +289,10 @@ class Bspt_Sync
         self::send_webhook($post, "content.deleted");
 
         // Clean up post meta
-        delete_post_meta($post_id, "_botspot_sync_hash");
-        delete_post_meta($post_id, "_botspot_last_synced_at");
-        delete_post_meta($post_id, "_botspot_sync_status");
-        delete_post_meta($post_id, "_botspot_pre_enrich_jsonld");
+        delete_post_meta($post_id, "_bspt_sync_hash");
+        delete_post_meta($post_id, "_bspt_last_synced_at");
+        delete_post_meta($post_id, "_bspt_sync_status");
+        delete_post_meta($post_id, "_bspt_pre_enrich_jsonld");
     }
 
     /**
@@ -331,9 +329,9 @@ class Bspt_Sync
         // Snapshot source JSON-LD before enrichment (schema versioning)
         $source_jsonld = $payload["structured_data"]["data"]["source_jsonld"] ?? null;
         if ($source_jsonld !== null) {
-            update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", wp_json_encode($source_jsonld));
-        } elseif (!get_post_meta($post->ID, "_botspot_pre_enrich_jsonld", true)) {
-            update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", "");
+            update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", wp_json_encode($source_jsonld));
+        } elseif (!get_post_meta($post->ID, "_bspt_pre_enrich_jsonld", true)) {
+            update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", "");
         }
 
         // Apply filter to allow payload modification
@@ -371,7 +369,7 @@ class Bspt_Sync
             // Store artifact_id from response for webhook mapping
             $body = json_decode(wp_remote_retrieve_body($response), true);
             if (!empty($body["artifact_id"])) {
-                update_post_meta($post->ID, "_botspot_artifact_id", $body["artifact_id"]);
+                update_post_meta($post->ID, "_bspt_artifact_id", $body["artifact_id"]);
             }
             self::log_debug(sprintf("Ingest successful for post %d (HTTP %d)", $post->ID, $status_code));
             return true;
@@ -980,9 +978,9 @@ class Bspt_Sync
                 // Snapshot source JSON-LD before enrichment (schema versioning)
                 $source_jsonld = $payload["structured_data"]["data"]["source_jsonld"] ?? null;
                 if ($source_jsonld !== null) {
-                    update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", wp_json_encode($source_jsonld));
-                } elseif (!get_post_meta($post->ID, "_botspot_pre_enrich_jsonld", true)) {
-                    update_post_meta($post->ID, "_botspot_pre_enrich_jsonld", "");
+                    update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", wp_json_encode($source_jsonld));
+                } elseif (!get_post_meta($post->ID, "_bspt_pre_enrich_jsonld", true)) {
+                    update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", "");
                 }
 
                 $post_hashes[$post->ID] = [
@@ -1027,12 +1025,12 @@ class Bspt_Sync
                     // Update meta for all posts in accepted batch
                     foreach ($posts as $idx => $post) {
                         $meta = $post_hashes[$post->ID];
-                        update_post_meta($post->ID, "_botspot_sync_hash", $meta["hash"]);
-                        update_post_meta($post->ID, "_botspot_last_synced_at", current_time("mysql"));
-                        update_post_meta($post->ID, "_botspot_sync_status", "synced");
-                        update_post_meta($post->ID, "_botspot_sync_word_count", $meta["word_count"]);
+                        update_post_meta($post->ID, "_bspt_sync_hash", $meta["hash"]);
+                        update_post_meta($post->ID, "_bspt_last_synced_at", current_time("mysql"));
+                        update_post_meta($post->ID, "_bspt_sync_status", "synced");
+                        update_post_meta($post->ID, "_bspt_sync_word_count", $meta["word_count"]);
                         if (!empty($artifact_ids[$idx])) {
-                            update_post_meta($post->ID, "_botspot_artifact_id", $artifact_ids[$idx]);
+                            update_post_meta($post->ID, "_bspt_artifact_id", $artifact_ids[$idx]);
                         }
                     }
 
@@ -1092,7 +1090,7 @@ class Bspt_Sync
         }
 
         $current_hash = self::compute_content_hash($post);
-        $previous_hash = get_post_meta($post_id, "_botspot_sync_hash", true);
+        $previous_hash = get_post_meta($post_id, "_bspt_sync_hash", true);
 
         $change_meta = [
             "previous_hash" => $previous_hash ?: null,
@@ -1106,16 +1104,16 @@ class Bspt_Sync
         $result = self::send_webhook($post, $event, $change_meta);
 
         if ($result) {
-            update_post_meta($post_id, "_botspot_sync_hash", $current_hash);
-            update_post_meta($post_id, "_botspot_last_synced_at", current_time("mysql"));
-            update_post_meta($post_id, "_botspot_sync_status", "synced");
+            update_post_meta($post_id, "_bspt_sync_hash", $current_hash);
+            update_post_meta($post_id, "_bspt_last_synced_at", current_time("mysql"));
+            update_post_meta($post_id, "_bspt_sync_status", "synced");
             update_post_meta(
                 $post_id,
-                "_botspot_sync_word_count",
+                "_bspt_sync_word_count",
                 str_word_count(wp_strip_all_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt)),
             );
         } else {
-            update_post_meta($post_id, "_botspot_sync_status", "error");
+            update_post_meta($post_id, "_bspt_sync_status", "error");
         }
 
         return $result;
@@ -1176,7 +1174,7 @@ class Bspt_Sync
         );
 
         // Get cached word count from previous sync
-        $previous_word_count = get_post_meta($post_id, "_botspot_sync_word_count", true);
+        $previous_word_count = get_post_meta($post_id, "_bspt_sync_word_count", true);
 
         if (!$previous_word_count || $previous_word_count <= 0) {
             return 100.0;
@@ -1186,7 +1184,7 @@ class Bspt_Sync
         $pct = ($change / (int) $previous_word_count) * 100;
 
         // Update stored word count
-        update_post_meta($post_id, "_botspot_sync_word_count", $current_words);
+        update_post_meta($post_id, "_bspt_sync_word_count", $current_words);
 
         return round($pct, 1);
     }
@@ -1243,9 +1241,9 @@ class Bspt_Sync
     public static function get_sync_status($post_id)
     {
         return [
-            "status" => get_post_meta($post_id, "_botspot_sync_status", true) ?: "never",
-            "last_synced_at" => get_post_meta($post_id, "_botspot_last_synced_at", true) ?: null,
-            "sync_hash" => get_post_meta($post_id, "_botspot_sync_hash", true) ?: null,
+            "status" => get_post_meta($post_id, "_bspt_sync_status", true) ?: "never",
+            "last_synced_at" => get_post_meta($post_id, "_bspt_last_synced_at", true) ?: null,
+            "sync_hash" => get_post_meta($post_id, "_bspt_sync_hash", true) ?: null,
         ];
     }
 

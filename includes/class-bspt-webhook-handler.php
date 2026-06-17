@@ -37,13 +37,39 @@ class Bspt_Webhook_Handler
     /**
      * Register REST API routes for webhook handling.
      *
+     * Endpoint naming convention:
+     * - Primary: bspt/v1/webhook (WordPress.org compliant prefix)
+     * - Legacy:  botspot/v1/webhook, botspot-wp/v1/webhook (backwards compat)
+     *
+     * Legacy endpoints are public contracts for existing connected sites.
+     * The platform registers webhooks using the site's REST URL at connection time;
+     * changing the endpoint would break all existing installations until they reconnect.
+     *
      * @since    2.8.0
      */
     public function register_routes()
     {
+        // Primary route (WordPress.org compliant prefix)
+        register_rest_route("bspt/v1", "/webhook", [
+            "methods" => "POST",
+            "callback" => [$this, "handle_webhook"],
+            "permission_callback" => "__return_true",
+        ]);
+        // Legacy routes (backwards compatibility for existing connected sites)
         register_rest_route("botspot/v1", "/webhook", [
             "methods" => "POST",
             "callback" => [$this, "handle_webhook"],
+            "permission_callback" => "__return_true",
+        ]);
+        register_rest_route("botspot-wp/v1", "/webhook", [
+            "methods" => "POST",
+            "callback" => [$this, "handle_webhook"],
+            "permission_callback" => "__return_true",
+        ]);
+        // Remote trigger for force resync
+        register_rest_route("bspt/v1", "/trigger-resync", [
+            "methods" => "POST",
+            "callback" => [$this, "handle_trigger_resync"],
             "permission_callback" => "__return_true",
         ]);
     }
@@ -105,7 +131,78 @@ class Bspt_Webhook_Handler
             ], 200);
         }
 
+        // Dispatch content.* events to Bspt_Sync handler
+        if (strpos($event, "content.") === 0) {
+            return Bspt_Sync::handle_webhook($request);
+        }
+
         return new WP_REST_Response(["status" => "ignored", "event" => $event], 200);
+    }
+
+    /**
+     * Handle remote trigger resync request.
+     *
+     * Allows locus-core to remotely trigger a full content resync.
+     * Authenticated via X-Webhook-Signature header using the shared webhook secret.
+     *
+     * @since    2.12.0
+     * @param    WP_REST_Request    $request    The request object.
+     * @return   WP_REST_Response               Response with sync results.
+     */
+    public function handle_trigger_resync(WP_REST_Request $request)
+    {
+        $signature = $request->get_header("X-Webhook-Signature");
+        $payload = $request->get_body();
+        $secret = get_option("bspt_webhook_secret", "");
+
+        if (empty($secret)) {
+            return new WP_REST_Response(["error" => "Webhook not configured"], 400);
+        }
+
+        if (!$this->verify_signature($payload, $signature, $secret)) {
+            return new WP_REST_Response(["error" => "Invalid signature"], 401);
+        }
+
+        $post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
+        $post_ids = get_posts([
+            "post_type" => $post_types,
+            "post_status" => "publish",
+            "posts_per_page" => -1,
+            "fields" => "ids",
+        ]);
+
+        if (empty($post_ids)) {
+            return new WP_REST_Response([
+                "status" => "ok",
+                "queued" => 0,
+                "message" => "No posts to sync",
+            ], 200);
+        }
+
+        Bspt_Options::set("force_resync_started_at", time());
+        Bspt_Options::set("force_resync_total", count($post_ids));
+        delete_transient("bspt_status_snapshot");
+
+        $result = Bspt_Sync::bulk_sync();
+
+        Bspt_Options::set("force_resync_finished_at", time());
+        if ($result) {
+            Bspt_Options::set("force_resync_succeeded", $result["processed"] ?? 0);
+            Bspt_Options::set("force_resync_failed", $result["failed"] ?? 0);
+        }
+
+        if ($result === false) {
+            return new WP_REST_Response([
+                "error" => "Sync failed - check API key configuration",
+            ], 500);
+        }
+
+        return new WP_REST_Response([
+            "status" => "ok",
+            "queued" => $result["processed"] ?? 0,
+            "total" => $result["total"] ?? count($post_ids),
+            "failed" => $result["failed"] ?? 0,
+        ], 200);
     }
 
     /**
@@ -193,10 +290,10 @@ class Bspt_Webhook_Handler
     private function invalidate_page_cache($path, $lang = null)
     {
         if ($lang) {
-            $cache_key = "botspot_content_" . md5($path . "_" . $lang);
+            $cache_key = "bspt_content_" . md5($path . "_" . $lang);
             delete_transient($cache_key);
 
-            $jsonld_key = "botspot_jsonld_" . md5($path . "_" . $lang);
+            $jsonld_key = "bspt_jsonld_" . md5($path . "_" . $lang);
             delete_transient($jsonld_key);
         } else {
             global $wpdb;
@@ -204,16 +301,16 @@ class Bspt_Webhook_Handler
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                    "_transient_botspot_content_" . $wpdb->esc_like(md5($path)) . "%",
-                    "_transient_timeout_botspot_content_" . $wpdb->esc_like(md5($path)) . "%"
+                    "_transient_bspt_content_" . $wpdb->esc_like(md5($path)) . "%",
+                    "_transient_timeout_bspt_content_" . $wpdb->esc_like(md5($path)) . "%"
                 )
             );
 
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                    "_transient_botspot_jsonld_" . $wpdb->esc_like(md5($path)) . "%",
-                    "_transient_timeout_botspot_jsonld_" . $wpdb->esc_like(md5($path)) . "%"
+                    "_transient_bspt_jsonld_" . $wpdb->esc_like(md5($path)) . "%",
+                    "_transient_timeout_bspt_jsonld_" . $wpdb->esc_like(md5($path)) . "%"
                 )
             );
         }
