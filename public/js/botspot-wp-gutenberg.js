@@ -10,7 +10,7 @@
   var registerBlockType = wp.blocks.registerBlockType;
   var createElement = wp.element.createElement;
 
-  registerBlockType("botspot-wp/appendix", {
+  var blockConfig = {
     title: "BotSpot Appendix",
     description: "Insert AI-discoverable appendix content from bot.spot",
     icon: createElement(
@@ -92,5 +92,10 @@
     save: function () {
       return null;
     },
-  });
+  };
+
+  // Register under primary name (WordPress.org compliant prefix)
+  registerBlockType("bspt/appendix", blockConfig);
+  // Register under legacy name (backwards compatibility)
+  registerBlockType("botspot-wp/appendix", blockConfig);
 })(window.wp);

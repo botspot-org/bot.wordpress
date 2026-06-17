@@ -64,7 +64,7 @@ class Bspt_Content_Fetcher
         }
 
         $lang = Bspt_Language::get_current_language();
-        $cache_key = "botspot_content_" . md5($url_path . "_" . $lang);
+        $cache_key = "bspt_content_" . md5($url_path . "_" . $lang);
 
         // Check transient cache
         $cached = get_transient($cache_key);
@@ -171,7 +171,7 @@ class Bspt_Content_Fetcher
     public static function fetch_jsonld($url_path)
     {
         $lang = Bspt_Language::get_current_language();
-        $cache_key_jsonld = "botspot_jsonld_" . md5($url_path . "_" . $lang);
+        $cache_key_jsonld = "bspt_jsonld_" . md5($url_path . "_" . $lang);
 
         // Check per-request cache first
         if (isset(self::$request_cache[$cache_key_jsonld])) {
@@ -384,19 +384,19 @@ class Bspt_Content_Fetcher
     public static function clear_cache($path = null)
     {
         if ($path !== null) {
-            delete_transient("botspot_content_" . md5($path));
+            delete_transient("bspt_content_" . md5($path));
             self::log_debug(sprintf("Cleared cache for path: %s", $path));
             return;
         }
 
-        // Clear all botspot_content_ transients
+        // Clear all bspt_content_ transients
         global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Deletes plugin-owned content cache transients by prefix.
         $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                $wpdb->esc_like("_transient_botspot_content_") . "%",
-                $wpdb->esc_like("_transient_timeout_botspot_content_") . "%",
+                $wpdb->esc_like("_transient_bspt_content_") . "%",
+                $wpdb->esc_like("_transient_timeout_bspt_content_") . "%",
             ),
         );
         self::log_debug("Cleared all content caches");

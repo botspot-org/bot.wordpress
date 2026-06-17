@@ -160,7 +160,7 @@ class Bspt_Admin
                 $this->version,
                 true
             );
-            wp_localize_script("bspt-sync-metabox", "botspotMetabox", [
+            wp_localize_script("bspt-sync-metabox", "bsptMetabox", [
                 "nonce" => wp_create_nonce("bspt_manual_sync"),
                 "syncing" => __("Syncing...", "botspot-wp"),
                 "syncNow" => __("Sync Now", "botspot-wp"),
@@ -190,7 +190,7 @@ class Bspt_Admin
         );
 
         // Localized data + nonces for all AJAX handlers the JS will call
-        wp_localize_script("bspt-admin", "botspotAdmin", [
+        wp_localize_script("bspt-admin", "bsptAdmin", [
             "ajaxurl" => admin_url("admin-ajax.php"),
             "restUrl" => rest_url("botspot-wp/v1/"),
             "siteDomain" => wp_parse_url(home_url(), PHP_URL_HOST),
@@ -249,21 +249,18 @@ JS;
     {
         $screen = get_current_screen();
 
+        // Settings updated notice - only show on plugin page to avoid dashboard hijacking
         if (get_transient("bspt_settings_updated_notice")) {
             if ($screen && $screen->base === "toplevel_page_botspot-wp") {
-                delete_transient("bspt_settings_updated_notice");
-            } else {
                 ?>
                 <div class="notice notice-info is-dismissible">
                     <p>
                         <strong><?php _e("bot.spot:", "botspot-wp"); ?></strong>
                         <?php _e("Your BotSpot settings were updated remotely.", "botspot-wp"); ?>
-                        <a href="<?php echo esc_url(admin_url("admin.php?page=botspot-wp&tab=settings")); ?>">
-                            <?php _e("View Settings", "botspot-wp"); ?>
-                        </a>
                     </p>
                 </div>
                 <?php
+                delete_transient("bspt_settings_updated_notice");
             }
         }
 
@@ -392,7 +389,7 @@ JS;
         }
 
         // Show enrichment status if available, fall back to sync status
-        $enrichment_status = get_post_meta($post_id, "_botspot_enrichment_status", true);
+        $enrichment_status = get_post_meta($post_id, "_bspt_enrichment_status", true);
         if ($enrichment_status) {
             $enrichment_colors = [
                 "indexed" => "#2271b1",
@@ -953,12 +950,12 @@ JS;
             "fields" => "ids",
             "meta_query" => [
                 [
-                    "key" => "_botspot_sync_status",
+                    "key" => "_bspt_sync_status",
                     "value" => "synced",
                     "compare" => "=",
                 ],
                 [
-                    "key" => "_botspot_last_synced_at",
+                    "key" => "_bspt_last_synced_at",
                     "value" => gmdate("Y-m-d H:i:s", time() - DAY_IN_SECONDS),
                     "compare" => ">=",
                     "type" => "DATETIME",
@@ -972,7 +969,7 @@ JS;
             "fields" => "ids",
             "meta_query" => [
                 [
-                    "key" => "_botspot_sync_status",
+                    "key" => "_bspt_sync_status",
                     "value" => "error",
                     "compare" => "=",
                 ],
@@ -1246,7 +1243,7 @@ JS;
         $rows = $wpdb->get_results(
             "SELECT meta_value AS status, COUNT(*) AS n
              FROM {$wpdb->postmeta}
-             WHERE meta_key = '_botspot_sync_status'
+             WHERE meta_key = '_bspt_sync_status'
              GROUP BY meta_value",
             ARRAY_A
         );
@@ -1274,7 +1271,7 @@ JS;
         $rows = $wpdb->get_results(
             "SELECT meta_value AS tier, COUNT(*) AS n
              FROM {$wpdb->postmeta}
-             WHERE meta_key = '_botspot_enrichment_tier'
+             WHERE meta_key = '_bspt_enrichment_tier'
              GROUP BY meta_value",
             ARRAY_A
         );
@@ -1377,7 +1374,7 @@ JS;
     }
 
     /**
-     * Look up a WP post by its `_botspot_artifact_id` meta value.
+     * Look up a WP post by its `_bspt_artifact_id` meta value.
      *
      * @param string $artifact_id
      * @return int|null Post ID or null if not found.
@@ -1390,7 +1387,7 @@ JS;
         $posts = get_posts([
             'post_type'      => 'any',
             'posts_per_page' => 1,
-            'meta_key'       => '_botspot_artifact_id',
+            'meta_key'       => '_bspt_artifact_id',
             'meta_value'     => $artifact_id,
             'fields'         => 'ids',
         ]);

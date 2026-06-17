@@ -52,8 +52,15 @@ foreach ($options as $option) {
 delete_transient("bspt_recent_errors");
 delete_transient("bspt_activation_notice");
 
-// Clear all botspot_content_ transients
+// Clear all content transients (both old and new prefixes)
 global $wpdb;
+$wpdb->query(
+    $wpdb->prepare(
+        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+        $wpdb->esc_like("_transient_bspt_content_") . "%",
+        $wpdb->esc_like("_transient_timeout_bspt_content_") . "%",
+    ),
+);
 $wpdb->query(
     $wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -63,8 +70,23 @@ $wpdb->query(
 );
 
 /**
- * Delete all post meta
+ * Delete all post meta (both old and new prefixes)
  */
+// New prefix
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_sync_hash"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_last_synced_at"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_sync_status"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_sync_word_count"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_inject_enabled"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_artifact_id"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_enrichment_tier"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_enrichment_status"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_pre_enrich_jsonld"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_impressions_pending"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_impressions_inflight"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_impressions_inflight_batch"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_impressions_inflight_at"]);
+// Legacy prefix
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_sync_hash"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_last_synced_at"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_sync_status"]);

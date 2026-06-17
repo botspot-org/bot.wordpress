@@ -219,7 +219,8 @@ class Bspt
         $this->loader->add_action("wp_ajax_bspt_get_impressions", $plugin_admin, "handle_get_impressions");
         $this->loader->add_action("wp_ajax_bspt_force_flush", $plugin_admin, "handle_force_flush");
 
-        // wp-cron handler for the hourly flush
+        // wp-cron handler for the hourly flush (both names for migration compatibility)
+        $this->loader->add_action("bspt_flush_analytics", "Bspt_Analytics_Flusher", "flush");
         $this->loader->add_action("botspot_flush_analytics", "Bspt_Analytics_Flusher", "flush");
 
         // wp-cron handler for background Force Resync (one-off, scheduled by handle_force_resync)

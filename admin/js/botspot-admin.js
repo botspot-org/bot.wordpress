@@ -12,7 +12,7 @@
         return;
     }
 
-    var config = window.botspotAdmin || {};
+    var config = window.bsptAdmin || {};
     var nonces = config.nonces || {};
     var strings = config.strings || {};
 
@@ -649,8 +649,8 @@
 (function (window, document) {
     'use strict';
 
-    var AJAX = (window.botspotAdmin && window.botspotAdmin.ajaxurl) || '/wp-admin/admin-ajax.php';
-    var NONCES = (window.botspotAdmin && window.botspotAdmin.nonces) || {};
+    var AJAX = (window.bsptAdmin && window.bsptAdmin.ajaxurl) || '/wp-admin/admin-ajax.php';
+    var NONCES = (window.bsptAdmin && window.bsptAdmin.nonces) || {};
     var currentWindow = '7d';
     var initialized = false;
 

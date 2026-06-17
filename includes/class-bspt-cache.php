@@ -28,7 +28,11 @@ class Bspt_Cache
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bulk-deletes only plugin-owned transient rows by fixed prefixes.
         $deleted = $wpdb->query(
             "DELETE FROM {$wpdb->options}
-             WHERE option_name LIKE '_transient_botspot_content_%'
+             WHERE option_name LIKE '_transient_bspt_content_%'
+                OR option_name LIKE '_transient_timeout_bspt_content_%'
+                OR option_name LIKE '_transient_bspt_jsonld_%'
+                OR option_name LIKE '_transient_timeout_bspt_jsonld_%'
+                OR option_name LIKE '_transient_botspot_content_%'
                 OR option_name LIKE '_transient_timeout_botspot_content_%'
                 OR option_name LIKE '_transient_botspot_jsonld_%'
                 OR option_name LIKE '_transient_timeout_botspot_jsonld_%'"
@@ -57,6 +61,9 @@ class Bspt_Cache
         $langs = array_unique(array_filter($langs));
         foreach ($langs as $lang) {
             $hash = md5($url_path . "_" . $lang);
+            // Delete both old and new prefixes
+            delete_transient("bspt_content_" . $hash);
+            delete_transient("bspt_jsonld_" . $hash);
             delete_transient("botspot_content_" . $hash);
             delete_transient("botspot_jsonld_" . $hash);
         }

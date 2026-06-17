@@ -6,17 +6,17 @@
  * (sections "Three independent flows" and "Failure modes").
  *
  * Post meta keys used:
- *   _botspot_impressions_pending          (int, JSON blob with 'total' and 'by_class' and 'first_hit_at')
- *   _botspot_impressions_inflight         (same shape as pending, but owned by a specific batch_id)
- *   _botspot_impressions_inflight_batch   (string UUID — which batch owns the inflight)
- *   _botspot_impressions_inflight_at      (int — unix timestamp when inflight was created)
+ *   _bspt_impressions_pending          (int, JSON blob with 'total' and 'by_class' and 'first_hit_at')
+ *   _bspt_impressions_inflight         (same shape as pending, but owned by a specific batch_id)
+ *   _bspt_impressions_inflight_batch   (string UUID — which batch owns the inflight)
+ *   _bspt_impressions_inflight_at      (int — unix timestamp when inflight was created)
  *
  * Options used:
  *   bspt_last_flush_at  (int unix timestamp)
  *   bspt_last_flush_id  (string UUID)
  *
  * Transients used:
- *   botspot_flush_lock       (single-flight lock, 10-minute TTL)
+ *   bspt_flush_lock       (single-flight lock, 10-minute TTL)
  *
  * @package Bspt
  */
@@ -28,15 +28,15 @@ if (!defined('ABSPATH')) {
 class Bspt_Analytics_Flusher
 {
     const MAX_ITEMS_PER_BATCH = 1000;
-    const LOCK_TRANSIENT = 'botspot_flush_lock';
+    const LOCK_TRANSIENT = 'bspt_flush_lock';
     const LOCK_TTL = 600;  // 10 minutes
     const ORPHAN_THRESHOLD = 7200;  // 2 hours — inflight older than this is considered orphaned
     const OPPORTUNISTIC_THRESHOLD = 7200;  // 2 hours — opportunistic flush threshold
 
-    const META_PENDING = '_botspot_impressions_pending';
-    const META_INFLIGHT = '_botspot_impressions_inflight';
-    const META_INFLIGHT_BATCH = '_botspot_impressions_inflight_batch';
-    const META_INFLIGHT_AT = '_botspot_impressions_inflight_at';
+    const META_PENDING = '_bspt_impressions_pending';
+    const META_INFLIGHT = '_bspt_impressions_inflight';
+    const META_INFLIGHT_BATCH = '_bspt_impressions_inflight_batch';
+    const META_INFLIGHT_AT = '_bspt_impressions_inflight_at';
 
     const OPTION_LAST_FLUSH_AT = 'bspt_last_flush_at';
     const OPTION_LAST_FLUSH_ID = 'bspt_last_flush_id';
@@ -185,7 +185,7 @@ class Bspt_Analytics_Flusher
                 continue;
             }
 
-            $artifact_id = get_post_meta($post_id, '_botspot_artifact_id', true);
+            $artifact_id = get_post_meta($post_id, '_bspt_artifact_id', true);
             if (empty($artifact_id)) {
                 // Not synced yet — leave pending in place, skip for now.
                 continue;

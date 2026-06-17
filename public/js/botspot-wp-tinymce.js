@@ -7,23 +7,23 @@
  */
 
 (function () {
-  tinymce.PluginManager.add("botspot_appendix", function (editor, url) {
+  tinymce.PluginManager.add("bspt_appendix", function (editor, url) {
     // Add button to toolbar
-    editor.addButton("botspot_appendix", {
+    editor.addButton("bspt_appendix", {
       title: "Insert BotSpot Appendix",
       icon: "icon dashicons-info",
       onclick: function () {
-        editor.insertContent("[botspot_appendix]");
+        editor.insertContent("[bspt_appendix]");
       },
     });
 
     // Add menu item
-    editor.addMenuItem("botspot_appendix", {
+    editor.addMenuItem("bspt_appendix", {
       text: "BotSpot Appendix",
       icon: "icon dashicons-info",
       context: "insert",
       onclick: function () {
-        editor.insertContent("[botspot_appendix]");
+        editor.insertContent("[bspt_appendix]");
       },
     });
   });

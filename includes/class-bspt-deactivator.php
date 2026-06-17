@@ -38,10 +38,14 @@ class Bspt_Deactivator {
         // Clear activation notice transient
         delete_transient('bspt_activation_notice');
 
-        // Unschedule analytics flush wp-cron event
-        $timestamp = wp_next_scheduled('botspot_flush_analytics');
+        // Unschedule analytics flush wp-cron event (both old and new names)
+        $timestamp = wp_next_scheduled('bspt_flush_analytics');
         if ($timestamp) {
-            wp_unschedule_event($timestamp, 'botspot_flush_analytics');
+            wp_unschedule_event($timestamp, 'bspt_flush_analytics');
+        }
+        $old_timestamp = wp_next_scheduled('botspot_flush_analytics');
+        if ($old_timestamp) {
+            wp_unschedule_event($old_timestamp, 'botspot_flush_analytics');
         }
 
         // Deregister webhook from locus-core

@@ -89,6 +89,9 @@ class Bspt_Public
      */
     public function register_shortcode()
     {
+        // Primary shortcode (WordPress.org compliant prefix)
+        add_shortcode("bspt_appendix", [$this, "render_appendix_shortcode"]);
+        // Legacy shortcodes (backwards compatibility)
         add_shortcode("botdot_appendix", [$this, "render_appendix_shortcode"]);
         add_shortcode("botspot_appendix", [$this, "render_appendix_shortcode"]);
     }
@@ -106,10 +109,10 @@ class Bspt_Public
 
         vc_map([
             "name" => __("bot.spot Appendix", "botspot-wp"),
-            "base" => "botdot_appendix",
+            "base" => "bspt_appendix",
             "description" => __("Insert AI-discoverable appendix content", "botspot-wp"),
             "category" => __("Content", "botspot-wp"),
-            "icon" => "icon-wpb-botspot",
+            "icon" => "icon-wpb-bspt",
             "params" => [],
         ]);
     }
@@ -142,7 +145,7 @@ class Bspt_Public
      */
     public function register_tinymce_button($buttons)
     {
-        array_push($buttons, "botdot_appendix");
+        array_push($buttons, "bspt_appendix");
         return $buttons;
     }
 
@@ -155,7 +158,7 @@ class Bspt_Public
      */
     public function register_tinymce_plugin($plugins)
     {
-        $plugins["botdot_appendix"] = BSPT_PLUGIN_URL . "public/js/botspot-wp-tinymce.js";
+        $plugins["bspt_appendix"] = BSPT_PLUGIN_URL . "public/js/botspot-wp-tinymce.js";
         return $plugins;
     }
 
@@ -170,6 +173,12 @@ class Bspt_Public
             return;
         }
 
+        // Primary block (WordPress.org compliant prefix)
+        register_block_type("bspt/appendix", [
+            "render_callback" => [$this, "render_appendix_shortcode"],
+            "attributes" => [],
+        ]);
+        // Legacy block (backwards compatibility for existing pages)
         register_block_type("botspot-wp/appendix", [
             "render_callback" => [$this, "render_appendix_shortcode"],
             "attributes" => [],
@@ -195,7 +204,7 @@ class Bspt_Public
             true,
         );
 
-        wp_localize_script($this->plugin_name . "-gutenberg", "botspotWP", [
+        wp_localize_script($this->plugin_name . "-gutenberg", "bsptWP", [
             "pluginName" => "BotSpot Appendix",
         ]);
     }
