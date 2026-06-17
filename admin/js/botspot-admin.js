@@ -189,7 +189,7 @@
     }
 
     function fetchStatus() {
-        bsaAjax("botspot_wp_get_status", {}, nonces.getStatus).then(function (res) {
+        bsaAjax("bspt_get_status", {}, nonces.getStatus).then(function (res) {
             state.statusFetched = true;
             if (!res || !res.success) {
                 ["connection", "sync", "runtime"].forEach(function (k) {
@@ -247,7 +247,7 @@
             list.innerHTML = '<div class="bsa-log-empty">' + escapeHtml(strings.loadingLogs || "Loading logs...") + "</div>";
         }
 
-        bsaAjax("botspot_wp_get_logs", { level: state.logFilter }, nonces.getLogs).then(function (res) {
+        bsaAjax("bspt_get_logs", { level: state.logFilter }, nonces.getLogs).then(function (res) {
             state.logsFetched = true;
             if (res && res.success && res.data && Array.isArray(res.data.entries)) {
                 state.logs = res.data.entries;
@@ -326,7 +326,7 @@
         btn.textContent = strings.testing || "Connecting...";
 
         var payload = apiKey ? { api_key: apiKey } : {};
-        bsaAjax("botspot_wp_test_connection", payload, nonces.testConnection).then(function (res) {
+        bsaAjax("bspt_test_connection", payload, nonces.testConnection).then(function (res) {
             btn.disabled = false;
             btn.textContent = originalText;
 
@@ -348,7 +348,7 @@
         btn.textContent = strings.testing || "Working...";
 
         var payload = apiKey ? { api_key: apiKey } : {};
-        bsaAjax("botspot_wp_register_connection", payload, nonces.registerConnection).then(function (res) {
+        bsaAjax("bspt_register_connection", payload, nonces.registerConnection).then(function (res) {
             btn.disabled = false;
             btn.textContent = originalText;
             if (res && res.success) {
@@ -366,7 +366,7 @@
         var originalText = btn.innerHTML;
         btn.querySelector("span").textContent = strings.testing || "Working...";
 
-        bsaAjax("botspot_wp_force_resync", {}, nonces.forceResync).then(function (res) {
+        bsaAjax("bspt_force_resync", {}, nonces.forceResync).then(function (res) {
             btn.disabled = false;
             btn.innerHTML = originalText;
             var msg = (res && res.data && res.data.message) || (res && res.success ? "Done" : "Failed");
@@ -382,7 +382,7 @@
         var originalText = btn.innerHTML;
         btn.querySelector("span").textContent = strings.testing || "Working...";
 
-        bsaAjax("botspot_wp_clear_cache", {}, nonces.clearCache).then(function (res) {
+        bsaAjax("bspt_clear_cache", {}, nonces.clearCache).then(function (res) {
             btn.disabled = false;
             btn.innerHTML = originalText;
             var msg = (res && res.data && res.data.message) || (res && res.success ? "Cache cleared" : "Failed");
@@ -563,7 +563,7 @@
 
         var settings = collectFormSettings();
         var body = new URLSearchParams();
-        body.append("action", "botspot_wp_save_settings");
+        body.append("action", "bspt_save_settings");
         body.append("nonce", nonces.saveSettings || "");
 
         // Serialize settings as individual params
@@ -748,17 +748,17 @@
     }
 
     function loadSyncHealth() {
-        return postAjax('botspot_wp_get_sync_health', 'getSyncHealth', {})
+        return postAjax('bspt_get_sync_health', 'getSyncHealth', {})
             .then(function (resp) { if (resp.success) renderSync(resp.data); });
     }
 
     function loadEnrichmentLifecycle() {
-        return postAjax('botspot_wp_get_enrichment_lifecycle', 'getEnrichmentLifecycle', {})
+        return postAjax('bspt_get_enrichment_lifecycle', 'getEnrichmentLifecycle', {})
             .then(function (resp) { if (resp.success) renderEnrichment(resp.data); });
     }
 
     function loadImpressions() {
-        return postAjax('botspot_wp_get_impressions', 'getImpressions', { window: currentWindow })
+        return postAjax('bspt_get_impressions', 'getImpressions', { window: currentWindow })
             .then(function (resp) { if (resp.success) renderImpressions(resp.data); });
     }
 
@@ -792,7 +792,7 @@
         if (flushBtn) {
             flushBtn.addEventListener('click', function () {
                 flushBtn.disabled = true;
-                postAjax('botspot_wp_force_flush', 'forceFlush', {}).then(function () {
+                postAjax('bspt_force_flush', 'forceFlush', {}).then(function () {
                     flushBtn.disabled = false;
                     loadImpressions();
                 });
