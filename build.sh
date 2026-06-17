@@ -106,12 +106,12 @@ rm -f "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}.bak"
 
 # Sanity check: confirm the rewritten file still has both defines and they
 # point at the expected URLs.
-if ! grep -q "define('BOTSPOT_WP_LOCUS_API_URL', '${LOCUS_API_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}"; then
-    echo -e "${RED}ERROR: BOTSPOT_WP_LOCUS_API_URL rewrite failed${NC}"
+if ! grep -q "define('BSPT_LOCUS_API_URL', '${LOCUS_API_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}"; then
+    echo -e "${RED}ERROR: BSPT_LOCUS_API_URL rewrite failed${NC}"
     exit 1
 fi
-if ! grep -q "define('BOTSPOT_WP_CONNECTOR_URL', '${CONNECTOR_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}"; then
-    echo -e "${RED}ERROR: BOTSPOT_WP_CONNECTOR_URL rewrite failed${NC}"
+if ! grep -q "define('BSPT_CONNECTOR_URL', '${CONNECTOR_URL}')" "${BUILD_DIR}/${PLUGIN_SLUG}/${MAIN_PLUGIN_FILE}"; then
+    echo -e "${RED}ERROR: BSPT_CONNECTOR_URL rewrite failed${NC}"
     exit 1
 fi
 
