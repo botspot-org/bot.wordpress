@@ -112,7 +112,7 @@ class Bspt_Activator {
         }
 
         if (Bspt_Options::get('debug_mode')) {
-            Bspt_Logger::log_debug('BotSpot WP v3.0.0 activated.');
+            Bspt_Logger::log_debug('BotSpot WP v' . BSPT_VERSION . ' activated.');
         }
     }
 
