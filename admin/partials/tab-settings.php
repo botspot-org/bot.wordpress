@@ -50,7 +50,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <?php _e("Content to sync", "botspot-wp"); ?>
                 <?php if ($bsa_is_platform_managed): ?>
                 <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
-                    <?php _e("Managed in BotSpot", "botspot-wp"); ?> ↗
+                    <?php _e("Managed in bot.spot", "botspot-wp"); ?> ↗
                 </a>
                 <?php endif; ?>
             </h3>
@@ -123,7 +123,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <?php _e("Placement", "botspot-wp"); ?>
                 <?php if ($bsa_is_platform_managed): ?>
                 <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
-                    <?php _e("Managed in BotSpot", "botspot-wp"); ?> ↗
+                    <?php _e("Managed in bot.spot", "botspot-wp"); ?> ↗
                 </a>
                 <?php endif; ?>
             </h3>
@@ -262,7 +262,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     <?php _e("Output toggles", "botspot-wp"); ?>
                     <?php if ($bsa_is_platform_managed): ?>
                     <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
-                        <?php _e("Managed in BotSpot", "botspot-wp"); ?> ↗
+                        <?php _e("Managed in bot.spot", "botspot-wp"); ?> ↗
                     </a>
                     <?php endif; ?>
                 </h3>
@@ -299,7 +299,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                     <?php _e("Inject on post types", "botspot-wp"); ?>
                     <?php if ($bsa_is_platform_managed): ?>
                     <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
-                        <?php _e("Managed in BotSpot", "botspot-wp"); ?> ↗
+                        <?php _e("Managed in bot.spot", "botspot-wp"); ?> ↗
                     </a>
                     <?php endif; ?>
                 </h3>

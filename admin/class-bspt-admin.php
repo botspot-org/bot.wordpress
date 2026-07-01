@@ -256,7 +256,7 @@ JS;
                 <div class="notice notice-info is-dismissible">
                     <p>
                         <strong><?php _e("bot.spot:", "botspot-wp"); ?></strong>
-                        <?php _e("Your BotSpot settings were updated remotely.", "botspot-wp"); ?>
+                        <?php _e("Your bot.spot settings were updated remotely.", "botspot-wp"); ?>
                     </p>
                 </div>
                 <?php
