@@ -2018,7 +2018,7 @@
    ========================================================================== */
 
 .bsa-analytics__header {
-    margin-bottom: var(--bsa-gap-lg, 24px);
+    margin-bottom: 24px;
 }
 
 .bsa-analytics__window-selector {
@@ -2035,7 +2035,7 @@
 .bsa-analytics-card--sync,
 .bsa-analytics-card--enrichment,
 .bsa-analytics-card--impressions {
-    margin-bottom: var(--bsa-gap-md, 16px);
+    margin-bottom: 16px;
 }
 
 .bsa-analytics-card__body {
@@ -2046,13 +2046,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: var(--bsa-gap-lg, 24px);
-    padding-top: var(--bsa-gap-md, 16px);
-    border-top: 1px solid var(--bsa-color-border, #e5e7eb);
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--bsa-border);
 }
 
 .bsa-muted {
-    color: var(--bsa-color-muted, #6b7280);
+    color: var(--bsa-text-faint);
     font-size: 0.9em;
 }
 
@@ -2066,14 +2066,14 @@
 .bsa-analytics__table td {
     padding: 6px 10px;
     text-align: left;
-    border-bottom: 1px solid var(--bsa-color-border, #e5e7eb);
+    border-bottom: 1px solid var(--bsa-border);
 }
 
 .bsa-analytics__table th {
     font-weight: 600;
     font-size: 0.85em;
     text-transform: uppercase;
-    color: var(--bsa-color-muted, #6b7280);
+    color: var(--bsa-text-faint);
 }
 
 /* ============================================================
