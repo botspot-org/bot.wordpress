@@ -247,9 +247,13 @@ function bspt_init() {
 
     try {
         require_once BSPT_PLUGIN_PATH . 'includes/class-bspt.php';
+        require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-tracking.php';
 
         $plugin = new Bspt();
         $plugin->run();
+
+        // Server-side tracking for bot analytics
+        new BSPT_Tracking();
     } catch (Exception $e) {
         error_log('BotSpot WP Initialization Error: ' . $e->getMessage());
         error_log('Stack trace: ' . $e->getTraceAsString());
