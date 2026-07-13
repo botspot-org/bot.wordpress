@@ -20,7 +20,7 @@ $bsa_inject_post_types = Bspt_Options::get("inject_on_post_types", ["post", "pag
 $bsa_injection_position = Bspt_Options::get("injection_position", "bottom_of_content");
 $bsa_jsonld_conflict = Bspt_Options::get("jsonld_conflict_mode", "merge");
 $bsa_auto_sync = (bool) Bspt_Options::get("auto_sync_enabled", true);
-$bsa_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "medium");
+$bsa_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "high");
 $bsa_appendix_enabled = (bool) Bspt_Options::get("appendix_enabled", true);
 $bsa_jsonld_enabled = (bool) Bspt_Options::get("jsonld_enabled", true);
 
@@ -225,37 +225,8 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             </div>
         </section>
 
-        <section class="bsa-settings-row">
-            <div class="bsa-settings-row__meta">
-                <h3 class="bsa-settings-row__title"><?php _e("Sync sensitivity", "botspot-wp"); ?></h3>
-                <p class="bsa-settings-row__desc"><?php _e("Change threshold before resyncing on save.", "botspot-wp"); ?></p>
-            </div>
-            <div class="bsa-settings-row__body">
-                <div class="bsa-radio-list">
-                    <label class="bsa-radio">
-                        <input type="radio" name="bspt_sync_sensitivity" value="high" <?php checked($bsa_sync_sensitivity, "high"); ?> />
-                        <div>
-                            <div class="bsa-radio__title"><?php _e("High", "botspot-wp"); ?></div>
-                            <div class="bsa-radio__desc"><?php _e("Sync on every save.", "botspot-wp"); ?></div>
-                        </div>
-                    </label>
-                    <label class="bsa-radio">
-                        <input type="radio" name="bspt_sync_sensitivity" value="medium" <?php checked($bsa_sync_sensitivity, "medium"); ?> />
-                        <div>
-                            <div class="bsa-radio__title"><?php _e("Medium", "botspot-wp"); ?></div>
-                            <div class="bsa-radio__desc"><?php _e("Sync on ≥10% content change.", "botspot-wp"); ?></div>
-                        </div>
-                    </label>
-                    <label class="bsa-radio">
-                        <input type="radio" name="bspt_sync_sensitivity" value="low" <?php checked($bsa_sync_sensitivity, "low"); ?> />
-                        <div>
-                            <div class="bsa-radio__title"><?php _e("Low", "botspot-wp"); ?></div>
-                            <div class="bsa-radio__desc"><?php _e("Sync on ≥25% content change.", "botspot-wp"); ?></div>
-                        </div>
-                    </label>
-                </div>
-            </div>
-        </section>
+        <!-- ponytail: sensitivity hidden, defaults to high. Unhide when dashboard supports it. -->
+        <input type="hidden" name="bspt_sync_sensitivity" value="high" />
 
         <section class="bsa-settings-row">
             <div class="bsa-settings-row__meta">
