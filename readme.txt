@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.4.7
+Stable tag: 3.4.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -130,6 +130,11 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Changelog ==
 
+= 3.4.8 =
+
+* Synced version metadata across plugin header and readme.
+* Upgraded test harness dependencies to resolve security advisories.
+
 = 3.4.7 =
 
 * Continued WordPress.org Plugin Directory compliance refinements.
@@ -194,6 +199,6 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Upgrade Notice ==
 
-= 3.4.7 =
+= 3.4.8 =
 
-Update for WordPress.org Plugin Directory compliance, UX refinements, and WooCommerce auto-detection.
+Metadata and dependency maintenance release.
