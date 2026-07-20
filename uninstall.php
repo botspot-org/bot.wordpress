@@ -51,6 +51,7 @@ foreach ($options as $option) {
  */
 delete_transient("bspt_recent_errors");
 delete_transient("bspt_activation_notice");
+delete_transient("bspt_status_snapshot");
 
 // Clear all content transients (both old and new prefixes)
 global $wpdb;

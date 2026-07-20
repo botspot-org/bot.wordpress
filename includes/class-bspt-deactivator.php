@@ -38,6 +38,12 @@ class Bspt_Deactivator {
         // Clear activation notice transient
         delete_transient('bspt_activation_notice');
 
+        // Clear cached header status snapshot (connection/sync/runtime pills) so
+        // a subsequent reactivation with a different (or no) API key doesn't
+        // read up to 5 minutes of stale "connected" state from before
+        // deactivation. See Bspt_Admin::get_status_snapshot().
+        delete_transient('bspt_status_snapshot');
+
         // Deregister webhook from locus-core
         require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-webhook-handler.php';
         Bspt_Webhook_Handler::deregister_webhook();

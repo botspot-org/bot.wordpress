@@ -41,6 +41,12 @@ class Bspt_Activator {
         // Auto-add WooCommerce product type to existing installs
         self::migrate_woocommerce_post_types();
 
+        // Clear any cached header status snapshot left over from before
+        // (re)activation — without this, a reactivated (or freshly reinstalled)
+        // site can read up to 5 minutes of stale "connected" state computed
+        // before any API key existed. See Bspt_Admin::get_status_snapshot().
+        delete_transient('bspt_status_snapshot');
+
         // Connection defaults
         if (!Bspt_Options::exists('api_key')) {
             Bspt_Options::set('api_key', '');
