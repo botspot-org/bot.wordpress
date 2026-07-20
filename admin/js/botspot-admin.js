@@ -501,17 +501,17 @@
         var settings = {};
 
         // API key - only include if user entered a new value
-        var apiKeyInput = form.querySelector('[name="botspot_wp_api_key"]');
+        var apiKeyInput = form.querySelector('[name="bspt_api_key"]');
         if (apiKeyInput && apiKeyInput.value) {
             settings.api_key = apiKeyInput.value;
         }
 
         // Checkboxes - booleans
         var checkboxes = [
-            { name: "botspot_wp_auto_sync_enabled", key: "auto_sync_enabled" },
-            { name: "botspot_wp_appendix_enabled", key: "appendix_enabled" },
-            { name: "botspot_wp_jsonld_enabled", key: "jsonld_enabled" },
-            { name: "botspot_wp_debug_mode", key: "debug_mode" },
+            { name: "bspt_auto_sync_enabled", key: "auto_sync_enabled" },
+            { name: "bspt_appendix_enabled", key: "appendix_enabled" },
+            { name: "bspt_jsonld_enabled", key: "jsonld_enabled" },
+            { name: "bspt_debug_mode", key: "debug_mode" },
         ];
         checkboxes.forEach(function (cb) {
             var el = form.querySelector('[name="' + cb.name + '"]');
@@ -520,7 +520,7 @@
 
         // Selects (dropdowns)
         var selects = [
-            { name: "botspot_wp_sync_sensitivity", key: "sync_sensitivity" },
+            { name: "bspt_sync_sensitivity", key: "sync_sensitivity" },
         ];
         selects.forEach(function (sel) {
             var el = form.querySelector('select[name="' + sel.name + '"]');
@@ -529,8 +529,8 @@
 
         // Radio buttons - must query for :checked
         var radios = [
-            { name: "botspot_wp_injection_position", key: "injection_position" },
-            { name: "botspot_wp_jsonld_conflict_mode", key: "jsonld_conflict_mode" },
+            { name: "bspt_injection_position", key: "injection_position" },
+            { name: "bspt_jsonld_conflict_mode", key: "jsonld_conflict_mode" },
         ];
         radios.forEach(function (radio) {
             var el = form.querySelector('[name="' + radio.name + '"]:checked');
@@ -538,14 +538,14 @@
         });
 
         // Multi-selects / checkboxes for arrays
-        var syncPostTypes = form.querySelectorAll('[name="botspot_wp_sync_post_types[]"]:checked');
+        var syncPostTypes = form.querySelectorAll('[name="bspt_sync_post_types[]"]:checked');
         settings.sync_post_types = Array.prototype.map.call(syncPostTypes, function (el) { return el.value; });
 
-        var injectPostTypes = form.querySelectorAll('[name="botspot_wp_inject_on_post_types[]"]:checked');
+        var injectPostTypes = form.querySelectorAll('[name="bspt_inject_on_post_types[]"]:checked');
         settings.inject_on_post_types = Array.prototype.map.call(injectPostTypes, function (el) { return el.value; });
 
         // Numbers
-        var cacheTtl = form.querySelector('[name="botspot_wp_cache_ttl"]');
+        var cacheTtl = form.querySelector('[name="bspt_cache_ttl"]');
         if (cacheTtl) settings.cache_ttl = cacheTtl.value;
 
         return settings;
@@ -593,7 +593,7 @@
                 if (resp.success) {
                     markClean();
                     // Clear API key input after successful save (keep placeholder)
-                    var apiKeyInput = qs('[name="botspot_wp_api_key"]');
+                    var apiKeyInput = qs('[name="bspt_api_key"]');
                     if (apiKeyInput && apiKeyInput.value) {
                         apiKeyInput.value = "";
                         apiKeyInput.setAttribute("data-has-value", "1");
