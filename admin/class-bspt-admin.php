@@ -951,8 +951,12 @@ JS;
                     "compare" => "=",
                 ],
                 [
+                    // _bspt_last_synced_at is always written with current_time("mysql")
+                    // (site-local time, see Bspt_Sync), so the comparison threshold
+                    // must also be site-local — gmdate() here would silently skew the
+                    // "recent" window by the site's UTC offset.
                     "key" => "_bspt_last_synced_at",
-                    "value" => gmdate("Y-m-d H:i:s", time() - DAY_IN_SECONDS),
+                    "value" => gmdate("Y-m-d H:i:s", current_time("timestamp") - DAY_IN_SECONDS),
                     "compare" => ">=",
                     "type" => "DATETIME",
                 ],
