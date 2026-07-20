@@ -996,11 +996,14 @@ JS;
 
         // ---------- Runtime ----------
         // Presence of any fetcher transient indicates appendix was served recently.
+        // Bspt_Content_Fetcher caches under "bspt_content_*" (rendered appendix
+        // HTML) and "bspt_jsonld_*" (JSON-LD payloads) — NOT "bspt_appendix_*".
         global $wpdb;
         $fetcher_hits = (int) $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s",
-                "_transient_bspt_appendix_%"
+                "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+                "_transient_bspt_content_%",
+                "_transient_bspt_jsonld_%"
             )
         );
         if ($fetcher_hits > 0) {
