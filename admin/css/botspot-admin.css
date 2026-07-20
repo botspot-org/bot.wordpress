@@ -2013,67 +2013,9 @@
     }
 }
 
-/* =============================================================================
-   Analytics tab
-   ========================================================================== */
-
-.bsa-analytics__header {
-    margin-bottom: 24px;
-}
-
-.bsa-analytics__window-selector {
-    display: inline-flex;
-    gap: 4px;
-    margin-top: 12px;
-}
-
-.bsa-analytics__window-selector .bsa-btn.is-active {
-    background: var(--bsa-color-brand, #2563eb);
-    color: #fff;
-}
-
-.bsa-analytics-card--sync,
-.bsa-analytics-card--enrichment,
-.bsa-analytics-card--impressions {
-    margin-bottom: 16px;
-}
-
-.bsa-analytics-card__body {
-    min-height: 60px;
-}
-
-.bsa-analytics__footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid var(--bsa-border);
-}
-
 .bsa-muted {
     color: var(--bsa-text-faint);
     font-size: 0.9em;
-}
-
-.bsa-analytics__table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 8px;
-}
-
-.bsa-analytics__table th,
-.bsa-analytics__table td {
-    padding: 6px 10px;
-    text-align: left;
-    border-bottom: 1px solid var(--bsa-border);
-}
-
-.bsa-analytics__table th {
-    font-weight: 600;
-    font-size: 0.85em;
-    text-transform: uppercase;
-    color: var(--bsa-text-faint);
 }
 
 /* ============================================================

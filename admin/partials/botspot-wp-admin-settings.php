@@ -110,7 +110,7 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
                 <?php require BSPT_PLUGIN_PATH . "admin/partials/tab-settings.php"; ?>
             </main>
 
-            <!-- Developer tab (includes Analytics — debug-only, not a top-level tab) -->
+            <!-- Developer tab (debug-only, not a top-level tab) -->
             <main class="bsa-panel bsa-hidden" data-bsa-panel="developer">
                 <?php require BSPT_PLUGIN_PATH . "admin/partials/tab-developer.php"; ?>
             </main>

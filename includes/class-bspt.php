@@ -120,12 +120,6 @@ class Bspt
         }
 
         /**
-         * Analytics: bot classifier + flusher (state machine + wp-cron handler).
-         */
-        require_once BSPT_PLUGIN_PATH . "includes/class-bspt-bot-classifier.php";
-        require_once BSPT_PLUGIN_PATH . "includes/class-bspt-analytics-flusher.php";
-
-        /**
          * The class responsible for orchestrating the actions and filters.
          */
         require_once BSPT_PLUGIN_PATH . "includes/class-bspt-loader.php";
@@ -212,16 +206,6 @@ class Bspt
         $this->loader->add_action("wp_ajax_bspt_force_resync", $plugin_admin, "handle_force_resync");
         $this->loader->add_action("wp_ajax_bspt_clear_cache", $plugin_admin, "handle_clear_cache");
         $this->loader->add_action("wp_ajax_bspt_save_settings", $plugin_admin, "handle_save_settings");
-
-        // Analytics AJAX handlers
-        $this->loader->add_action("wp_ajax_bspt_get_sync_health", $plugin_admin, "handle_get_sync_health");
-        $this->loader->add_action("wp_ajax_bspt_get_enrichment_lifecycle", $plugin_admin, "handle_get_enrichment_lifecycle");
-        $this->loader->add_action("wp_ajax_bspt_get_impressions", $plugin_admin, "handle_get_impressions");
-        $this->loader->add_action("wp_ajax_bspt_force_flush", $plugin_admin, "handle_force_flush");
-
-        // wp-cron handler for the hourly flush (both names for migration compatibility)
-        $this->loader->add_action("bspt_flush_analytics", "Bspt_Analytics_Flusher", "flush");
-        $this->loader->add_action("botspot_flush_analytics", "Bspt_Analytics_Flusher", "flush");
 
         // wp-cron handler for background Force Resync (one-off, scheduled by handle_force_resync)
         $this->loader->add_action("bspt_force_resync_run", $plugin_admin, "run_scheduled_force_resync");

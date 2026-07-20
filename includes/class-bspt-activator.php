@@ -97,14 +97,6 @@ class Bspt_Activator {
         // Migrate post meta from _botspot_* to _bspt_* (WordPress.org compliance)
         self::migrate_post_meta_prefix();
 
-        // Migrate cron event name
-        self::migrate_cron_event();
-
-        // Schedule hourly analytics flush wp-cron event
-        if (!wp_next_scheduled('bspt_flush_analytics')) {
-            wp_schedule_event(time() + 3600, 'hourly', 'bspt_flush_analytics');
-        }
-
         // Register webhook for cache invalidation (if API key is configured)
         if (Bspt_Options::get('api_key')) {
             require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-webhook-handler.php';
@@ -211,26 +203,7 @@ class Bspt_Activator {
                 '%botspot_jsonld_%'
             )
         );
-        $wpdb->query(
-            $wpdb->prepare(
-                "UPDATE {$wpdb->options} SET option_name = REPLACE(option_name, 'botspot_flush_lock', 'bspt_flush_lock') WHERE option_name LIKE %s",
-                '%botspot_flush_lock%'
-            )
-        );
-
         update_option('bspt_migrated_post_meta_prefix', time());
-    }
-
-    /**
-     * Migrate cron event from botspot_flush_analytics to bspt_flush_analytics.
-     *
-     * @since 3.3.0
-     */
-    private static function migrate_cron_event() {
-        $timestamp = wp_next_scheduled('botspot_flush_analytics');
-        if ($timestamp) {
-            wp_unschedule_event($timestamp, 'botspot_flush_analytics');
-        }
     }
 
     /**

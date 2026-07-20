@@ -448,19 +448,6 @@ class Bspt_Content_Injector
                 strlen($html),
                 $position
             ));
-
-            // --- Analytics: increment impression counters ---
-            try {
-                $ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
-                $bot_class = Bspt_Bot_Classifier::classify($ua);
-                $post_id = get_the_ID();
-                if ($post_id) {
-                    Bspt_Analytics_Flusher::increment_post($post_id, $bot_class);
-                }
-            } catch (Throwable $e) {
-                // Analytics must NEVER break the render path.
-                Bspt_Logger::log_error('Analytics increment failed: ' . $e->getMessage());
-            }
         }
 
         return $content;
