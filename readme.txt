@@ -2,9 +2,9 @@
 Contributors: haavardmk
 Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
-Tested up to: 7.0
+Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 3.5.0
+Stable tag: 3.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -130,11 +130,12 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Changelog ==
 
-= 3.5.0 =
+= 3.5.1 =
 
-* Added server-side page view tracking for bot analytics.
-* Tracks all traffic including bots that don't execute JavaScript.
-* Non-blocking requests — no impact on page load time.
+* Fixed Developer tab badge status checks (Sync timezone, Runtime transient prefix).
+* Fixed Settings form field selector prefixes.
+* Removed incomplete server-side analytics feature.
+* Updated WordPress tested-up-to version to 6.8.
 
 = 3.4.8 =
 
@@ -205,6 +206,6 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Upgrade Notice ==
 
-= 3.4.8 =
+= 3.5.1 =
 
-Metadata and dependency maintenance release.
+Bug fixes for Developer tab badges (Sync, Runtime status) and Settings form fields.
