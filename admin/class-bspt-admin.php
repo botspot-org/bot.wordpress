@@ -921,9 +921,9 @@ JS;
             ];
         } elseif (empty($connection_id)) {
             $connection = [
-                "status" => "warn",
-                "label" => __("Not registered", "botspot-wp"),
-                "detail" => __("Access key present but site is not yet registered with bot.spot.", "botspot-wp"),
+                "status" => "ok",
+                "label" => __("Ready", "botspot-wp"),
+                "detail" => __("Access key set. Click Connect to register.", "botspot-wp"),
             ];
         } else {
             // Quick health probe via content fetcher (has its own short timeout)
@@ -976,25 +976,23 @@ JS;
             ],
         ]);
 
-        if (!empty($recent_synced)) {
-            $sync = [
-                "status" => empty($recent_errors) ? "ok" : "warn",
-                "label" => empty($recent_errors)
-                    ? __("Sync healthy", "botspot-wp")
-                    : __("Sync has recent errors", "botspot-wp"),
-                "detail" => __("Last successful sync within 24 hours.", "botspot-wp"),
-            ];
-        } elseif (!empty($recent_errors)) {
+        if (!empty($recent_errors)) {
             $sync = [
                 "status" => "error",
-                "label" => __("Sync failing", "botspot-wp"),
-                "detail" => __("Recent sync attempts have errored.", "botspot-wp"),
+                "label" => __("Sync errors", "botspot-wp"),
+                "detail" => __("Some posts failed to sync.", "botspot-wp"),
+            ];
+        } elseif (!empty($recent_synced)) {
+            $sync = [
+                "status" => "ok",
+                "label" => __("Synced", "botspot-wp"),
+                "detail" => __("Content synced within 24 hours.", "botspot-wp"),
             ];
         } else {
             $sync = [
-                "status" => "warn",
-                "label" => __("No recent sync", "botspot-wp"),
-                "detail" => __("No posts synced in the last 24 hours.", "botspot-wp"),
+                "status" => "ok",
+                "label" => __("Ready", "botspot-wp"),
+                "detail" => __("No syncs yet. Use Force Re-Sync to start.", "botspot-wp"),
             ];
         }
 
@@ -1022,9 +1020,9 @@ JS;
             ];
         } else {
             $runtime = [
-                "status" => "warn",
-                "label" => __("Runtime idle", "botspot-wp"),
-                "detail" => __("No frontend requests have cached appendix content yet.", "botspot-wp"),
+                "status" => "ok",
+                "label" => __("Ready", "botspot-wp"),
+                "detail" => __("Waiting for first frontend request.", "botspot-wp"),
             ];
         }
 
