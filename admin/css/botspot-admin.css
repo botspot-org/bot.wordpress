@@ -336,8 +336,7 @@
 }
 
 .botspot-admin-root .bsa-dot--ok {
-    background: var(--bsa-mint);
-    animation: bsa-pulse-mint 2.4s ease-in-out infinite;
+    background: var(--bsa-green);
 }
 
 .botspot-admin-root .bsa-dot--warn {
