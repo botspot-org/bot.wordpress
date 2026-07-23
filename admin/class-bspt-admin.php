@@ -251,8 +251,8 @@ JS;
                 ?>
                 <div class="notice notice-info is-dismissible">
                     <p>
-                        <strong><?php _e("bot.spot:", "botspot-wp"); ?></strong>
-                        <?php _e("Your bot.spot settings were updated remotely.", "botspot-wp"); ?>
+                        <strong><?php esc_html_e("bot.spot:", "botspot-wp"); ?></strong>
+                        <?php esc_html_e("Your bot.spot settings were updated remotely.", "botspot-wp"); ?>
                     </p>
                 </div>
                 <?php
@@ -264,7 +264,7 @@ JS;
             return;
         }
 
-        if (!$screen || !in_array($screen->base, ["toplevel_page_botspot-wp", "dashboard", "post", "page"])) {
+        if (!$screen || !in_array($screen->base, ["toplevel_page_botspot-wp", "dashboard", "post", "page"], true)) {
             return;
         }
 
@@ -277,17 +277,26 @@ JS;
         ?>
         <div class="notice notice-<?php echo esc_attr($last_error["type"]); ?> is-dismissible">
             <p>
-                <strong><?php _e("bot.spot WP:", "botspot-wp"); ?></strong>
+                <strong><?php esc_html_e("bot.spot WP:", "botspot-wp"); ?></strong>
                 <?php echo esc_html($last_error["message"]); ?>
-                <em>(<?php echo esc_html(sprintf(__("%s ago", "botspot-wp"), $time_ago)); ?>)</em>
+                <em>(<?php
+                    /* translators: %s: human-readable time ago string */
+                    echo esc_html(sprintf(__("%s ago", "botspot-wp"), $time_ago));
+                ?>)</em>
             </p>
             <?php if (Bspt_Logger::get_error_count() > 1): ?>
                 <p>
-                    <?php printf(
-                        __('There are %d more errors. <a href="%s">View settings</a> for details.', "botspot-wp"),
-                        Bspt_Logger::get_error_count() - 1,
-                        admin_url("admin.php?page=botspot-wp"),
-                    ); ?>
+                    <?php
+                    echo wp_kses(
+                        sprintf(
+                            /* translators: 1: number of additional errors, 2: settings page URL */
+                            __('There are %1$d more errors. <a href="%2$s">View settings</a> for details.', "botspot-wp"),
+                            Bspt_Logger::get_error_count() - 1,
+                            esc_url(admin_url("admin.php?page=botspot-wp"))
+                        ),
+                        ["a" => ["href" => []]]
+                    );
+                    ?>
                 </p>
             <?php endif; ?>
         </div>
@@ -328,15 +337,15 @@ JS;
         ?>
         <div class="botspot-sync-meta-box">
             <p>
-                <strong><?php _e("Status:", "botspot-wp"); ?></strong>
+                <strong><?php esc_html_e("Status:", "botspot-wp"); ?></strong>
                 <span style="color: <?php echo esc_attr(
                     $status_color,
                 ); ?>;"><?php echo esc_html($status_label); ?></span>
             </p>
             <?php if ($status["last_synced_at"]): ?>
                 <p>
-                    <strong><?php _e("Last synced:", "botspot-wp"); ?></strong>
-                    <?php echo esc_html(human_time_diff(strtotime($status["last_synced_at"]), time())); ?> <?php _e(
+                    <strong><?php esc_html_e("Last synced:", "botspot-wp"); ?></strong>
+                    <?php echo esc_html(human_time_diff(strtotime($status["last_synced_at"]), time())); ?> <?php esc_html_e(
      "ago",
      "botspot-wp",
  ); ?>
@@ -344,7 +353,7 @@ JS;
             <?php endif; ?>
             <p>
                 <button type="button" class="button botspot-sync-now" data-post-id="<?php echo esc_attr($post->ID); ?>">
-                    <?php _e("Sync Now", "botspot-wp"); ?>
+                    <?php esc_html_e("Sync Now", "botspot-wp"); ?>
                 </button>
                 <span class="botspot-sync-result"></span>
             </p>
@@ -379,7 +388,7 @@ JS;
         }
 
         $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
-        if (!in_array(get_post_type($post_id), $sync_post_types)) {
+        if (!in_array(get_post_type($post_id), $sync_post_types, true)) {
             echo '<span style="color: #999;">&#8212;</span>';
             return;
         }
@@ -408,6 +417,7 @@ JS;
         $label = $this->get_sync_status_label($status["status"]);
         $icon = $this->get_sync_status_icon($status["status"]);
 
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $icon is a fixed HTML entity from get_sync_status_icon()'s internal allow-list, not user input; esc_html() would double-encode the entity.
         echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">' . $icon . "</span>";
     }
 
@@ -554,9 +564,11 @@ JS;
      */
     private function maybe_save_inline_api_key($reset_connection = false)
     {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified via check_ajax_referer() in the calling AJAX handler (handle_test_connection / handle_register_connection) before this method is invoked.
         if (empty($_POST["api_key"])) {
             return;
         }
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified via check_ajax_referer() in the calling AJAX handler before this method is invoked.
         $submitted = sanitize_text_field(wp_unslash($_POST["api_key"]));
         if (strpos($submitted, "sk_") !== 0) {
             return;
@@ -732,6 +744,7 @@ JS;
         if (is_wp_error($response)) {
             wp_send_json_error([
                 "message" => sprintf(
+                    /* translators: %s: WP_Error message */
                     __("Connection failed: %s", "botspot-wp"),
                     $response->get_error_message()
                 ),
@@ -750,6 +763,7 @@ JS;
             // webhook registration failing is a wrong / truncated key.
             $friendly = ($status_code === 401 || $status_code === 403)
                 ? __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botspot-wp")
+                /* translators: %s: error message returned by the connection attempt */
                 : sprintf(__("Connection failed: %s", "botspot-wp"), $error_msg);
             wp_send_json_error(["message" => $friendly]);
             return;
@@ -861,7 +875,8 @@ JS;
             return;
         }
 
-        $level_filter = isset($_POST["level"]) ? sanitize_text_field($_POST["level"]) : "all";
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nonce verified via check_ajax_referer above
+        $level_filter = isset($_POST["level"]) ? sanitize_text_field(wp_unslash($_POST["level"])) : "all";
         $entries = Bspt_Logger::get_logs_for_viewer($level_filter);
 
         wp_send_json_success([
@@ -944,6 +959,7 @@ JS;
             "post_status" => "publish",
             "posts_per_page" => 1,
             "fields" => "ids",
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, bounded lookup (posts_per_page => 1) used only for an admin status indicator, not a listing query.
             "meta_query" => [
                 [
                     "key" => "_bspt_sync_status",
@@ -967,6 +983,7 @@ JS;
             "post_status" => "publish",
             "posts_per_page" => 1,
             "fields" => "ids",
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, bounded lookup (posts_per_page => 1) used only for an admin status indicator, not a listing query.
             "meta_query" => [
                 [
                     "key" => "_bspt_sync_status",
@@ -1001,6 +1018,7 @@ JS;
         // Bspt_Content_Fetcher caches under "bspt_content_*" (rendered appendix
         // HTML) and "bspt_jsonld_*" (JSON-LD payloads) — NOT "bspt_appendix_*".
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned query, prepared; no wp_options API exists for a LIKE scan of transient names, and the result is itself cached via set_transient() below.
         $fetcher_hits = (int) $wpdb->get_var(
             $wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -1183,7 +1201,8 @@ JS;
             return;
         }
 
-        $settings = isset($_POST["settings"]) ? $_POST["settings"] : [];
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- each value is sanitized per-key below via the $sanitizers dispatch table before being persisted.
+        $settings = isset($_POST["settings"]) ? wp_unslash($_POST["settings"]) : [];
         if (!is_array($settings)) {
             wp_send_json_error(["message" => __("Invalid settings data", "botspot-wp")]);
             return;

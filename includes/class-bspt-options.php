@@ -312,16 +312,16 @@ class Bspt_Options
 
             case "sync_sensitivity":
                 $allowed = ["high", "medium", "low"];
-                return in_array($value, $allowed) ? $value : "medium";
+                return in_array($value, $allowed, true) ? $value : "medium";
 
             case "jsonld_conflict_mode":
                 $allowed = ["merge", "replace", "off"];
-                return in_array($value, $allowed) ? $value : "merge";
+                return in_array($value, $allowed, true) ? $value : "merge";
 
             case "injection_position":
                 $value = self::migrate_placement_value($value);
                 $allowed = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
-                return in_array($value, $allowed) ? $value : "bottom_of_content";
+                return in_array($value, $allowed, true) ? $value : "bottom_of_content";
 
             case "sync_post_types":
             case "inject_on_post_types":

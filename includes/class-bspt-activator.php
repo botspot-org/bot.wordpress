@@ -126,6 +126,7 @@ class Bspt_Activator {
             return;
         }
 
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery -- one-time v2.x->v3.x option/postmeta prefix migration run once per site on activation; queries use hardcoded LIKE patterns with no user input, and caching is not applicable to a single-run migration.
         // 1. Migrate options: botdot_wp_* -> bspt_*
         $old_options = $wpdb->get_results(
             "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE 'botdot_wp_%'"
@@ -141,6 +142,7 @@ class Bspt_Activator {
         $wpdb->query(
             "UPDATE {$wpdb->postmeta} SET meta_key = REPLACE(meta_key, '_botdot_', '_botspot_') WHERE meta_key LIKE '_botdot_%'"
         );
+        // phpcs:enable WordPress.DB.DirectDatabaseQuery
 
         update_option('bspt_migrated_from_botdot', time());
     }
@@ -157,6 +159,7 @@ class Bspt_Activator {
             return;
         }
 
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery -- one-time botspot_wp_->bspt_ option/transient prefix migration run once per site on activation; queries use hardcoded LIKE patterns with no user input, and caching is not applicable to a single-run migration.
         // Migrate options: botspot_wp_* -> bspt_*
         $old_options = $wpdb->get_results(
             "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE 'botspot_wp_%'"
@@ -173,6 +176,7 @@ class Bspt_Activator {
         $old_transients = $wpdb->get_results(
             "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE '_transient_botspot_wp_%' OR option_name LIKE '_transient_timeout_botspot_wp_%'"
         );
+        // phpcs:enable WordPress.DB.DirectDatabaseQuery
         foreach ($old_transients as $trans) {
             delete_option($trans->option_name);
         }
@@ -192,6 +196,7 @@ class Bspt_Activator {
             return;
         }
 
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery -- one-time _botspot_->_bspt_ postmeta/option prefix migration run once per site on activation; the postmeta query uses a hardcoded LIKE pattern and the option queries are passed through $wpdb->prepare(); caching is not applicable to a single-run migration.
         $wpdb->query(
             "UPDATE {$wpdb->postmeta} SET meta_key = REPLACE(meta_key, '_botspot_', '_bspt_') WHERE meta_key LIKE '_botspot_%'"
         );
@@ -209,6 +214,7 @@ class Bspt_Activator {
                 '%botspot_jsonld_%'
             )
         );
+        // phpcs:enable WordPress.DB.DirectDatabaseQuery
         update_option('bspt_migrated_post_meta_prefix', time());
     }
 

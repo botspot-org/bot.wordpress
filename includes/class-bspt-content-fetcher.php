@@ -324,7 +324,7 @@ class Bspt_Content_Fetcher
         if (empty($api_key)) {
             return [
                 "success" => false,
-                "message" => __("API key is not configured", "botspot"),
+                "message" => __("API key is not configured", "botspot-wp"),
             ];
         }
 
@@ -343,7 +343,7 @@ class Bspt_Content_Fetcher
                 "success" => false,
                 "message" => sprintf(
                     /* translators: %s: WordPress HTTP API error message */
-                    __("Connection failed: %s", "botspot"),
+                    __("Connection failed: %s", "botspot-wp"),
                     $response->get_error_message()
                 ),
             ];
@@ -354,14 +354,14 @@ class Bspt_Content_Fetcher
         if ($status_code === 200) {
             return [
                 "success" => true,
-                "message" => __("Connected to bot.spot successfully", "botspot"),
+                "message" => __("Connected to bot.spot successfully", "botspot-wp"),
             ];
         }
 
         if ($status_code === 401 || $status_code === 403) {
             return [
                 "success" => false,
-                "message" => __("Authentication failed. Check your API key.", "botspot"),
+                "message" => __("Authentication failed. Check your API key.", "botspot-wp"),
             ];
         }
 
@@ -369,7 +369,7 @@ class Bspt_Content_Fetcher
             "success" => false,
             "message" => sprintf(
                 /* translators: %d: HTTP status code */
-                __("Connection returned HTTP %d", "botspot"),
+                __("Connection returned HTTP %d", "botspot-wp"),
                 $status_code
             ),
         ];

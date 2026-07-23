@@ -298,6 +298,7 @@ class Bspt_Webhook_Handler
         } else {
             global $wpdb;
 
+            // phpcs:disable WordPress.DB.DirectDatabaseQuery -- content/JSON-LD cache invalidation keyed by content hash; deleting the underlying transient rows directly is the invalidation itself, so a cache read/write here would be circular. All dynamic input goes through $wpdb->prepare()/esc_like().
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -313,6 +314,7 @@ class Bspt_Webhook_Handler
                     "_transient_timeout_bspt_jsonld_" . $wpdb->esc_like(md5($path)) . "%"
                 )
             );
+            // phpcs:enable WordPress.DB.DirectDatabaseQuery
         }
     }
 
@@ -343,7 +345,7 @@ class Bspt_Webhook_Handler
                 "X-API-Key" => $api_key,
                 "Content-Type" => "application/json",
             ],
-            "body" => json_encode([
+            "body" => wp_json_encode([
                 "url" => rest_url("botspot/v1/webhook"),
                 "events" => ["appendix.updated", "settings.updated"],
                 "name" => "WordPress: " . home_url(),
@@ -455,7 +457,7 @@ class Bspt_Webhook_Handler
                 "X-Site-URL" => home_url(),
                 "Content-Type" => "application/json",
             ],
-            "body" => json_encode(["settings" => $local_settings]),
+            "body" => wp_json_encode(["settings" => $local_settings]),
             "timeout" => 15,
         ]);
 

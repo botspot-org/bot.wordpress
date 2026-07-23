@@ -38,7 +38,7 @@ Service provider: BotSpot
 Service URLs used by production builds:
 
 * `https://platform.bot.spot` - BotSpot dashboard used to create and manage access keys.
-* `https://locus-api.bot.spot` - BotSpot API used for site registration, content sync, appendix rendering, JSON-LD rendering, enrichment webhooks, and analytics reporting.
+* `https://locus-api.bot.spot` - BotSpot API used for site registration, content sync, appendix rendering, JSON-LD rendering, and enrichment webhooks.
 
 Terms of service: https://bot.spot/terms
 
@@ -49,7 +49,6 @@ Data sent to BotSpot may include:
 * Site URL, site name, and webhook URL during connection.
 * Selected published content, including title, content, excerpt, permalink, post type, status, author display name, language, publish/update dates, categories, tags, featured image URL, and existing source JSON-LD during sync.
 * The current page path, site origin, and API authentication headers when fetching rendered appendix content or JSON-LD.
-* Aggregated impression counters for synced content, grouped by bot or human class. The plugin classifies visitors locally and sends aggregate counts, artifact identifiers, and first-hit timestamps. It does not send raw visitor IP addresses or raw user-agent strings in the analytics batch.
 
 BotSpot may send webhook requests back to the WordPress site to update enrichment status, clear local caches, and push configuration changes. These requests are authenticated with an HMAC signature.
 

@@ -40,6 +40,11 @@ $options = [
     "bspt_cache_ttl",
     // Debug
     "bspt_debug_mode",
+    // Platform sync + backups
+    "bspt_platform_settings",
+    "bspt_local_settings_backup",
+    // Diagnostics
+    "bspt_fatal_errors",
 ];
 
 foreach ($options as $option) {
@@ -52,9 +57,11 @@ foreach ($options as $option) {
 delete_transient("bspt_recent_errors");
 delete_transient("bspt_activation_notice");
 delete_transient("bspt_status_snapshot");
+delete_transient("bspt_settings_updated_notice");
 
 // Clear all content transients (both old and new prefixes)
 global $wpdb;
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.SlowDBQuery -- one-time uninstall cleanup of plugin-owned options/postmeta; no caching layer applies since the plugin (and its cache) is being removed, and every dynamic value is passed through $wpdb->prepare()/esc_like().
 $wpdb->query(
     $wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -67,6 +74,17 @@ $wpdb->query(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
         $wpdb->esc_like("_transient_botspot_content_") . "%",
         $wpdb->esc_like("_transient_timeout_botspot_content_") . "%",
+    ),
+);
+
+// Catch-all: remove any remaining plugin-owned options written under the
+// dynamic "bspt_" prefix (migration flags, dynamically-keyed settings).
+// The escaped underscore keeps this from matching "_transient_bspt_*" rows,
+// which are handled above.
+$wpdb->query(
+    $wpdb->prepare(
+        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+        $wpdb->esc_like("bspt_") . "%",
     ),
 );
 
@@ -97,3 +115,4 @@ $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_artifact_id"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_enrichment_tier"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_enrichment_status"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_botspot_pre_enrich_jsonld"]);
+// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.SlowDBQuery
