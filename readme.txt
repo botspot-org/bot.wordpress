@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 3.5.2
+Stable tag: 3.5.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,12 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.5.3 =
+
+* Hardened for WordPress.org review: output escaping, translation text domain, input sanitization, and strict comparisons across admin and public code.
+* Documented plugin-owned direct database queries and removed stale analytics references from the readme.
+* Uninstall now removes all plugin options and transients, including platform settings and migration flags.
 
 = 3.5.2 =
 
