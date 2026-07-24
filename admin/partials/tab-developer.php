@@ -11,8 +11,8 @@ if (!defined("WPINC")) {
     die();
 }
 
-$bsa_debug_mode = (bool) Bspt_Options::get("debug_mode", false);
-$bsa_cache_ttl = (int) Bspt_Options::get("cache_ttl", 3600);
+$bspt_debug_mode = (bool) Bspt_Options::get("debug_mode", false);
+$bspt_cache_ttl = (int) Bspt_Options::get("cache_ttl", 3600);
 ?>
 <div class="bsa-developer">
 
@@ -76,7 +76,7 @@ $bsa_cache_ttl = (int) Bspt_Options::get("cache_ttl", 3600);
                     <h4 class="bsa-sidebar-section__title"><?php esc_html_e("Options", "botspot"); ?></h4>
                     <div class="bsa-check-list">
                         <label class="bsa-check">
-                            <input type="checkbox" name="bspt_debug_mode" value="1" <?php checked($bsa_debug_mode); ?> />
+                            <input type="checkbox" name="bspt_debug_mode" value="1" <?php checked($bspt_debug_mode); ?> />
                             <span><?php esc_html_e("Debug logging", "botspot"); ?></span>
                         </label>
                         <label class="bsa-check">
@@ -96,7 +96,7 @@ $bsa_cache_ttl = (int) Bspt_Options::get("cache_ttl", 3600);
                         <input
                             type="number"
                             name="bspt_cache_ttl"
-                            value="<?php echo esc_attr($bsa_cache_ttl); ?>"
+                            value="<?php echo esc_attr($bspt_cache_ttl); ?>"
                             min="60"
                             max="86400"
                             class="bsa-ttl-input bsa-mono bsa-tabular-nums"

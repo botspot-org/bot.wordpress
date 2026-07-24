@@ -16,7 +16,7 @@ if (!defined("WP_UNINSTALL_PLUGIN")) {
 /**
  * Delete all plugin options
  */
-$options = [
+$bspt_options = [
     // Connection
     "bspt_api_key",
     "bspt_botspot_key", // legacy, removed in 1.3.0 but clean up if present
@@ -47,8 +47,8 @@ $options = [
     "bspt_fatal_errors",
 ];
 
-foreach ($options as $option) {
-    delete_option($option);
+foreach ($bspt_options as $bspt_option) {
+    delete_option($bspt_option);
 }
 
 /**

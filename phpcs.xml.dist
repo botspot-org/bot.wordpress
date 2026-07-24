@@ -56,6 +56,18 @@
     <!-- in_array/array_search without strict comparison. -->
     <rule ref="WordPress.PHP.StrictInArray"/>
 
+    <!-- Global symbols (vars/functions/classes/hooks) must carry a plugin prefix. -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="bspt"/>
+                <element value="botspot"/>
+                <element value="Bspt"/>
+                <element value="BSPT"/>
+            </property>
+        </properties>
+    </rule>
+
     <!-- ===== PHP cross-version compatibility (declared floor: PHP 7.4) ===== -->
     <config name="testVersion" value="7.4-"/>
     <rule ref="PHPCompatibilityWP"/>

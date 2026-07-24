@@ -22,15 +22,15 @@ if (!defined("WPINC")) {
 Bspt_Options::migrate_injection_toggles();
 
 // Common data used across partials
-$bsa_site_domain = wp_parse_url(home_url(), PHP_URL_HOST);
-$bsa_post_types = get_post_types(["public" => true], "objects");
-$bsa_has_api_key = !empty(Bspt_Options::get("api_key"));
-$bsa_webhook_id = Bspt_Options::get("webhook_id");
-$bsa_tenant_id = Bspt_Options::get("tenant_id");
-$bsa_is_connected = $bsa_has_api_key && !empty($bsa_webhook_id);
+$bspt_site_domain = wp_parse_url(home_url(), PHP_URL_HOST);
+$bspt_post_types = get_post_types(["public" => true], "objects");
+$bspt_has_api_key = !empty(Bspt_Options::get("api_key"));
+$bspt_webhook_id = Bspt_Options::get("webhook_id");
+$bspt_tenant_id = Bspt_Options::get("tenant_id");
+$bspt_is_connected = $bspt_has_api_key && !empty($bspt_webhook_id);
 
 // WooCommerce detection
-$bsa_woocommerce_active = class_exists("WooCommerce");
+$bspt_woocommerce_active = class_exists("WooCommerce");
 ?>
 <div class="wrap">
     <h1 class="screen-reader-text"><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -66,7 +66,7 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
                     <span class="bsa-status-pill__label"><?php esc_html_e("Runtime", "botspot"); ?></span>
                 </div>
                 <span class="bsa-header__divider"></span>
-                <span class="bsa-header__domain bsa-mono bsa-tabular-nums"><?php echo esc_html($bsa_site_domain); ?></span>
+                <span class="bsa-header__domain bsa-mono bsa-tabular-nums"><?php echo esc_html($bspt_site_domain); ?></span>
             </div>
         </header>
 

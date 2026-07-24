@@ -7,32 +7,32 @@
  * @since 2.2.0
  *
  * Variables from parent partial:
- * - $bsa_post_types (WP post type objects)
- * - $bsa_woocommerce_active (bool)
+ * - $bspt_post_types (WP post type objects)
+ * - $bspt_woocommerce_active (bool)
  */
 
 if (!defined("WPINC")) {
     die();
 }
 
-$bsa_sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
-$bsa_inject_post_types = Bspt_Options::get("inject_on_post_types", ["post", "page"]);
-$bsa_injection_position = Bspt_Options::get("injection_position", "bottom_of_content");
-$bsa_jsonld_conflict = Bspt_Options::get("jsonld_conflict_mode", "merge");
-$bsa_auto_sync = (bool) Bspt_Options::get("auto_sync_enabled", true);
-$bsa_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "high");
-$bsa_appendix_enabled = (bool) Bspt_Options::get("appendix_enabled", true);
-$bsa_jsonld_enabled = (bool) Bspt_Options::get("jsonld_enabled", true);
+$bspt_sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
+$bspt_inject_post_types = Bspt_Options::get("inject_on_post_types", ["post", "page"]);
+$bspt_injection_position = Bspt_Options::get("injection_position", "bottom_of_content");
+$bspt_jsonld_conflict = Bspt_Options::get("jsonld_conflict_mode", "merge");
+$bspt_auto_sync = (bool) Bspt_Options::get("auto_sync_enabled", true);
+$bspt_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "high");
+$bspt_appendix_enabled = (bool) Bspt_Options::get("appendix_enabled", true);
+$bspt_jsonld_enabled = (bool) Bspt_Options::get("jsonld_enabled", true);
 
 // Platform-managed only after dashboard pushes settings (not just on connect)
-$bsa_platform_settings = get_option("bspt_platform_settings", []);
-$bsa_is_platform_managed = !empty($bsa_platform_settings);
-$bsa_dashboard_url = "https://platform.bot.spot";
+$bspt_platform_settings = get_option("bspt_platform_settings", []);
+$bspt_is_platform_managed = !empty($bspt_platform_settings);
+$bspt_dashboard_url = "https://platform.bot.spot";
 
 // Custom post types (exclude built-ins we handle explicitly)
-$bsa_builtin_types = ["post", "page", "attachment", "product"];
-$bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_builtin_types) {
-    return !in_array($pt->name, $bsa_builtin_types, true);
+$bspt_builtin_types = ["post", "page", "attachment", "product"];
+$bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bspt_builtin_types) {
+    return !in_array($bspt_pt->name, $bspt_builtin_types, true);
 });
 ?>
 <div class="bsa-settings">
@@ -49,8 +49,8 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
         <div class="bsa-settings-row__meta">
             <h3 class="bsa-settings-row__title">
                 <?php esc_html_e("Content to sync", "botspot"); ?>
-                <?php if ($bsa_is_platform_managed): ?>
-                <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                <?php if ($bspt_is_platform_managed): ?>
+                <a href="<?php echo esc_url($bspt_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
                     <?php esc_html_e("Managed in bot.spot", "botspot"); ?> ↗
                 </a>
                 <?php endif; ?>
@@ -60,48 +60,48 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             </p>
         </div>
         <div class="bsa-settings-row__body">
-            <?php if ($bsa_is_platform_managed): ?>
+            <?php if ($bspt_is_platform_managed): ?>
             <div class="bsa-readonly-list">
                 <?php
-                $type_labels = [
+                $bspt_type_labels = [
                     "post" => __("Posts", "botspot"),
                     "page" => __("Pages", "botspot"),
                     "product" => __("Products", "botspot"),
                 ];
-                foreach ($bsa_sync_post_types as $type):
-                    $label = isset($type_labels[$type]) ? $type_labels[$type] : ucfirst($type);
+                foreach ($bspt_sync_post_types as $type):
+                    $bspt_label = isset($bspt_type_labels[$type]) ? $bspt_type_labels[$type] : ucfirst($type);
                 ?>
-                <span class="bsa-readonly-item"><?php echo esc_html($label); ?></span>
+                <span class="bsa-readonly-item"><?php echo esc_html($bspt_label); ?></span>
                 <?php endforeach; ?>
-                <?php if (empty($bsa_sync_post_types)): ?>
+                <?php if (empty($bspt_sync_post_types)): ?>
                 <span class="bsa-readonly-item bsa-readonly-item--none"><?php esc_html_e("None selected", "botspot"); ?></span>
                 <?php endif; ?>
             </div>
             <?php else: ?>
             <div class="bsa-check-list">
                 <label class="bsa-check">
-                    <input type="checkbox" name="bspt_sync_post_types[]" value="post" <?php checked(in_array("post", $bsa_sync_post_types, true)); ?> />
+                    <input type="checkbox" name="bspt_sync_post_types[]" value="post" <?php checked(in_array("post", $bspt_sync_post_types, true)); ?> />
                     <span><?php esc_html_e("Posts", "botspot"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="checkbox" name="bspt_sync_post_types[]" value="page" <?php checked(in_array("page", $bsa_sync_post_types, true)); ?> />
+                    <input type="checkbox" name="bspt_sync_post_types[]" value="page" <?php checked(in_array("page", $bspt_sync_post_types, true)); ?> />
                     <span><?php esc_html_e("Pages", "botspot"); ?></span>
                 </label>
-                <label class="bsa-check <?php echo $bsa_woocommerce_active ? "" : "bsa-check--disabled"; ?>">
-                    <input type="checkbox" name="bspt_sync_post_types[]" value="product" <?php checked(in_array("product", $bsa_sync_post_types, true)); ?> <?php echo $bsa_woocommerce_active ? "" : "disabled"; ?> />
+                <label class="bsa-check <?php echo $bspt_woocommerce_active ? "" : "bsa-check--disabled"; ?>">
+                    <input type="checkbox" name="bspt_sync_post_types[]" value="product" <?php checked(in_array("product", $bspt_sync_post_types, true)); ?> <?php echo $bspt_woocommerce_active ? "" : "disabled"; ?> />
                     <span>
                         <?php esc_html_e("Products", "botspot"); ?>
-                        <span class="bsa-check__tag <?php echo $bsa_woocommerce_active ? "bsa-check__tag--active" : ""; ?>">WooCommerce</span>
+                        <span class="bsa-check__tag <?php echo $bspt_woocommerce_active ? "bsa-check__tag--active" : ""; ?>">WooCommerce</span>
                     </span>
                 </label>
-                <?php if (!empty($bsa_custom_types)): ?>
+                <?php if (!empty($bspt_custom_types)): ?>
                 <details class="bsa-check bsa-check-group">
                     <summary><?php esc_html_e("Custom post types", "botspot"); ?></summary>
                     <div class="bsa-check-list bsa-check-list--nested">
-                        <?php foreach ($bsa_custom_types as $pt): ?>
+                        <?php foreach ($bspt_custom_types as $bspt_pt): ?>
                         <label class="bsa-check">
-                            <input type="checkbox" name="bspt_sync_post_types[]" value="<?php echo esc_attr($pt->name); ?>" <?php checked(in_array($pt->name, $bsa_sync_post_types, true)); ?> />
-                            <span><?php echo esc_html($pt->label); ?></span>
+                            <input type="checkbox" name="bspt_sync_post_types[]" value="<?php echo esc_attr($bspt_pt->name); ?>" <?php checked(in_array($bspt_pt->name, $bspt_sync_post_types, true)); ?> />
+                            <span><?php echo esc_html($bspt_pt->label); ?></span>
                         </label>
                         <?php endforeach; ?>
                     </div>
@@ -122,8 +122,8 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
         <div class="bsa-settings-row__meta">
             <h3 class="bsa-settings-row__title">
                 <?php esc_html_e("Placement", "botspot"); ?>
-                <?php if ($bsa_is_platform_managed): ?>
-                <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                <?php if ($bspt_is_platform_managed): ?>
+                <a href="<?php echo esc_url($bspt_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
                     <?php esc_html_e("Managed in bot.spot", "botspot"); ?> ↗
                 </a>
                 <?php endif; ?>
@@ -131,9 +131,9 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <p class="bsa-settings-row__desc"><?php esc_html_e("Where the appendix is injected into the page.", "botspot"); ?></p>
         </div>
         <div class="bsa-settings-row__body">
-            <?php if ($bsa_is_platform_managed): ?>
+            <?php if ($bspt_is_platform_managed): ?>
             <?php
-            $placement_labels = [
+            $bspt_placement_labels = [
                 "bottom_of_content" => __("Bottom of content", "botspot"),
                 "auto" => __("Automatic", "botspot"),
                 "above_footer" => __("Above footer", "botspot"),
@@ -141,33 +141,33 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 "footer" => __("Footer", "botspot"),
                 "manual" => __("Manual placement", "botspot"),
             ];
-            $placement_label = isset($placement_labels[$bsa_injection_position]) ? $placement_labels[$bsa_injection_position] : ucfirst($bsa_injection_position);
+            $bspt_placement_label = isset($bspt_placement_labels[$bspt_injection_position]) ? $bspt_placement_labels[$bspt_injection_position] : ucfirst($bspt_injection_position);
             ?>
             <div class="bsa-readonly-value">
-                <?php echo esc_html($placement_label); ?>
-                <?php if ($bsa_injection_position === "manual"): ?>
+                <?php echo esc_html($bspt_placement_label); ?>
+                <?php if ($bspt_injection_position === "manual"): ?>
                 <code class="bsa-code">[botspot_appendix]</code>
                 <?php endif; ?>
             </div>
             <?php else: ?>
             <div class="bsa-check-list">
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_content" <?php checked($bsa_injection_position, "bottom_of_content"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_content" <?php checked($bspt_injection_position, "bottom_of_content"); ?> />
                     <span>
                         <?php esc_html_e("Bottom of content", "botspot"); ?>
                         <span class="bsa-check__tag"><?php esc_html_e("recommended", "botspot"); ?></span>
                     </span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="above_footer" <?php checked($bsa_injection_position, "above_footer"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="above_footer" <?php checked($bspt_injection_position, "above_footer"); ?> />
                     <span><?php esc_html_e("Above footer", "botspot"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_page" <?php checked($bsa_injection_position, "bottom_of_page"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_page" <?php checked($bspt_injection_position, "bottom_of_page"); ?> />
                     <span><?php esc_html_e("Bottom of page", "botspot"); ?></span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="manual" <?php checked($bsa_injection_position, "manual"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="manual" <?php checked($bspt_injection_position, "manual"); ?> />
                     <span>
                         <?php esc_html_e("Manual placement", "botspot"); ?>
                         <span class="bsa-check__tag"><code class="bsa-code">[botspot_appendix]</code></span>
@@ -191,14 +191,14 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
         <div class="bsa-settings-row__body">
             <div class="bsa-check-list">
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="bspt_jsonld_conflict_mode" value="merge" <?php checked($bsa_jsonld_conflict, "merge"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_jsonld_conflict_mode" value="merge" <?php checked($bspt_jsonld_conflict, "merge"); ?> />
                     <span>
                         <?php esc_html_e("Merge with existing output", "botspot"); ?>
                         <span class="bsa-check__tag"><?php esc_html_e("recommended", "botspot"); ?></span>
                     </span>
                 </label>
                 <label class="bsa-check">
-                    <input type="radio" class="bsa-check-as-check" name="bspt_jsonld_conflict_mode" value="replace" <?php checked($bsa_jsonld_conflict, "replace"); ?> />
+                    <input type="radio" class="bsa-check-as-check" name="bspt_jsonld_conflict_mode" value="replace" <?php checked($bspt_jsonld_conflict, "replace"); ?> />
                     <span><?php esc_html_e("Replace conflicting output", "botspot"); ?></span>
                 </label>
             </div>
@@ -219,7 +219,7 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             </div>
             <div class="bsa-settings-row__body">
                 <label class="bsa-check">
-                    <input type="checkbox" name="bspt_auto_sync_enabled" value="1" <?php checked($bsa_auto_sync); ?> />
+                    <input type="checkbox" name="bspt_auto_sync_enabled" value="1" <?php checked($bspt_auto_sync); ?> />
                     <span><?php esc_html_e("Enable auto-sync", "botspot"); ?></span>
                 </label>
             </div>
@@ -232,8 +232,8 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <div class="bsa-settings-row__meta">
                 <h3 class="bsa-settings-row__title">
                     <?php esc_html_e("Output toggles", "botspot"); ?>
-                    <?php if ($bsa_is_platform_managed): ?>
-                    <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                    <?php if ($bspt_is_platform_managed): ?>
+                    <a href="<?php echo esc_url($bspt_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
                         <?php esc_html_e("Managed in bot.spot", "botspot"); ?> ↗
                     </a>
                     <?php endif; ?>
@@ -241,23 +241,23 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <p class="bsa-settings-row__desc"><?php esc_html_e("Disable specific injection outputs.", "botspot"); ?></p>
             </div>
             <div class="bsa-settings-row__body">
-                <?php if ($bsa_is_platform_managed): ?>
+                <?php if ($bspt_is_platform_managed): ?>
                 <div class="bsa-readonly-toggles">
-                    <span class="bsa-readonly-toggle <?php echo $bsa_appendix_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
-                        <?php esc_html_e("HTML appendix", "botspot"); ?>: <?php echo $bsa_appendix_enabled ? esc_html__("Enabled", "botspot") : esc_html__("Disabled", "botspot"); ?>
+                    <span class="bsa-readonly-toggle <?php echo $bspt_appendix_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
+                        <?php esc_html_e("HTML appendix", "botspot"); ?>: <?php echo $bspt_appendix_enabled ? esc_html__("Enabled", "botspot") : esc_html__("Disabled", "botspot"); ?>
                     </span>
-                    <span class="bsa-readonly-toggle <?php echo $bsa_jsonld_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
-                        <?php esc_html_e("JSON-LD structured data", "botspot"); ?>: <?php echo $bsa_jsonld_enabled ? esc_html__("Enabled", "botspot") : esc_html__("Disabled", "botspot"); ?>
+                    <span class="bsa-readonly-toggle <?php echo $bspt_jsonld_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
+                        <?php esc_html_e("JSON-LD structured data", "botspot"); ?>: <?php echo $bspt_jsonld_enabled ? esc_html__("Enabled", "botspot") : esc_html__("Disabled", "botspot"); ?>
                     </span>
                 </div>
                 <?php else: ?>
                 <div class="bsa-check-list">
                     <label class="bsa-check">
-                        <input type="checkbox" name="bspt_appendix_enabled" value="1" <?php checked($bsa_appendix_enabled); ?> />
+                        <input type="checkbox" name="bspt_appendix_enabled" value="1" <?php checked($bspt_appendix_enabled); ?> />
                         <span><?php esc_html_e("HTML appendix", "botspot"); ?></span>
                     </label>
                     <label class="bsa-check">
-                        <input type="checkbox" name="bspt_jsonld_enabled" value="1" <?php checked($bsa_jsonld_enabled); ?> />
+                        <input type="checkbox" name="bspt_jsonld_enabled" value="1" <?php checked($bspt_jsonld_enabled); ?> />
                         <span><?php esc_html_e("JSON-LD structured data", "botspot"); ?></span>
                     </label>
                 </div>
@@ -269,8 +269,8 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
             <div class="bsa-settings-row__meta">
                 <h3 class="bsa-settings-row__title">
                     <?php esc_html_e("Inject on post types", "botspot"); ?>
-                    <?php if ($bsa_is_platform_managed): ?>
-                    <a href="<?php echo esc_url($bsa_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
+                    <?php if ($bspt_is_platform_managed): ?>
+                    <a href="<?php echo esc_url($bspt_dashboard_url); ?>" target="_blank" rel="noopener" class="bsa-managed-link">
                         <?php esc_html_e("Managed in bot.spot", "botspot"); ?> ↗
                     </a>
                     <?php endif; ?>
@@ -278,29 +278,29 @@ $bsa_custom_types = array_filter($bsa_post_types, function ($pt) use ($bsa_built
                 <p class="bsa-settings-row__desc"><?php esc_html_e("Override which post types receive injected output (defaults to synced types).", "botspot"); ?></p>
             </div>
             <div class="bsa-settings-row__body">
-                <?php if ($bsa_is_platform_managed): ?>
+                <?php if ($bspt_is_platform_managed): ?>
                 <div class="bsa-readonly-list">
                     <?php
-                    $type_labels = [
+                    $bspt_type_labels = [
                         "post" => __("Posts", "botspot"),
                         "page" => __("Pages", "botspot"),
                         "product" => __("Products", "botspot"),
                     ];
-                    foreach ($bsa_inject_post_types as $type):
-                        $label = isset($type_labels[$type]) ? $type_labels[$type] : ucfirst($type);
+                    foreach ($bspt_inject_post_types as $type):
+                        $bspt_label = isset($bspt_type_labels[$type]) ? $bspt_type_labels[$type] : ucfirst($type);
                     ?>
-                    <span class="bsa-readonly-item"><?php echo esc_html($label); ?></span>
+                    <span class="bsa-readonly-item"><?php echo esc_html($bspt_label); ?></span>
                     <?php endforeach; ?>
-                    <?php if (empty($bsa_inject_post_types)): ?>
+                    <?php if (empty($bspt_inject_post_types)): ?>
                     <span class="bsa-readonly-item bsa-readonly-item--none"><?php esc_html_e("None selected", "botspot"); ?></span>
                     <?php endif; ?>
                 </div>
                 <?php else: ?>
                 <div class="bsa-check-list">
-                    <?php foreach ($bsa_post_types as $pt): ?>
+                    <?php foreach ($bspt_post_types as $bspt_pt): ?>
                     <label class="bsa-check">
-                        <input type="checkbox" name="bspt_inject_on_post_types[]" value="<?php echo esc_attr($pt->name); ?>" <?php checked(in_array($pt->name, $bsa_inject_post_types, true)); ?> />
-                        <span><?php echo esc_html($pt->label); ?></span>
+                        <input type="checkbox" name="bspt_inject_on_post_types[]" value="<?php echo esc_attr($bspt_pt->name); ?>" <?php checked(in_array($bspt_pt->name, $bspt_inject_post_types, true)); ?> />
+                        <span><?php echo esc_html($bspt_pt->label); ?></span>
                     </label>
                     <?php endforeach; ?>
                 </div>
