@@ -109,6 +109,9 @@ class Bspt_Activator {
             Bspt_Webhook_Handler::register_webhook();
         }
 
+        // Sync webhook secret to connectors (backfill for existing installs)
+        self::sync_webhook_secret();
+
         if (Bspt_Options::get('debug_mode')) {
             Bspt_Logger::log_debug('BotSpot WP v' . BSPT_VERSION . ' activated.');
         }
@@ -268,5 +271,48 @@ class Bspt_Activator {
         }
 
         update_option('bspt_migrated_woocommerce_types', time());
+    }
+
+    /**
+     * Sync webhook secret to connectors for backfill.
+     *
+     * Existing installs have the secret stored locally but connectors
+     * doesn't have it in DB. This pushes it back so force-recache works.
+     *
+     * @since 3.5.0
+     */
+    private static function sync_webhook_secret() {
+        $api_key = Bspt_Options::get('api_key');
+        $connection_id = Bspt_Options::get('connection_id');
+        $webhook_secret = Bspt_Options::get('webhook_secret');
+
+        if (empty($api_key) || empty($connection_id) || empty($webhook_secret)) {
+            return;
+        }
+
+        $connectors_url = Bspt_Options::get_connectors_api_url();
+        $endpoint = rtrim($connectors_url, '/') . '/api/v1/connections/' . $connection_id . '/sync-secret';
+
+        $response = wp_remote_post($endpoint, [
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-API-Key' => $api_key,
+            ],
+            'body' => wp_json_encode([
+                'webhook_secret' => $webhook_secret,
+            ]),
+            'timeout' => 10,
+        ]);
+
+        if (is_wp_error($response)) {
+            if (Bspt_Options::get('debug_mode')) {
+                Bspt_Logger::log_debug('Webhook secret sync failed: ' . $response->get_error_message());
+            }
+            return;
+        }
+
+        if (Bspt_Options::get('debug_mode')) {
+            Bspt_Logger::log_debug('Webhook secret synced to connectors');
+        }
     }
 }
