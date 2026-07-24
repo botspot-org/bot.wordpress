@@ -108,6 +108,7 @@ class Bspt_Options
      */
     public static function is_woocommerce_active()
     {
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- applying WordPress core 'active_plugins' filter to detect WooCommerce
         return class_exists('WooCommerce') || in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins', [])), true);
     }
 
@@ -383,7 +384,7 @@ class Bspt_Options
         switch ($option_name) {
             case "api_key":
                 if (empty($value)) {
-                    return new WP_Error("empty_api_key", __("API key cannot be empty", "botspot-wp"));
+                    return new WP_Error("empty_api_key", __("API key cannot be empty", "botspot"));
                 }
                 break;
 
@@ -391,7 +392,7 @@ class Bspt_Options
                 if ($value < 60 || $value > 86400) {
                     return new WP_Error(
                         "invalid_cache_ttl",
-                        __("Cache TTL must be between 60 and 86400 seconds", "botspot-wp"),
+                        __("Cache TTL must be between 60 and 86400 seconds", "botspot"),
                     );
                 }
                 break;
@@ -401,7 +402,7 @@ class Bspt_Options
                 if (!is_array($value) || empty($value)) {
                     return new WP_Error(
                         "invalid_post_types",
-                        __("At least one post type must be selected", "botspot-wp"),
+                        __("At least one post type must be selected", "botspot"),
                     );
                 }
                 break;

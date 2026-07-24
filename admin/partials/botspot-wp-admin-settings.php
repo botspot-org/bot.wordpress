@@ -47,23 +47,23 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
                 <span class="bsa-header__divider"></span>
                 <span class="bsa-header__mark">BOT.SPOT</span>
                 <span class="bsa-header__divider"></span>
-                <span class="bsa-header__subtitle"><?php esc_html_e("WordPress plugin", "botspot-wp"); ?></span>
+                <span class="bsa-header__subtitle"><?php esc_html_e("WordPress plugin", "botspot"); ?></span>
             </div>
 
             <div class="bsa-header__status">
-                <div class="bsa-status-pill" data-bsa-status="connection" title="<?php esc_attr_e("Checking connection...", "botspot-wp"); ?>">
+                <div class="bsa-status-pill" data-bsa-status="connection" title="<?php esc_attr_e("Checking connection...", "botspot"); ?>">
                     <span class="bsa-dot bsa-dot--pending"></span>
-                    <span class="bsa-status-pill__label"><?php esc_html_e("Connection", "botspot-wp"); ?></span>
+                    <span class="bsa-status-pill__label"><?php esc_html_e("Connection", "botspot"); ?></span>
                 </div>
                 <span class="bsa-header__divider bsa-header__divider--tiny"></span>
-                <div class="bsa-status-pill" data-bsa-status="sync" title="<?php esc_attr_e("Checking sync...", "botspot-wp"); ?>">
+                <div class="bsa-status-pill" data-bsa-status="sync" title="<?php esc_attr_e("Checking sync...", "botspot"); ?>">
                     <span class="bsa-dot bsa-dot--pending"></span>
-                    <span class="bsa-status-pill__label"><?php esc_html_e("Sync", "botspot-wp"); ?></span>
+                    <span class="bsa-status-pill__label"><?php esc_html_e("Sync", "botspot"); ?></span>
                 </div>
                 <span class="bsa-header__divider bsa-header__divider--tiny"></span>
-                <div class="bsa-status-pill" data-bsa-status="runtime" title="<?php esc_attr_e("Checking runtime...", "botspot-wp"); ?>">
+                <div class="bsa-status-pill" data-bsa-status="runtime" title="<?php esc_attr_e("Checking runtime...", "botspot"); ?>">
                     <span class="bsa-dot bsa-dot--pending"></span>
-                    <span class="bsa-status-pill__label"><?php esc_html_e("Runtime", "botspot-wp"); ?></span>
+                    <span class="bsa-status-pill__label"><?php esc_html_e("Runtime", "botspot"); ?></span>
                 </div>
                 <span class="bsa-header__divider"></span>
                 <span class="bsa-header__domain bsa-mono bsa-tabular-nums"><?php echo esc_html($bsa_site_domain); ?></span>
@@ -76,11 +76,11 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
         <nav class="bsa-tabs">
             <div class="bsa-tabs__group">
                 <button type="button" class="bsa-tab" data-bsa-tab="connect" aria-selected="true">
-                    <?php esc_html_e("Connect", "botspot-wp"); ?>
+                    <?php esc_html_e("Connect", "botspot"); ?>
                     <span class="bsa-tab__underline"></span>
                 </button>
                 <button type="button" class="bsa-tab" data-bsa-tab="settings" aria-selected="false">
-                    <?php esc_html_e("Settings", "botspot-wp"); ?>
+                    <?php esc_html_e("Settings", "botspot"); ?>
                     <span class="bsa-tab__underline"></span>
                 </button>
             </div>
@@ -88,7 +88,7 @@ $bsa_woocommerce_active = class_exists("WooCommerce");
             <div class="bsa-tabs__group bsa-tabs__group--right">
                 <button type="button" class="bsa-tab bsa-tab--dev" data-bsa-tab="developer" aria-selected="false">
                     <svg class="bsa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="square" d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>
-                    <?php esc_html_e("Developer", "botspot-wp"); ?>
+                    <?php esc_html_e("Developer", "botspot"); ?>
                     <span class="bsa-tab__underline"></span>
                 </button>
             </div>

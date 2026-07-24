@@ -241,6 +241,7 @@ class Bspt_Activator {
      * @return bool
      */
     private static function is_woocommerce_active() {
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- applying WordPress core 'active_plugins' filter to detect WooCommerce
         return class_exists('WooCommerce') || in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins', array())), true);
     }
 

@@ -2,9 +2,9 @@
 Contributors: haavardmk
 Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
-Tested up to: 6.8
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.5.3
+Stable tag: 3.5.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,12 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.5.4 =
+
+* Corrected the plugin text domain to match the plugin slug ("botspot") across all strings.
+* Renamed the plugin to "BotSpot" and removed the invalid "Network" header for WordPress.org compliance.
+* Removed the manual load_plugin_textdomain() call (handled automatically for hosted plugins) and updated the "Tested up to" version.
 
 = 3.5.3 =
 

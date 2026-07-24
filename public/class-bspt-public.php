@@ -108,10 +108,10 @@ class Bspt_Public
         }
 
         vc_map([
-            "name" => __("bot.spot Appendix", "botspot-wp"),
+            "name" => __("bot.spot Appendix", "botspot"),
             "base" => "bspt_appendix",
-            "description" => __("Insert AI-discoverable appendix content", "botspot-wp"),
-            "category" => __("Content", "botspot-wp"),
+            "description" => __("Insert AI-discoverable appendix content", "botspot"),
+            "category" => __("Content", "botspot"),
             "icon" => "icon-wpb-bspt",
             "params" => [],
         ]);
