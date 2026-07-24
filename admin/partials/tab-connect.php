@@ -7,8 +7,8 @@
  * @since 2.2.0
  *
  * Variables from parent partial:
- * - $bsa_has_api_key (bool)
- * - $bsa_is_connected (bool)
+ * - $bspt_has_api_key (bool)
+ * - $bspt_is_connected (bool)
  */
 
 if (!defined("WPINC")) {
@@ -42,24 +42,24 @@ if (!defined("WPINC")) {
                         name="bspt_api_key"
                         class="bsa-input-group__input bsa-mono bsa-tabular-nums"
                         value=""
-                        placeholder="<?php echo esc_attr($bsa_has_api_key ? "••••••••••••••••••••••••" : "sk_live_xxxxxxxxxxxxxxxxxxxxxxxx"); ?>"
+                        placeholder="<?php echo esc_attr($bspt_has_api_key ? "••••••••••••••••••••••••" : "sk_live_xxxxxxxxxxxxxxxxxxxxxxxx"); ?>"
                         autocomplete="off"
-                        data-has-value="<?php echo esc_attr($bsa_has_api_key ? "1" : "0"); ?>"
+                        data-has-value="<?php echo esc_attr($bspt_has_api_key ? "1" : "0"); ?>"
                     />
                     <button type="button" class="bsa-input-group__affix" data-bsa-action="toggle-key-visibility">
                         <?php esc_html_e("Show", "botspot"); ?>
                     </button>
                 </div>
-                <?php if ($bsa_has_api_key): ?>
+                <?php if ($bspt_has_api_key): ?>
                     <p class="bsa-help"><?php esc_html_e("Leave empty to keep the current key.", "botspot"); ?></p>
                 <?php endif; ?>
             </div>
 
             <div class="bsa-actions">
-                <button type="button" class="bsa-btn bsa-btn--primary" data-bsa-action="test-connection" data-bsa-requires-key="1" data-bsa-is-connected="<?php echo esc_attr($bsa_is_connected ? '1' : '0'); ?>" <?php disabled(!$bsa_has_api_key); ?>>
+                <button type="button" class="bsa-btn bsa-btn--primary" data-bsa-action="test-connection" data-bsa-requires-key="1" data-bsa-is-connected="<?php echo esc_attr($bspt_is_connected ? '1' : '0'); ?>" <?php disabled(!$bspt_has_api_key); ?>>
                     <?php esc_html_e("Connect", "botspot"); ?>
                 </button>
-                <?php if ($bsa_is_connected): ?>
+                <?php if ($bspt_is_connected): ?>
                     <span class="bsa-status-pill bsa-status-pill--connected" data-bsa-connected-indicator>
                         <span class="bsa-dot bsa-dot--ok bsa-dot--pulse"></span>
                         <span class="bsa-status-pill__label"><?php esc_html_e("Connected", "botspot"); ?></span>

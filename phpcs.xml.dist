@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<ruleset name="BotSpot WordPress.org submission checks">
+    <description>
+        WordPress.org submission-oriented static analysis. Deliberately scoped to
+        the sniffs Plugin Check actually blocks/warns on (security, DB, i18n,
+        debug code, PHP cross-version compatibility) — NOT full WordPress
+        formatting/whitespace/Yoda style, which WordPress.org does not require.
+    </description>
+
+    <!-- What to scan when phpcs is run with no path argument. -->
+    <file>botspot.php</file>
+    <file>uninstall.php</file>
+    <file>admin</file>
+    <file>includes</file>
+    <file>public</file>
+
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="ps"/><!-- p = progress, s = show sniff codes -->
+
+    <!-- Never scan dependencies, build output, tests, or the WP.org asset dir. -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/dist/*</exclude-pattern>
+    <exclude-pattern>*/build/*</exclude-pattern>
+    <exclude-pattern>*/tests/*</exclude-pattern>
+    <exclude-pattern>*/testing/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/assets/*</exclude-pattern>
+
+    <!-- ===== Submission-critical sniffs (the ones Plugin Check reports) ===== -->
+
+    <!-- Output escaping, nonce verification, input sanitization, unsafe SQL. -->
+    <rule ref="WordPress.Security"/>
+
+    <!-- Direct DB queries: require $wpdb->prepare, esc_like, caching justification. -->
+    <rule ref="WordPress.DB"/>
+
+    <!-- Translation readiness: text domain, translators comments, placeholders. -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="botspot"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- Debug/development code left in (error_log, var_dump, print_r, etc.). -->
+    <rule ref="WordPress.PHP.DevelopmentFunctions"/>
+
+    <!-- Prefer WP HTTP/filesystem APIs over curl/file_get_contents/fopen. -->
+    <rule ref="WordPress.WP.AlternativeFunctions"/>
+
+    <!-- Remote/enqueued asset loading rules. -->
+    <rule ref="WordPress.WP.EnqueuedResources"/>
+
+    <!-- in_array/array_search without strict comparison. -->
+    <rule ref="WordPress.PHP.StrictInArray"/>
+
+    <!-- Global symbols (vars/functions/classes/hooks) must carry a plugin prefix. -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="bspt"/>
+                <element value="botspot"/>
+                <element value="Bspt"/>
+                <element value="BSPT"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- ===== PHP cross-version compatibility (declared floor: PHP 7.4) ===== -->
+    <config name="testVersion" value="7.4-"/>
+    <rule ref="PHPCompatibilityWP"/>
+</ruleset>

@@ -2,9 +2,9 @@
 Contributors: haavardmk
 Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
-Tested up to: 6.8
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.5.2
+Stable tag: 3.5.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,7 +38,7 @@ Service provider: BotSpot
 Service URLs used by production builds:
 
 * `https://platform.bot.spot` - BotSpot dashboard used to create and manage access keys.
-* `https://locus-api.bot.spot` - BotSpot API used for site registration, content sync, appendix rendering, JSON-LD rendering, enrichment webhooks, and analytics reporting.
+* `https://locus-api.bot.spot` - BotSpot API used for site registration, content sync, appendix rendering, JSON-LD rendering, and enrichment webhooks.
 
 Terms of service: https://bot.spot/terms
 
@@ -49,7 +49,6 @@ Data sent to BotSpot may include:
 * Site URL, site name, and webhook URL during connection.
 * Selected published content, including title, content, excerpt, permalink, post type, status, author display name, language, publish/update dates, categories, tags, featured image URL, and existing source JSON-LD during sync.
 * The current page path, site origin, and API authentication headers when fetching rendered appendix content or JSON-LD.
-* Aggregated impression counters for synced content, grouped by bot or human class. The plugin classifies visitors locally and sends aggregate counts, artifact identifiers, and first-hit timestamps. It does not send raw visitor IP addresses or raw user-agent strings in the analytics batch.
 
 BotSpot may send webhook requests back to the WordPress site to update enrichment status, clear local caches, and push configuration changes. These requests are authenticated with an HMAC signature.
 
@@ -129,6 +128,22 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.5.5 =
+
+* Prefixed all global template variables (bspt_) to satisfy WordPress.org global-namespace guidelines.
+
+= 3.5.4 =
+
+* Corrected the plugin text domain to match the plugin slug ("botspot") across all strings.
+* Renamed the plugin to "BotSpot" and removed the invalid "Network" header for WordPress.org compliance.
+* Removed the manual load_plugin_textdomain() call (handled automatically for hosted plugins) and updated the "Tested up to" version.
+
+= 3.5.3 =
+
+* Hardened for WordPress.org review: output escaping, translation text domain, input sanitization, and strict comparisons across admin and public code.
+* Documented plugin-owned direct database queries and removed stale analytics references from the readme.
+* Uninstall now removes all plugin options and transients, including platform settings and migration flags.
 
 = 3.5.2 =
 

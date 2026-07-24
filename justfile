@@ -66,3 +66,17 @@ ls-bucket:
 [group('info')]
 version:
     @echo {{VERSION}}
+
+# Run WordPress.org submission checks (security, escaping, i18n, DB, PHP compat).
+# Scoped via phpcs.xml.dist to what Plugin Check blocks on, not full WP formatting.
+[group('qa')]
+check:
+    @test -x vendor/bin/phpcs || composer install
+    vendor/bin/phpcs
+
+# Auto-fix the mechanically-fixable subset, then re-report.
+[group('qa')]
+check-fix:
+    @test -x vendor/bin/phpcbf || composer install
+    -vendor/bin/phpcbf
+    vendor/bin/phpcs

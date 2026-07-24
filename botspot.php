@@ -1,22 +1,21 @@
 <?php
 /**
- * Plugin Name: BotSpot WordPress
+ * Plugin Name: BotSpot
  * Plugin URI: https://bot.spot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 3.5.2
+ * Version: 3.5.5
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: botspot-wp
+ * Text Domain: botspot
  * Domain Path: /languages
  * Requires at least: 5.0
- * Tested up to: 6.8
+ * Tested up to: 7.0
  * Requires PHP: 7.4
- * Network: false
  *
  * @package Bspt
- * @version 3.5.2
+ * @version 3.5.5
  */
 
 // If this file is called directly, abort.
@@ -44,7 +43,7 @@ register_shutdown_function(function () {
         return;
     }
     // Only capture errors from our plugin
-    if (strpos($error['file'], 'botspot-wp') === false && strpos($error['file'], 'botspot') === false) {
+    if (strpos($error['file'], 'botspot') === false && strpos($error['file'], 'botspot') === false) {
         return;
     }
     // Store in option (not transient) so it persists across the fatal redirect
@@ -69,7 +68,7 @@ register_shutdown_function(function () {
 /**
  * Plugin version.
  */
-define('BSPT_VERSION', '3.5.2');
+define('BSPT_VERSION', '3.5.5');
 
 /**
  * Plugin file path
@@ -94,7 +93,7 @@ define('BSPT_PLUGIN_BASENAME', plugin_basename(__FILE__));
 /**
  * Plugin text domain for translations
  */
-define('BSPT_TEXT_DOMAIN', 'botspot-wp');
+define('BSPT_TEXT_DOMAIN', 'botspot');
 
 /**
  * Locus API URL (overridable via wp-config.php).
@@ -137,7 +136,9 @@ function bspt_activate() {
     try {
         Bspt_Activator::activate();
     } catch (Exception $e) {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional fatal-error capture at bootstrap
         error_log('BotSpot WP Activation Error: ' . $e->getMessage());
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional fatal-error capture at bootstrap
         error_log('Stack trace: ' . $e->getTraceAsString());
 
         deactivate_plugins(plugin_basename(__FILE__));
@@ -145,7 +146,7 @@ function bspt_activate() {
         wp_die(
             'bot.spot WP could not be activated. Error: ' . esc_html($e->getMessage()) .
             '<br><br>Check your error log for more details.' .
-            '<br><br><a href="' . admin_url('plugins.php') . '">Back to Plugins</a>'
+            '<br><br><a href="' . esc_url(admin_url('plugins.php')) . '">Back to Plugins</a>'
         );
     }
 }
@@ -161,6 +162,7 @@ function bspt_deactivate() {
     try {
         Bspt_Deactivator::deactivate();
     } catch (Exception $e) {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional fatal-error capture at bootstrap
         error_log('BotSpot WP Deactivation Error: ' . $e->getMessage());
     }
 }
@@ -179,7 +181,8 @@ function bspt_check_requirements() {
 
     if (version_compare(get_bloginfo('version'), BSPT_MIN_WP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('bot.spot WP requires WordPress %s or higher. You are running version %s.', BSPT_TEXT_DOMAIN),
+            /* translators: 1: minimum required WordPress version, 2: currently running WordPress version */
+            __('bot.spot WP requires WordPress %1$s or higher. You are running version %2$s.', 'botspot'),
             BSPT_MIN_WP_VERSION,
             get_bloginfo('version')
         );
@@ -187,32 +190,34 @@ function bspt_check_requirements() {
 
     if (version_compare(PHP_VERSION, BSPT_MIN_PHP_VERSION, '<')) {
         $errors[] = sprintf(
-            __('bot.spot WP requires PHP %s or higher. You are running version %s.', BSPT_TEXT_DOMAIN),
+            /* translators: 1: minimum required PHP version, 2: currently running PHP version */
+            __('bot.spot WP requires PHP %1$s or higher. You are running version %2$s.', 'botspot'),
             BSPT_MIN_PHP_VERSION,
             PHP_VERSION
         );
     }
 
     if (!extension_loaded('curl')) {
-        $errors[] = __('bot.spot WP requires the PHP cURL extension.', BSPT_TEXT_DOMAIN);
+        $errors[] = __('bot.spot WP requires the PHP cURL extension.', 'botspot');
     }
 
     if (!extension_loaded('json')) {
-        $errors[] = __('bot.spot WP requires the PHP JSON extension.', BSPT_TEXT_DOMAIN);
+        $errors[] = __('bot.spot WP requires the PHP JSON extension.', 'botspot');
     }
 
     if (!empty($errors)) {
         add_action('admin_notices', function() use ($errors) {
             echo '<div class="error"><p>';
-            echo '<strong>' . __('bot.spot WP Plugin Error:', BSPT_TEXT_DOMAIN) . '</strong><br>';
+            echo '<strong>' . esc_html__('bot.spot WP Plugin Error:', 'botspot') . '</strong><br>';
             foreach ($errors as $error) {
-                echo $error . '<br>';
+                echo esc_html($error) . '<br>';
             }
             echo '</p></div>';
         });
 
         add_action('admin_init', function() {
             deactivate_plugins(plugin_basename(__FILE__));
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only checks/clears presence of the query var, no data is read or processed
             if (isset($_GET['activate'])) {
                 unset($_GET['activate']);
             }
@@ -225,17 +230,6 @@ function bspt_check_requirements() {
 }
 
 /**
- * Load plugin text domain for internationalization
- */
-function bspt_load_textdomain() {
-    load_plugin_textdomain(
-        BSPT_TEXT_DOMAIN,
-        false,
-        dirname(plugin_basename(__FILE__)) . '/languages/'
-    );
-}
-
-/**
  * Initialize the plugin
  */
 function bspt_init() {
@@ -243,15 +237,15 @@ function bspt_init() {
         return;
     }
 
-    bspt_load_textdomain();
-
     try {
         require_once BSPT_PLUGIN_PATH . 'includes/class-bspt.php';
 
         $plugin = new Bspt();
         $plugin->run();
     } catch (Exception $e) {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional fatal-error capture at bootstrap
         error_log('BotSpot WP Initialization Error: ' . $e->getMessage());
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional fatal-error capture at bootstrap
         error_log('Stack trace: ' . $e->getTraceAsString());
 
         add_action('admin_notices', function() use ($e) {
@@ -280,8 +274,9 @@ function bspt_activation_notice() {
             <p>
                 <?php
                 printf(
-                    __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', BSPT_TEXT_DOMAIN),
-                    admin_url('admin.php?page=botspot-wp')
+                    /* translators: %s: URL to the plugin settings page */
+                    __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', 'botspot'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- string contains trusted markup; dynamic URL is escaped below
+                    esc_url(admin_url('admin.php?page=botspot-wp'))
                 );
                 ?>
             </p>

@@ -77,7 +77,9 @@ class Bspt_Sync
         // Fallback: lookup by artifact_id stored in post_meta
         if (!$post_id && $content_id) {
             $posts = get_posts([
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- one-off fallback lookup by plugin-owned _bspt_artifact_id meta on webhook receipt; no unbounded/looped query, numberposts capped at 1.
                 "meta_key" => "_bspt_artifact_id",
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- see meta_key justification above.
                 "meta_value" => $content_id,
                 "post_type" => "any",
                 "numberposts" => 1,
@@ -143,7 +145,7 @@ class Bspt_Sync
 
         // Skip non-synced post types
         $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
-        if (!in_array($post->post_type, $sync_post_types)) {
+        if (!in_array($post->post_type, $sync_post_types, true)) {
             return;
         }
 
@@ -251,7 +253,7 @@ class Bspt_Sync
         }
 
         $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
-        if (!in_array($post->post_type, $sync_post_types)) {
+        if (!in_array($post->post_type, $sync_post_types, true)) {
             return;
         }
 
@@ -260,7 +262,7 @@ class Bspt_Sync
             return;
         }
 
-        if ($old_status === "publish" && in_array($new_status, ["draft", "trash", "pending"])) {
+        if ($old_status === "publish" && in_array($new_status, ["draft", "trash", "pending"], true)) {
             // Unpublished or trashed
             $event = $new_status === "trash" ? "content.deleted" : "content.status_changed";
             self::send_webhook($post, $event);
@@ -282,7 +284,7 @@ class Bspt_Sync
         }
 
         $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
-        if (!in_array($post->post_type, $sync_post_types)) {
+        if (!in_array($post->post_type, $sync_post_types, true)) {
             return;
         }
 
@@ -314,7 +316,7 @@ class Bspt_Sync
         }
 
         // Skip delete/unpublish events (no delete endpoint in locus-core yet)
-        if (in_array($event, ["content.deleted", "content.status_changed"])) {
+        if (in_array($event, ["content.deleted", "content.status_changed"], true)) {
             self::log_debug(sprintf("Post %d: skipping %s event (no delete endpoint)", $post->ID, $event));
             return true;
         }
