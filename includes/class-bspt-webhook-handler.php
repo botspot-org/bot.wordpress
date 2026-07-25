@@ -271,6 +271,12 @@ class Bspt_Webhook_Handler
 
         update_option("bspt_platform_settings", $updated);
 
+        // Explicit lock flag: ONLY a real dashboard push locks the settings UI
+        // to read-only. Connect/bootstrap never set this, so a fresh or
+        // reconnected site keeps its local override controls until the dashboard
+        // actually pushes settings. See tab-settings.php.
+        update_option("bspt_settings_dashboard_locked", true);
+
         foreach ($platform_settings as $key => $value) {
             Bspt_Options::set($key, $value);
         }

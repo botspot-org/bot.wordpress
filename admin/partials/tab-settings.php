@@ -24,9 +24,12 @@ $bspt_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "high");
 $bspt_appendix_enabled = (bool) Bspt_Options::get("appendix_enabled", true);
 $bspt_jsonld_enabled = (bool) Bspt_Options::get("jsonld_enabled", true);
 
-// Platform-managed only after dashboard pushes settings (not just on connect)
-$bspt_platform_settings = get_option("bspt_platform_settings", []);
-$bspt_is_platform_managed = !empty($bspt_platform_settings);
+// Platform-managed (read-only) ONLY after an explicit dashboard push
+// (settings.updated -> handle_settings_updated sets this flag). Connecting or
+// bootstrapping must NOT lock the UI, so keying on this dedicated flag means a
+// fresh/reconnected site keeps its local override controls. Older builds keyed
+// this on bspt_platform_settings, which connect populated -> everything locked.
+$bspt_is_platform_managed = (bool) get_option("bspt_settings_dashboard_locked", false);
 $bspt_dashboard_url = "https://platform.bot.spot";
 
 // Custom post types (exclude built-ins we handle explicitly)
