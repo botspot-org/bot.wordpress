@@ -170,7 +170,7 @@ class Bspt_Admin
         }
 
         // Settings page assets
-        if ($hook !== "toplevel_page_botspot-wp") {
+        if ($hook !== "toplevel_page_botspot") {
             return;
         }
 
@@ -247,7 +247,7 @@ JS;
 
         // Settings updated notice - only show on plugin page to avoid dashboard hijacking
         if (get_transient("bspt_settings_updated_notice")) {
-            if ($screen && $screen->base === "toplevel_page_botspot-wp") {
+            if ($screen && $screen->base === "toplevel_page_botspot") {
                 ?>
                 <div class="notice notice-info is-dismissible">
                     <p>
@@ -264,7 +264,7 @@ JS;
             return;
         }
 
-        if (!$screen || !in_array($screen->base, ["toplevel_page_botspot-wp", "dashboard", "post", "page"], true)) {
+        if (!$screen || !in_array($screen->base, ["toplevel_page_botspot", "dashboard", "post", "page"], true)) {
             return;
         }
 
