@@ -418,13 +418,14 @@ class Bspt_Webhook_Handler
 
         $settings = $body["settings"];
         $platform_settings = self::normalize_platform_settings($settings);
-        $platform_settings["fetched_at"] = gmdate("c");
-        update_option("bspt_platform_settings", $platform_settings);
 
+        // Apply platform values to local options, but do NOT write
+        // bspt_platform_settings here: that option locks the settings UI to
+        // read-only. Connecting must not lock the UI -- only an explicit
+        // dashboard push (settings.updated -> handle_settings_updated) should.
+        // See tab-settings.php:27 and d6ef514 (BOT-277).
         foreach ($platform_settings as $key => $value) {
-            if ($key !== "fetched_at") {
-                Bspt_Options::set($key, $value);
-            }
+            Bspt_Options::set($key, $value);
         }
 
         return $platform_settings;
@@ -483,9 +484,9 @@ class Bspt_Webhook_Handler
         ];
 
         $platform_settings = array_merge($local_normalized, self::normalize_platform_settings($api_settings));
-        $platform_settings["fetched_at"] = gmdate("c");
 
-        update_option("bspt_platform_settings", $platform_settings);
+        // Do NOT write bspt_platform_settings here (see fetch_platform_settings):
+        // bootstrapping on connect must not lock the settings UI to read-only.
         update_option("bspt_local_settings_backup", $local_settings);
 
         return $platform_settings;

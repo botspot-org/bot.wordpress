@@ -41,6 +41,13 @@ class Bspt_Activator {
         // Auto-add WooCommerce product type to existing installs
         self::migrate_woocommerce_post_types();
 
+        // One-time: clear the settings lock that older builds set on connect.
+        // bspt_platform_settings should only be set by an explicit dashboard push
+        // (settings.updated). A prior bug set it on every connect, locking the
+        // settings UI to read-only. Genuine dashboard-managed sites re-lock on
+        // their next push. See Bspt_Webhook_Handler::fetch_platform_settings().
+        self::migrate_clear_stale_settings_lock();
+
         // Clear any cached header status snapshot left over from before
         // (re)activation — without this, a reactivated (or freshly reinstalled)
         // site can read up to 5 minutes of stale "connected" state computed
@@ -271,6 +278,27 @@ class Bspt_Activator {
         }
 
         update_option('bspt_migrated_woocommerce_types', time());
+    }
+
+    /**
+     * One-time: clear the settings lock older builds set on connect.
+     *
+     * bspt_platform_settings is the flag that renders the settings UI read-only
+     * ("managed in bot.spot"). It must only be set by an explicit dashboard push
+     * (settings.updated). A prior bug set it on every connect. Delete it once so
+     * the UI is editable again; genuinely dashboard-managed sites re-lock on
+     * their next push.
+     *
+     * @since 3.5.9
+     */
+    private static function migrate_clear_stale_settings_lock() {
+        if (get_option('bspt_migrated_settings_lock')) {
+            return;
+        }
+
+        delete_option('bspt_platform_settings');
+
+        update_option('bspt_migrated_settings_lock', time());
     }
 
     /**
