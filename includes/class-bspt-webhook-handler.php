@@ -335,11 +335,12 @@ class Bspt_Webhook_Handler
             return false;
         }
 
-        $existing_id = get_option("bspt_webhook_id", "");
-        if (!empty($existing_id)) {
-            return true;
-        }
-
+        // Always (re)register with the server rather than trusting a locally
+        // cached id: the server row can be deleted (env reset, cleanup) while the
+        // plugin still holds a stale bspt_webhook_id, which previously caused the
+        // plugin to believe it was registered when no row existed. The core
+        // endpoint upserts by (org_id, url), so this is idempotent and returns the
+        // authoritative id + secret to re-sync locally.
         $response = wp_remote_post(rtrim($api_url, "/") . "/api/v1/webhooks", [
             "headers" => [
                 "X-API-Key" => $api_key,
