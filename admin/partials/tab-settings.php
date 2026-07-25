@@ -15,6 +15,13 @@ if (!defined("WPINC")) {
     die();
 }
 
+// Normally the parent settings partial hands us $bspt_post_types, but guard
+// against it being unset or non-array (AJAX/partial render contexts, another
+// plugin dropping post types) so the array_filter() below never fatals.
+if (!isset($bspt_post_types) || !is_array($bspt_post_types)) {
+    $bspt_post_types = get_post_types(["public" => true], "objects");
+}
+
 $bspt_sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
 $bspt_inject_post_types = Bspt_Options::get("inject_on_post_types", ["post", "page"]);
 $bspt_injection_position = Bspt_Options::get("injection_position", "bottom_of_content");
