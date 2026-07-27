@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BotSpot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 3.5.12
+ * Version: 3.5.13
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: GPLv2 or later
@@ -14,7 +14,7 @@
  * Requires PHP: 7.4
  *
  * @package Bspt
- * @version 3.5.5
+ * @version 3.5.13
  */
 
 // If this file is called directly, abort.
@@ -67,7 +67,7 @@ register_shutdown_function(function () {
 /**
  * Plugin version.
  */
-define('BSPT_VERSION', '3.5.12');
+define('BSPT_VERSION', '3.5.13');
 
 /**
  * Plugin file path
@@ -275,7 +275,7 @@ function bspt_activation_notice() {
                 printf(
                     /* translators: %s: URL to the plugin settings page */
                     __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', 'botspot'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- string contains trusted markup; dynamic URL is escaped below
-                    esc_url(admin_url('admin.php?page=botspot-wp'))
+                    esc_url(admin_url('admin.php?page=botspot'))
                 );
                 ?>
             </p>

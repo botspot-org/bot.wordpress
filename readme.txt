@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.5.12
+Stable tag: 3.5.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,6 +129,33 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Changelog ==
 
+= 3.5.13 =
+
+* Fixed two admin notice links that still pointed at the old settings page slug and produced a permissions error.
+* Synced version metadata across the plugin header, version constant, and readme.
+
+= 3.5.12 =
+
+* Removed the Plugin URI header so the plugin and author URIs are no longer identical.
+
+= 3.5.11 =
+
+* Fixed a fatal error on activation caused by a call to a removed webhook secret method.
+* Guarded the settings tab against a null post type list.
+
+= 3.5.9 =
+
+* Settings now lock only when the BotSpot dashboard explicitly pushes configuration, not on initial connect.
+
+= 3.5.7 =
+
+* Fixed hidden settings controls caused by a stale checkbox override.
+* Webhooks are now always re-registered instead of trusting a cached webhook id.
+
+= 3.5.6 =
+
+* Fixed the settings page hook and admin CSS selectors after the plugin slug was renamed to "botspot".
+
 = 3.5.5 =
 
 * Prefixed all global template variables (bspt_) to satisfy WordPress.org global-namespace guidelines.
@@ -224,6 +251,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.5.13 =
+
+Fixes broken admin notice links and header compliance issues found during WordPress.org review. Recommended for all users.
 
 = 3.5.2 =
 

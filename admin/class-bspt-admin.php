@@ -292,7 +292,7 @@ JS;
                             /* translators: 1: number of additional errors, 2: settings page URL */
                             __('There are %1$d more errors. <a href="%2$s">View settings</a> for details.', "botspot"),
                             Bspt_Logger::get_error_count() - 1,
-                            esc_url(admin_url("admin.php?page=botspot-wp"))
+                            esc_url(admin_url("admin.php?page=botspot"))
                         ),
                         ["a" => ["href" => []]]
                     );
