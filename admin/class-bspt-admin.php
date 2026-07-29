@@ -744,7 +744,7 @@ JS;
         if (is_wp_error($response)) {
             wp_send_json_error([
                 "message" => sprintf(
-                    /* translators: %s: WP_Error message */
+                    /* translators: %s: error message from the failed connection attempt */
                     __("Connection failed: %s", "botspot"),
                     $response->get_error_message()
                 ),
@@ -763,7 +763,7 @@ JS;
             // webhook registration failing is a wrong / truncated key.
             $friendly = ($status_code === 401 || $status_code === 403)
                 ? __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botspot")
-                /* translators: %s: error message returned by the connection attempt */
+                /* translators: %s: error message from the failed connection attempt */
                 : sprintf(__("Connection failed: %s", "botspot"), $error_msg);
             wp_send_json_error(["message" => $friendly]);
             return;

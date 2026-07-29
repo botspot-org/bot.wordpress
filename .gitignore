@@ -515,6 +515,8 @@ composer.phar
 # composer.lock IS committed for reproducible vendor builds.
 
 ##### PHP CodeSniffer
+# PHPUnit's local test-result cache is machine-specific.
+.phpunit.result.cache
 # gitignore for the PHP Codesniffer framework
 # website: https://github.com/squizlabs/PHP_CodeSniffer
 #

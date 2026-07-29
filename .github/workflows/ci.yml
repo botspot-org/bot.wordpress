@@ -6,8 +6,17 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
+  # Tier 0 + 1 from docs/verification.md: metadata, syntax, PHPCS, unit tests.
+  static:
+    name: Static analysis
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -16,10 +25,140 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+          coverage: none
           tools: composer, cs2pr
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress || true
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-all
 
-      - name: Run PHP CodeSniffer
-        run: composer lint || true
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: PHP syntax check
+        run: |
+          fail=0
+          for f in $(git ls-files '*.php' | grep -v '^vendor/'); do
+            php -l "$f" > /dev/null || fail=1
+          done
+          exit $fail
+
+      # NOTE: `composer lint` was previously used here but no such script is
+      # defined in composer.json, and `|| true` hid the failure — so this step
+      # never actually ran. Call phpcs directly and let it fail the build.
+      - name: PHPCS
+        run: vendor/bin/phpcs --report-full --report-checkstyle=phpcs-report.xml
+        continue-on-error: true
+
+      - name: Annotate PHPCS findings
+        if: always()
+        run: cs2pr phpcs-report.xml
+
+      - name: Unit tests
+        run: vendor/bin/phpunit
+
+  # Tier 0 + 3: version metadata agreement and packaged-zip invariants.
+  package:
+    name: Package integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer
+
+      - name: Check version metadata agreement
+        run: |
+          header=$(grep -m1 ' \* Version:' botspot.php | awk '{print $3}')
+          docblock=$(grep -m1 '@version' botspot.php | awk '{print $3}')
+          constant=$(grep -m1 "define('BSPT_VERSION'" botspot.php | sed "s/.*'\([0-9.]*\)'.*/\1/")
+          stable=$(grep -m1 '^Stable tag:' readme.txt | awk '{print $3}')
+          echo "header=$header docblock=$docblock constant=$constant stable=$stable"
+          if [ "$header" != "$docblock" ] || [ "$header" != "$constant" ] || [ "$header" != "$stable" ]; then
+            echo "::error::Version metadata disagrees across botspot.php and readme.txt"
+            exit 1
+          fi
+
+      - name: Build production zip
+        run: ./build.sh --production
+
+      - name: Assert production URLs are baked in
+        run: |
+          VERSION=$(grep "Version:" botspot.php | awk '{print $3}' | head -1)
+          ZIP="dist/botspot-${VERSION}.zip"
+          MAIN=$(unzip -p "$ZIP" botspot/botspot.php)
+          echo "$MAIN" | grep -q "define('BSPT_LOCUS_API_URL', 'https://locus-api.bot.spot')" \
+            || { echo "::error::Production API URL missing from zip"; exit 1; }
+          echo "$MAIN" | grep -q "define('BSPT_CONNECTOR_URL', 'https://locus-connectors.bot.spot')" \
+            || { echo "::error::Production connector URL missing from zip"; exit 1; }
+          # Match staging *hostnames* only. The word "staging" legitimately
+          # appears in the build-time-rewrite comments in botspot.php.
+          if echo "$MAIN" | grep -qE "locus-staging-api\.bot\.spot|staging-locus-connectors\.bot\.spot"; then
+            echo "::error::Staging URL found in production zip"
+            exit 1
+          fi
+
+      - name: Assert no dev dependencies or junk shipped
+        run: |
+          VERSION=$(grep "Version:" botspot.php | awk '{print $3}' | head -1)
+          ZIP="dist/botspot-${VERSION}.zip"
+          if unzip -l "$ZIP" | grep -iE "phpunit|strauss|squizlabs|wp-coding|\.git|/tests/|\.DS_Store"; then
+            echo "::error::Development files present in the distributable zip"
+            exit 1
+          fi
+          # vendor/ must contain only the Strauss-prefixed tree.
+          dirs=$(unzip -l "$ZIP" | awk '{print $4}' | grep "^botspot/vendor/" \
+                 | grep -oE "^botspot/vendor/[^/]+/" | sort -u)
+          if [ "$dirs" != "botspot/vendor/botspot-prefixed/" ]; then
+            echo "::error::Unexpected vendor contents: $dirs"
+            exit 1
+          fi
+
+      - name: Assert readme and licenses are packaged
+        run: |
+          VERSION=$(grep "Version:" botspot.php | awk '{print $3}' | head -1)
+          ZIP="dist/botspot-${VERSION}.zip"
+          for f in readme.txt LICENSE.txt THIRD-PARTY-LICENSES.txt botspot.php; do
+            unzip -l "$ZIP" | grep -q "botspot/$f" || { echo "::error::Missing botspot/$f"; exit 1; }
+          done
+
+      - name: Upload zip for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: botspot-production-zip
+          path: dist/*.zip
+          retention-days: 14
+
+  # Tier 2: the check WordPress.org reviewers actually run. Gates the packaged
+  # output, not the source tree, because reviewers only ever see the zip.
+  plugin-check:
+    name: WordPress.org Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer
+
+      - name: Build and unpack the production zip
+        run: |
+          ./build.sh --production
+          VERSION=$(grep "Version:" botspot.php | awk '{print $3}' | head -1)
+          mkdir -p tmp-build
+          unzip -q "dist/botspot-${VERSION}.zip" -d tmp-build
+
+      - name: Plugin Check
+        uses: WordPress/plugin-check-action@v1
+        with:
+          build-dir: './tmp-build/botspot'
+          slug: 'botspot'
+          categories: |
+            plugin_repo
+          wp-version: 'latest'
