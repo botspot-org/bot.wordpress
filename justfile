@@ -131,6 +131,15 @@ check-escaping:
         --mount=.:/wordpress/wp-content/plugins/botspot \
         -- /wordpress/wp-content/plugins/botspot/scripts/verify-escaping.php
 
+# Activates the built zip in a real WordPress with WP_DEBUG on and drives the
+# actual hooks, so wiring mistakes (wrong hook, renamed callback, fatal on load)
+# surface. Fails on any plugin PHP notice.
+
+# Smoke-test the packaged plugin at runtime in WordPress Playground.
+[group('qa')]
+check-runtime:
+    ./scripts/verify-runtime.sh
+
 # A mismatch between the plugin header, version constant, and readme stable tag
 # is a guaranteed WordPress.org review rejection.
 
@@ -161,5 +170,5 @@ verify: check-version check-syntax check
 
 # Full pre-submission gate incl. official Plugin Check. Run before submitting.
 [group('qa')]
-verify-submission: verify check-i18n check-escaping check-wporg
+verify-submission: verify check-i18n check-escaping check-wporg check-runtime
     @echo "Submission verification passed."
