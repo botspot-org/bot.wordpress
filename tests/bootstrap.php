@@ -23,3 +23,25 @@ if (!function_exists('esc_attr')) {
 if (!function_exists('esc_html')) {
     function esc_html($text) { return htmlspecialchars($text, ENT_QUOTES, 'UTF-8'); }
 }
+
+// has_shortcode()/has_block() stubs mirroring core's matching rules closely
+// enough for the manual-placement detection tests: has_shortcode() matches the
+// exact tag name (not a longer name sharing the prefix), has_block() matches
+// the block delimiter comment.
+if (!function_exists('has_shortcode')) {
+    function has_shortcode($content, $tag) {
+        if (!is_string($content) || $content === '') {
+            return false;
+        }
+        return (bool) preg_match('/\[' . preg_quote($tag, '/') . '(?![\w-])/', $content);
+    }
+}
+if (!function_exists('has_block')) {
+    function has_block($block_name, $content) {
+        if (!is_string($content) || $content === '') {
+            return false;
+        }
+        return strpos($content, '<!-- wp:' . $block_name . ' ') !== false
+            || strpos($content, '<!-- wp:' . $block_name . "\n") !== false;
+    }
+}
