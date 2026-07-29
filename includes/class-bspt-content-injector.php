@@ -30,6 +30,20 @@ if (!defined("WPINC")) {
 class Bspt_Content_Injector
 {
     /**
+     * json_encode flags used for every JSON-LD payload.
+     *
+     * The JSON_HEX_* flags escape HTML-significant characters as \uXXXX
+     * sequences, so no string value can terminate the script element or
+     * introduce markup. JSON parsers decode these transparently, so consumers
+     * receive identical data.
+     *
+     * @since 3.5.14
+     * @var   int
+     */
+    const JSONLD_ENCODE_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+
+    /**
      * The plugin name.
      *
      * @since    1.0.0
@@ -252,20 +266,22 @@ class Bspt_Content_Injector
             return;
         }
 
-        $json_string = $this->encode_jsonld($jsonld);
-        if ($json_string === "") {
+        // Bail before emitting the wrapper comments if the payload cannot be
+        // encoded, so a failure leaves no empty script tag behind.
+        if ($this->encode_jsonld($jsonld) === "") {
             return;
         }
 
-        $this->print_jsonld($json_string);
+        $this->print_jsonld($jsonld);
     }
 
     /**
      * JSON-encode a JSON-LD graph for safe inline output.
      *
-     * The JSON_HEX_* flags escape HTML-significant characters as \uXXXX
-     * sequences, so no string value can terminate the script element. JSON
-     * parsers decode these transparently, so consumers see identical data.
+     * Kept in sync with print_jsonld() via the shared JSONLD_ENCODE_FLAGS
+     * constant. Used to detect an unencodable payload before any output is
+     * emitted; print_jsonld() re-encodes inline so that the escaping is
+     * visible at the point of output.
      *
      * @since    3.5.14
      * @access   private
@@ -274,11 +290,7 @@ class Bspt_Content_Injector
      */
     private function encode_jsonld($jsonld)
     {
-        $json_string = wp_json_encode(
-            $jsonld,
-            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-                | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
-        );
+        $json_string = wp_json_encode($jsonld, self::JSONLD_ENCODE_FLAGS);
 
         if (!is_string($json_string)) {
             return "";
@@ -290,26 +302,22 @@ class Bspt_Content_Injector
     /**
      * Emit a JSON-LD script element.
      *
-     * Uses wp_print_inline_script_tag() where available (WP 5.7+) so core owns
-     * the escaping of both the attributes and the payload.
+     * The payload is encoded inline with the JSON_HEX_* flags so that every
+     * HTML-significant character in a string value becomes a \uXXXX escape.
+     * Nothing in the payload can therefore close the element or introduce
+     * markup. esc_html() is deliberately not used: it would encode the
+     * structural quotes and leave consumers with invalid JSON.
      *
      * @since    3.5.14
      * @access   private
-     * @param    string    $json_string    JSON produced by encode_jsonld().
+     * @param    mixed    $jsonld    The JSON-LD structure to emit.
      */
-    private function print_jsonld($json_string)
+    private function print_jsonld($jsonld)
     {
         echo "\n<!-- BotSpot JSON-LD -->\n";
-
-        if (function_exists("wp_print_inline_script_tag")) {
-            wp_print_inline_script_tag($json_string, ["type" => "application/ld+json"]);
-        } else {
-            // WP 5.0–5.6 fallback. encode_jsonld() has already escaped every
-            // HTML-significant character as \uXXXX, so the payload cannot
-            // close the element or introduce markup.
-            echo '<script type="application/ld+json">' . $json_string . "</script>"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-encoded with JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT in encode_jsonld(), so no HTML-significant character survives; esc_html() would corrupt the JSON.
-        }
-
+        echo '<script type="application/ld+json">';
+        echo wp_json_encode($jsonld, self::JSONLD_ENCODE_FLAGS);
+        echo "</script>";
         echo "\n<!-- /BotSpot JSON-LD -->\n";
     }
 
@@ -357,12 +365,11 @@ class Bspt_Content_Injector
             return;
         }
 
-        $json_string = $this->encode_jsonld($decoded);
-        if ($json_string === "") {
+        if ($this->encode_jsonld($decoded) === "") {
             return;
         }
 
-        $this->print_jsonld($json_string);
+        $this->print_jsonld($decoded);
 
         $this->log_debug("JSON-LD injected into wp_head as peer schema tag");
     }

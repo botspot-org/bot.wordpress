@@ -164,6 +164,35 @@ class ReviewFixesTest extends TestCase
         );
     }
 
+    public function test_encode_jsonld_returns_empty_on_unencodable_payload(): void
+    {
+        // Invalid UTF-8 cannot be encoded, and must not produce output.
+        $json = $this->invoke($this->injector, 'encode_jsonld', [['name' => "\xB1\x31"]]);
+
+        $this->assertSame('', $json);
+    }
+
+    /**
+     * print_jsonld() re-encodes inline so the escaping is visible at the point
+     * of output. That means it must use the same flags as encode_jsonld(), or
+     * the pre-flight emptiness check would not describe what is emitted.
+     */
+    public function test_print_jsonld_uses_the_shared_encode_flags(): void
+    {
+        $payload = ['name' => '</script>& "x"', 'url' => 'https://example.com/a/b'];
+
+        ob_start();
+        $this->invoke($this->injector, 'print_jsonld', [$payload]);
+        $printed = ob_get_clean();
+
+        $expected = $this->invoke($this->injector, 'encode_jsonld', [$payload]);
+
+        $this->assertStringContainsString($expected, $printed);
+        $this->assertStringContainsString('<script type="application/ld+json">', $printed);
+        // The payload must not be able to close the script element.
+        $this->assertSame(1, substr_count($printed, '</script>'));
+    }
+
     // -------------------------------------------------------------------------
     // Diagnostic comments cannot close the HTML comment early
     // -------------------------------------------------------------------------
