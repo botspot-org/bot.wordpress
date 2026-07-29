@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BotSpot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 3.5.13
+ * Version: 3.5.14
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: GPLv2 or later
@@ -14,7 +14,7 @@
  * Requires PHP: 7.4
  *
  * @package Bspt
- * @version 3.5.13
+ * @version 3.5.14
  */
 
 // If this file is called directly, abort.
@@ -67,7 +67,7 @@ register_shutdown_function(function () {
 /**
  * Plugin version.
  */
-define('BSPT_VERSION', '3.5.13');
+define('BSPT_VERSION', '3.5.14');
 
 /**
  * Plugin file path
@@ -272,10 +272,14 @@ function bspt_activation_notice() {
         <div class="notice notice-success is-dismissible">
             <p>
                 <?php
+                // The link is assembled from separately escaped parts rather than
+                // embedding markup in a translatable string, so no translation can
+                // introduce HTML into an admin screen.
                 printf(
-                    /* translators: %s: URL to the plugin settings page */
-                    __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', 'botspot'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- string contains trusted markup; dynamic URL is escaped below
-                    esc_url(admin_url('admin.php?page=botspot'))
+                    '%1$s <a href="%2$s">%3$s</a>',
+                    esc_html__('bot.spot WP plugin activated successfully!', 'botspot'),
+                    esc_url(admin_url('admin.php?page=botspot')),
+                    esc_html__('Configure your settings to get started.', 'botspot')
                 );
                 ?>
             </p>

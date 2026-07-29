@@ -15,7 +15,7 @@ BotSpot connects your WordPress site to the BotSpot platform through two paths:
 - Appendix HTML injection (bottom of content, above footer, or manual placement)
 - Push-based content sync with configurable change-detection thresholds
 - Per-page injection control via post meta
-- Shortcode (`[botspot_appendix]`, with `[botdot_appendix]` retained as a legacy alias), Gutenberg block, WPBakery, and TinyMCE support
+- Shortcode (`[bspt_appendix]`, with `[botspot_appendix]` and `[botdot_appendix]` still supported for upgraded sites), Gutenberg block, WPBakery, and TinyMCE support
 - Transient caching with freshness checks and per-request deduplication
 - Webhook retry via WP-Cron on failure
 - Bulk sync in batches of 100
@@ -126,7 +126,7 @@ add_filter('botspot_wp_should_sync', function($should_sync, $post_id, $post) {
 [botspot_appendix]
 ```
 
-The legacy `[botdot_appendix]` shortcode remains available for upgraded sites.
+The legacy `[botdot_appendix]` tag is rewritten to `[bspt_appendix]` automatically, so pages saved with it keep rendering.
 
 ### Gutenberg Block
 

@@ -265,6 +265,11 @@ class Bspt
         // Register shortcode
         $this->loader->add_action("init", $public, "register_shortcode");
 
+        // Rewrite the legacy [botdot_appendix] tag before core's do_shortcode
+        // (priority 11) so old pages keep rendering without this plugin
+        // registering a non-prefixed shortcode name.
+        $this->loader->add_filter("the_content", $public, "rewrite_legacy_shortcode", 9);
+
         // Register WPBakery element
         $this->loader->add_action("vc_before_init", $public, "register_wpbakery_element");
 

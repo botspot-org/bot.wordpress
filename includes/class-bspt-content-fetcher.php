@@ -342,7 +342,7 @@ class Bspt_Content_Fetcher
             return [
                 "success" => false,
                 "message" => sprintf(
-                    /* translators: %s: WordPress HTTP API error message */
+                    /* translators: %s: error message from the failed connection attempt */
                     __("Connection failed: %s", "botspot"),
                     $response->get_error_message()
                 ),

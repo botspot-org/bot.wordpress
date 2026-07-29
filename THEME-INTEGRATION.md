@@ -46,7 +46,7 @@ Insert the shortcode anywhere in your content:
 [botspot_appendix]
 ```
 
-The legacy `[botdot_appendix]` shortcode remains available for upgraded sites.
+The legacy `[botdot_appendix]` tag is rewritten to `[bspt_appendix]` automatically, so pages saved with it keep rendering.
 
 When manual placement is detected (shortcode or Gutenberg block), automatic injection is skipped to prevent duplicates.
 

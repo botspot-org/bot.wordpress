@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.5.13
+Stable tag: 3.5.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,14 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.5.14 =
+
+* Escaped all output at the point of output, including the appendix HTML, JSON-LD, diagnostic comments, and admin notices.
+* Appendix HTML is now filtered before it is escaped, so output added by the `bspt_appendix_html` filter is escaped too.
+* Replaced the legacy `[botdot_appendix]` shortcode registration with an automatic rewrite to `[bspt_appendix]`, so existing pages keep working without the plugin claiming a shortcode name that lacks its prefix.
+* Fixed page cache purging for WP Rocket, which was never being triggered, and routed W3 Total Cache purges through its public API so all of its cache modules are cleared.
+* Fixed a bug where a page using the `[bspt_appendix]` shortcode or BotSpot Appendix block could receive a second, automatically injected appendix.
 
 = 3.5.13 =
 

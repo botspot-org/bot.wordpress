@@ -91,9 +91,32 @@ class Bspt_Public
     {
         // Primary shortcode (WordPress.org compliant prefix)
         add_shortcode("bspt_appendix", [$this, "render_appendix_shortcode"]);
-        // Legacy shortcodes (backwards compatibility)
-        add_shortcode("botdot_appendix", [$this, "render_appendix_shortcode"]);
+        // Legacy shortcode (backwards compatibility)
         add_shortcode("botspot_appendix", [$this, "render_appendix_shortcode"]);
+    }
+
+    /**
+     * Rewrite the pre-3.x [botdot_appendix] shortcode to [bspt_appendix].
+     *
+     * Registering a `botdot_appendix` shortcode would claim a global name that
+     * carries none of this plugin's prefixes, so the legacy tag is rewritten
+     * before core's do_shortcode() runs (the_content priority 11) instead.
+     * Pages saved with the old tag keep working without the plugin owning a
+     * non-prefixed shortcode.
+     *
+     * Hook: the_content (priority 9)
+     *
+     * @since    3.5.14
+     * @param    string    $content    The post content.
+     * @return   string                Content with the legacy tag rewritten.
+     */
+    public function rewrite_legacy_shortcode($content)
+    {
+        if (!is_string($content) || strpos($content, "[botdot_appendix") === false) {
+            return $content;
+        }
+
+        return preg_replace('/\[(\/?)botdot_appendix\b/', '[$1bspt_appendix', $content);
     }
 
     /**

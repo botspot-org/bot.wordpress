@@ -417,8 +417,7 @@ JS;
         $label = $this->get_sync_status_label($status["status"]);
         $icon = $this->get_sync_status_icon($status["status"]);
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $icon is a fixed HTML entity from get_sync_status_icon()'s internal allow-list, not user input; esc_html() would double-encode the entity.
-        echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">' . $icon . "</span>";
+        echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">' . esc_html($icon) . "</span>";
     }
 
     /**
@@ -744,7 +743,7 @@ JS;
         if (is_wp_error($response)) {
             wp_send_json_error([
                 "message" => sprintf(
-                    /* translators: %s: WP_Error message */
+                    /* translators: %s: error message from the failed connection attempt */
                     __("Connection failed: %s", "botspot"),
                     $response->get_error_message()
                 ),
@@ -763,7 +762,7 @@ JS;
             // webhook registration failing is a wrong / truncated key.
             $friendly = ($status_code === 401 || $status_code === 403)
                 ? __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botspot")
-                /* translators: %s: error message returned by the connection attempt */
+                /* translators: %s: error message from the failed connection attempt */
                 : sprintf(__("Connection failed: %s", "botspot"), $error_msg);
             wp_send_json_error(["message" => $friendly]);
             return;
@@ -837,20 +836,23 @@ JS;
     /**
      * Get sync status icon
      *
+     * Returns the literal character rather than an HTML entity so the value can
+     * be escaped with esc_html() at the point of output.
+     *
      * @since    1.0.0
      */
     private function get_sync_status_icon($status)
     {
         switch ($status) {
             case "synced":
-                return "&#9679;"; // filled circle
+                return "\u{25CF}"; // ● filled circle
             case "pending":
-                return "&#9675;"; // empty circle
+                return "\u{25CB}"; // ○ empty circle
             case "error":
-                return "&#9888;"; // warning
+                return "\u{26A0}"; // ⚠ warning
             case "never":
             default:
-                return "&#8212;"; // em dash
+                return "\u{2014}"; // — em dash
         }
     }
 

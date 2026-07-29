@@ -97,11 +97,11 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
                     <input type="checkbox" name="bspt_sync_post_types[]" value="page" <?php checked(in_array("page", $bspt_sync_post_types, true)); ?> />
                     <span><?php esc_html_e("Pages", "botspot"); ?></span>
                 </label>
-                <label class="bsa-check <?php echo $bspt_woocommerce_active ? "" : "bsa-check--disabled"; ?>">
-                    <input type="checkbox" name="bspt_sync_post_types[]" value="product" <?php checked(in_array("product", $bspt_sync_post_types, true)); ?> <?php echo $bspt_woocommerce_active ? "" : "disabled"; ?> />
+                <label class="bsa-check <?php echo esc_attr($bspt_woocommerce_active ? "" : "bsa-check--disabled"); ?>">
+                    <input type="checkbox" name="bspt_sync_post_types[]" value="product" <?php checked(in_array("product", $bspt_sync_post_types, true)); ?> <?php echo esc_attr($bspt_woocommerce_active ? "" : "disabled"); ?> />
                     <span>
                         <?php esc_html_e("Products", "botspot"); ?>
-                        <span class="bsa-check__tag <?php echo $bspt_woocommerce_active ? "bsa-check__tag--active" : ""; ?>">WooCommerce</span>
+                        <span class="bsa-check__tag <?php echo esc_attr($bspt_woocommerce_active ? "bsa-check__tag--active" : ""); ?>">WooCommerce</span>
                     </span>
                 </label>
                 <?php if (!empty($bspt_custom_types)): ?>
@@ -253,10 +253,10 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
             <div class="bsa-settings-row__body">
                 <?php if ($bspt_is_platform_managed): ?>
                 <div class="bsa-readonly-toggles">
-                    <span class="bsa-readonly-toggle <?php echo $bspt_appendix_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
+                    <span class="bsa-readonly-toggle <?php echo esc_attr($bspt_appendix_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'); ?>">
                         <?php esc_html_e("HTML appendix", "botspot"); ?>: <?php echo $bspt_appendix_enabled ? esc_html__("Enabled", "botspot") : esc_html__("Disabled", "botspot"); ?>
                     </span>
-                    <span class="bsa-readonly-toggle <?php echo $bspt_jsonld_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'; ?>">
+                    <span class="bsa-readonly-toggle <?php echo esc_attr($bspt_jsonld_enabled ? 'bsa-readonly-toggle--on' : 'bsa-readonly-toggle--off'); ?>">
                         <?php esc_html_e("JSON-LD structured data", "botspot"); ?>: <?php echo $bspt_jsonld_enabled ? esc_html__("Enabled", "botspot") : esc_html__("Disabled", "botspot"); ?>
                     </span>
                 </div>
