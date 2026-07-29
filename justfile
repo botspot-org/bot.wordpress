@@ -119,6 +119,18 @@ check-syntax:
 check-i18n:
     ./scripts/check-i18n.sh
 
+# Verify the output-escaping pipeline against real WordPress (not test stubs),
+# so wp_kses/wp_kses_allowed_html/wp_json_encode are core's implementations.
+# Proves the appendix payload (inline CSS, SVG, style attrs) survives escaping
+# and that bspt_appendix_html filter output is escaped.
+
+# Run the escaping pipeline checks inside WordPress Playground.
+[group('qa')]
+check-escaping:
+    npx --yes @wp-playground/cli@latest php --quiet \
+        --mount=.:/wordpress/wp-content/plugins/botspot \
+        -- /wordpress/wp-content/plugins/botspot/scripts/verify-escaping.php
+
 # A mismatch between the plugin header, version constant, and readme stable tag
 # is a guaranteed WordPress.org review rejection.
 
@@ -149,5 +161,5 @@ verify: check-version check-syntax check
 
 # Full pre-submission gate incl. official Plugin Check. Run before submitting.
 [group('qa')]
-verify-submission: verify check-i18n check-wporg
+verify-submission: verify check-i18n check-escaping check-wporg
     @echo "Submission verification passed."
