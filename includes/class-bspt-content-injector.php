@@ -1068,7 +1068,7 @@ JS;
     {
         // Inspect the queried post's raw, unexpanded content too. By the time
         // the_content priority 20 runs, do_shortcode (priority 11) has already
-        // rewritten [botdot_appendix] into HTML, so has_shortcode($content,...)
+        // rewritten [bspt_appendix] into HTML, so has_shortcode($content,...)
         // can return false even though the user did manually place the
         // shortcode. The queried post's post_content always holds the raw
         // form, so it's the authoritative source.
@@ -1076,22 +1076,46 @@ JS;
         if ($queried_id > 0) {
             $post_obj = get_post($queried_id);
             if ($post_obj && isset($post_obj->post_content)) {
-                $raw = (string) $post_obj->post_content;
-                if (function_exists("has_block") && has_block("botspot-wp/appendix", $raw)) {
-                    return true;
-                }
-                if (has_shortcode($raw, "botdot_appendix") || has_shortcode($raw, "botspot_appendix")) {
+                if ($this->content_has_appendix_marker((string) $post_obj->post_content)) {
                     return true;
                 }
             }
         }
 
-        if (function_exists("has_block") && has_block("botspot-wp/appendix", $content)) {
-            return true;
+        return $this->content_has_appendix_marker($content);
+    }
+
+    /**
+     * Whether a content string carries any appendix block or shortcode.
+     *
+     * Covers the current names and every legacy alias, so manual placement is
+     * detected regardless of which generation of the markup the page was saved
+     * with. Missing an alias here would auto-inject a second appendix onto a
+     * page that already places one manually.
+     *
+     * @since    3.5.14
+     * @access   private
+     * @param    string    $content    Content to inspect.
+     * @return   bool
+     */
+    private function content_has_appendix_marker($content)
+    {
+        if (!is_string($content) || $content === "") {
+            return false;
         }
 
-        if (has_shortcode($content, "botdot_appendix") || has_shortcode($content, "botspot_appendix")) {
-            return true;
+        if (function_exists("has_block")) {
+            foreach (["bspt/appendix", "botspot-wp/appendix"] as $block) {
+                if (has_block($block, $content)) {
+                    return true;
+                }
+            }
+        }
+
+        foreach (["bspt_appendix", "botspot_appendix", "botdot_appendix"] as $shortcode) {
+            if (has_shortcode($content, $shortcode)) {
+                return true;
+            }
         }
 
         return false;

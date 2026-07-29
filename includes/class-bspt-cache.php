@@ -85,17 +85,24 @@ class Bspt_Cache
 
         clean_post_cache($post_id);
 
-        // LiteSpeed Cache
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
-        do_action("litespeed_purge_post", $post_id);
+        // LiteSpeed Cache. The documented integration point is this action —
+        // LiteSpeed exposes no stable function equivalent — so this calls a
+        // third-party plugin's public API rather than defining a hook of our
+        // own. Guarded so it only fires when LiteSpeed is actually loaded.
+        if (defined("LSCWP_V")) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- documented LiteSpeed Cache API (https://docs.litespeedtech.com/lscache/lscwp/api/); calling a third-party hook, not declaring one.
+            do_action("litespeed_purge_post", $post_id);
+        }
 
         // W3 Total Cache
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
-        do_action("w3tc_flush_post", $post_id);
+        if (function_exists("w3tc_flush_post")) {
+            w3tc_flush_post($post_id);
+        }
 
         // WP Rocket
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
-        do_action("rocket_clean_post", $post_id);
+        if (function_exists("rocket_clean_post")) {
+            rocket_clean_post($post_id);
+        }
 
         // WP Super Cache
         if (function_exists("wp_cache_post_change")) {
@@ -129,13 +136,19 @@ class Bspt_Cache
      */
     public static function purge_page_caches_all()
     {
-        // LiteSpeed Cache
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
-        do_action("litespeed_purge_all");
+        // LiteSpeed Cache. As above: this action is LiteSpeed's documented API,
+        // so we are consuming a third-party hook rather than declaring one.
+        if (defined("LSCWP_V")) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- documented LiteSpeed Cache API (https://docs.litespeedtech.com/lscache/lscwp/api/); calling a third-party hook, not declaring one.
+            do_action("litespeed_purge_all");
+        }
 
         // W3 Total Cache
-        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party cache plugin hook.
-        do_action("w3tc_flush_all");
+        if (function_exists("w3tc_flush_all")) {
+            w3tc_flush_all();
+        } elseif (function_exists("w3tc_flush_posts")) {
+            w3tc_flush_posts();
+        }
 
         // WP Rocket
         if (function_exists("rocket_clean_domain")) {
