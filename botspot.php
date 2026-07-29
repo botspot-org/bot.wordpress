@@ -272,10 +272,14 @@ function bspt_activation_notice() {
         <div class="notice notice-success is-dismissible">
             <p>
                 <?php
+                // The link is assembled from separately escaped parts rather than
+                // embedding markup in a translatable string, so no translation can
+                // introduce HTML into an admin screen.
                 printf(
-                    /* translators: %s: URL to the plugin settings page */
-                    __('bot.spot WP plugin activated successfully! <a href="%s">Configure your settings</a> to get started.', 'botspot'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- string contains trusted markup; dynamic URL is escaped below
-                    esc_url(admin_url('admin.php?page=botspot'))
+                    '%1$s <a href="%2$s">%3$s</a>',
+                    esc_html__('bot.spot WP plugin activated successfully!', 'botspot'),
+                    esc_url(admin_url('admin.php?page=botspot')),
+                    esc_html__('Configure your settings to get started.', 'botspot')
                 );
                 ?>
             </p>

@@ -252,12 +252,64 @@ class Bspt_Content_Injector
             return;
         }
 
-        $json_string = wp_json_encode($jsonld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $json_string = str_replace("</script>", "<\/script>", $json_string);
+        $json_string = $this->encode_jsonld($jsonld);
+        if ($json_string === "") {
+            return;
+        }
 
+        $this->print_jsonld($json_string);
+    }
+
+    /**
+     * JSON-encode a JSON-LD graph for safe inline output.
+     *
+     * The JSON_HEX_* flags escape HTML-significant characters as \uXXXX
+     * sequences, so no string value can terminate the script element. JSON
+     * parsers decode these transparently, so consumers see identical data.
+     *
+     * @since    3.5.14
+     * @access   private
+     * @param    mixed     $jsonld    The JSON-LD structure to encode.
+     * @return   string               Encoded JSON, or "" on failure.
+     */
+    private function encode_jsonld($jsonld)
+    {
+        $json_string = wp_json_encode(
+            $jsonld,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        );
+
+        if (!is_string($json_string)) {
+            return "";
+        }
+
+        return $json_string;
+    }
+
+    /**
+     * Emit a JSON-LD script element.
+     *
+     * Uses wp_print_inline_script_tag() where available (WP 5.7+) so core owns
+     * the escaping of both the attributes and the payload.
+     *
+     * @since    3.5.14
+     * @access   private
+     * @param    string    $json_string    JSON produced by encode_jsonld().
+     */
+    private function print_jsonld($json_string)
+    {
         echo "\n<!-- BotSpot JSON-LD -->\n";
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON built via wp_json_encode with </script> neutralized
-        echo '<script type="application/ld+json">' . $json_string . "</script>";
+
+        if (function_exists("wp_print_inline_script_tag")) {
+            wp_print_inline_script_tag($json_string, ["type" => "application/ld+json"]);
+        } else {
+            // WP 5.0–5.6 fallback. encode_jsonld() has already escaped every
+            // HTML-significant character as \uXXXX, so the payload cannot
+            // close the element or introduce markup.
+            echo '<script type="application/ld+json">' . $json_string . "</script>"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-encoded with JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT in encode_jsonld(), so no HTML-significant character survives; esc_html() would corrupt the JSON.
+        }
+
         echo "\n<!-- /BotSpot JSON-LD -->\n";
     }
 
@@ -305,15 +357,12 @@ class Bspt_Content_Injector
             return;
         }
 
-        $json_string = wp_json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json_string = $this->encode_jsonld($decoded);
+        if ($json_string === "") {
+            return;
+        }
 
-        // Prevent script-tag breakout
-        $json_string = str_replace("</script>", "<\/script>", $json_string);
-
-        echo "\n<!-- BotSpot JSON-LD -->\n";
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON built via wp_json_encode with </script> neutralized
-        echo '<script type="application/ld+json">' . $json_string . "</script>";
-        echo "\n<!-- /BotSpot JSON-LD -->\n";
+        $this->print_jsonld($json_string);
 
         $this->log_debug("JSON-LD injected into wp_head as peer schema tag");
     }
@@ -428,19 +477,18 @@ class Bspt_Content_Injector
             ]);
         }
 
-        $html = $this->sanitize_html($data["html"]);
+        $html = $this->strip_injection_config($data["html"]);
 
-        // Apply filter
+        // Apply filter before escaping so the escaping happens as late as
+        // possible — filtered output is escaped too, not just the service HTML.
         $html = apply_filters("bspt_appendix_html", $html);
+
+        // Escape late: single wp_kses pass at the point of output.
+        $html = wp_kses($html, $this->allowed_appendix_html());
 
         if (!empty($html)) {
             $this->appendix_injected = true;
-            $wrapped = sprintf(
-                '<div data-bsa-appendix data-bsa-position="%s">%s</div>',
-                esc_attr($position),
-                $html
-            );
-            $content .= $wrapped;
+            $content .= $this->wrap_appendix($html, $position);
             $content .= $this->bsa_debug_comment("the_content", "injected", [
                 "bytes" => strlen($html),
                 "position" => $position,
@@ -607,9 +655,7 @@ JS;
     {
         // Already injected by the_content path, nothing to do.
         if ($this->appendix_injected) {
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "already_injected");
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "already_injected");
             return;
         }
 
@@ -617,17 +663,13 @@ JS;
         // Otherwise the_content's gate (in_the_loop, queried-object) already
         // chose not to inject and we should respect that.
         if (!$this->is_page_builder_active()) {
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "no_page_builder_skip");
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "no_page_builder_skip");
             return;
         }
 
         $position = $this->resolve_injection_position();
         if ($position === "manual") {
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "position_manual");
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "position_manual");
             return;
         }
 
@@ -668,14 +710,19 @@ JS;
     }
 
     /**
-     * Build an HTML comment describing a single decision point in the
+     * Build the diagnostic payload for a single decision point in the
      * injection pipeline. Returns "" when debug is not active.
      *
+     * The returned value is the comment *payload* only, not the comment
+     * delimiters, so callers escape it before output.
+     *
+     * @since 3.5.14
      * @param string $where    Hook name: the_content / above_footer / bottom_of_page.
      * @param string $reason   Short tag identifying which branch we took.
      * @param array  $extra    Optional structured payload to aid diagnosis.
+     * @return string          JSON payload, or "" when debug is inactive.
      */
-    private function bsa_debug_comment($where, $reason, array $extra = [])
+    private function bsa_debug_payload($where, $reason, array $extra = [])
     {
         if (!$this->bsa_debug_active()) {
             return "";
@@ -683,12 +730,52 @@ JS;
         $payload = array_merge(["where" => $where, "reason" => $reason], $extra);
         $json = wp_json_encode($payload);
         if ($json === false) {
-            $json = '{"where":"' . esc_html($where) . '","reason":"json_encode_failed"}';
+            $json = '{"where":"' . $where . '","reason":"json_encode_failed"}';
         }
         // Strip "--" so the payload can never close the comment early.
-        $safe = str_replace("--", "-_-", $json);
-        return "\n<!-- bsa-appendix:" . $safe . " -->\n";
+        return str_replace("--", "-_-", $json);
     }
+
+    /**
+     * Build an HTML comment describing a single decision point in the
+     * injection pipeline. Returns "" when debug is not active.
+     *
+     * Used by the the_content path, whose return value is the output; the
+     * payload is escaped here because that is the point of output.
+     *
+     * @param string $where    Hook name: the_content / above_footer / bottom_of_page.
+     * @param string $reason   Short tag identifying which branch we took.
+     * @param array  $extra    Optional structured payload to aid diagnosis.
+     */
+    private function bsa_debug_comment($where, $reason, array $extra = [])
+    {
+        $payload = $this->bsa_debug_payload($where, $reason, $extra);
+        if ($payload === "") {
+            return "";
+        }
+        return "\n<!-- bsa-appendix:" . esc_html($payload) . " -->\n";
+    }
+
+    /**
+     * Echo the diagnostic comment for a decision point on an output hook.
+     *
+     * Exists so the payload is escaped inline at the point of output rather
+     * than being built into a variable and echoed later.
+     *
+     * @since 3.5.14
+     * @param string $where    Hook name.
+     * @param string $reason   Short tag identifying which branch we took.
+     * @param array  $extra    Optional structured payload to aid diagnosis.
+     */
+    private function print_debug_comment($where, $reason, array $extra = [])
+    {
+        $payload = $this->bsa_debug_payload($where, $reason, $extra);
+        if ($payload === "") {
+            return;
+        }
+        echo "\n<!-- bsa-appendix:" . esc_html($payload) . " -->\n";
+    }
+
 
     /**
      * Snapshot of the page-state booleans that should_inject_common
@@ -731,25 +818,19 @@ JS;
     private function inject_footer_position($position)
     {
         if ($this->appendix_injected) {
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "already_injected", $this->bsa_debug_state());
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "already_injected", $this->bsa_debug_state());
             return;
         }
 
         if (!$this->should_inject_appendix()) {
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "should_not_inject", $this->bsa_debug_state());
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "should_not_inject", $this->bsa_debug_state());
             return;
         }
 
         // Check for manual placement
         global $post;
         if ($post && $this->has_manual_placement($post->post_content)) {
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "manual_placement");
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "manual_placement");
             return;
         }
 
@@ -768,9 +849,7 @@ JS;
         }
         if ($delivery_mode === "disabled" || $delivery_mode === "jsonld_only") {
             $this->log_debug(sprintf("delivery_mode=%s, skipping footer appendix HTML injection", $delivery_mode));
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "delivery_mode_skip", ["delivery_mode" => $delivery_mode]);
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "delivery_mode_skip", ["delivery_mode" => $delivery_mode]);
             return;
         }
 
@@ -783,42 +862,34 @@ JS;
                 $api_status,
                 $api_reason
             ));
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "fetch_null", [
+            $this->print_debug_comment("wp_footer", "fetch_null", [
                 "path" => $path,
                 "api_status" => $api_status,
                 "api_reason" => $api_reason,
                 "data_present" => $data ? true : false,
             ]);
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
             return;
         }
 
-        $html = $this->sanitize_html($data["html"]);
+        $html = $this->strip_injection_config($data["html"]);
 
-        // Apply filter
+        // Apply the filter before escaping so that escaping happens as late as
+        // possible and covers filtered output too, not just the service HTML.
         $html = apply_filters("bspt_appendix_html", $html);
 
         if (!empty($html)) {
             $this->appendix_injected = true;
-            $appendix_markup = sprintf(
-                '<div data-bsa-appendix data-bsa-position="%s">%s</div>',
-                esc_attr($position),
-                $html
-            );
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML already sanitized via sanitize_html()/wp_kses
-            echo $appendix_markup;
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "injected_fallback", [
+            // Escape late: a single wp_kses pass, inline at the point of output.
+            echo '<div data-bsa-appendix data-bsa-position="' . esc_attr($position) . '">';
+            echo wp_kses($html, $this->allowed_appendix_html());
+            echo '</div>';
+            $this->print_debug_comment("wp_footer", "injected_fallback", [
                 "bytes" => strlen($html),
                 "position" => $position,
             ]);
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
             $this->log_debug(sprintf("Appendix injected via wp_footer fallback (%d bytes, position=%s)", strlen($html), $position));
         } else {
-            $debug_comment = $this->bsa_debug_comment("wp_footer", "html_empty_after_sanitize");
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- diagnostic HTML comment, JSON-encoded and stripped of "--" in bsa_debug_comment()
-            echo $debug_comment;
+            $this->print_debug_comment("wp_footer", "html_empty_after_sanitize");
         }
     }
 
@@ -872,12 +943,14 @@ JS;
             return "";
         }
 
-        $html = $this->sanitize_html($data["html"]);
+        $html = $this->strip_injection_config($data["html"]);
 
-        // Apply filter
+        // Apply the filter before escaping so that escaping happens as late as
+        // possible and covers filtered output too, not just the service HTML.
         $html = apply_filters("bspt_appendix_html", $html);
 
-        return $html;
+        // Escape late: the shortcode's return value is the output, so escape here.
+        return wp_kses($html, $this->allowed_appendix_html());
     }
 
     /**
@@ -1059,18 +1132,38 @@ JS;
     }
 
     /**
-     * Sanitize external HTML using wp_kses with extended allowlist
+     * Strip the injection config script tag from the service payload.
      *
-     * @since    1.0.1
+     * This is a content transform, not an escaping step: the tag carries
+     * configuration for the client and must never be rendered. Kept separate
+     * from escaping so the wp_kses pass can happen as late as possible.
+     *
+     * @since    3.5.14
      * @access   private
-     * @param    string    $html    The HTML to sanitize.
-     * @return   string             Sanitized HTML.
+     * @param    string    $html    The raw HTML from the service.
+     * @return   string             HTML with the config script removed.
      */
-    private function sanitize_html($html)
+    private function strip_injection_config($html)
     {
-        // Strip the injection config script tag (not for rendering)
-        $html = preg_replace('/<script[^>]*id="locus-injection-config"[^>]*>.*?<\/script>/s', '', $html);
+        if (!is_string($html)) {
+            return "";
+        }
 
+        return preg_replace('/<script[^>]*id="locus-injection-config"[^>]*>.*?<\/script>/s', '', $html);
+    }
+
+    /**
+     * The wp_kses allowlist used for appendix HTML.
+     *
+     * Extends the standard "post" context with the elements and attributes the
+     * appendix markup relies on.
+     *
+     * @since    3.5.14
+     * @access   private
+     * @return   array    Allowed HTML elements and attributes for wp_kses().
+     */
+    private function allowed_appendix_html()
+    {
         $allowed = wp_kses_allowed_html("post");
 
         // Appendix-specific elements
@@ -1094,8 +1187,26 @@ JS;
         $allowed["span"]["style"] = true;
         $allowed["div"]["style"] = true;
 
-        return wp_kses($html, $allowed);
+        return $allowed;
     }
+
+    /**
+     * Wrap already-escaped appendix HTML in the placement marker.
+     *
+     * The wrapper carries the position so the client-side placement script
+     * (inject_placement_script) can relocate the appendix.
+     *
+     * @since    3.5.14
+     * @access   private
+     * @param    string    $html        Appendix HTML, escaped by the caller via wp_kses().
+     * @param    string    $position    The resolved injection position.
+     * @return   string                 The wrapped markup, safe to output.
+     */
+    private function wrap_appendix($html, $position)
+    {
+        return '<div data-bsa-appendix data-bsa-position="' . esc_attr($position) . '">' . $html . '</div>';
+    }
+
 
     /**
      * Log debug message
