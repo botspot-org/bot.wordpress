@@ -43,10 +43,16 @@ class MainContentExtractionTest extends TestCase
         // the lazy regex happens to land correctly. The truncation bug lives in
         // the id= and class= selectors, whose capture terminates at the first
         // closing tag of ANY kind — which is the shape most classic themes emit.
+        //
+        // The outer wrapper is class="entry-content", not id="content": #content
+        // and .site-content are page-level wrappers that can also contain the
+        // widget sidebar (see test_sidebar_aside_inside_page_level_wrapper_is_removed),
+        // so <aside> is stripped there. .entry-content bounds the article itself,
+        // so the in-content pull quote below is expected to survive here.
         return '<!DOCTYPE html><html><head><title>Roasting</title>'
             . '<style>.x{color:red}</style></head><body>'
             . '<header class="site-header"><nav><a href="/">Home</a> Site navigation chrome</nav></header>'
-            . '<div id="content">'
+            . '<div class="entry-content">'
             . '<div class="post">'
             . '<header class="entry-header"><h1>How We Roast Our Coffee</h1></header>'
             . '<p>First paragraph about the drum roaster and its thermal mass.</p>'
@@ -203,5 +209,90 @@ class MainContentExtractionTest extends TestCase
         $result = $this->extract($html);
 
         $this->assertStringContainsString('Unclosed paragraph', $result);
+    }
+
+    /**
+     * A classic theme with no <main>/<article> wraps the article AND the
+     * widget sidebar in the same <div id="content"> page-level container.
+     * <aside> there is the sidebar, not a pull quote, and must be stripped —
+     * the pre-DOM regex code stripped every <aside> document-wide, so this is
+     * a regression guard for the #content candidate specifically.
+     */
+    public function test_sidebar_aside_inside_page_level_wrapper_is_removed()
+    {
+        $html = '<html><body>'
+            . '<div id="content">'
+            . '<p>The article body copy continues for several sentences about roasting.</p>'
+            . '<aside id="secondary">Recent posts, tag cloud, and a newsletter signup form.</aside>'
+            . '</div>'
+            . '</body></html>';
+
+        $result = $this->extract($html);
+
+        $this->assertStringContainsString('The article body copy continues', $result);
+        $this->assertStringNotContainsString('Recent posts, tag cloud', $result);
+    }
+
+    /**
+     * Same page-level-wrapper shape, .site-content flavour.
+     */
+    public function test_sidebar_aside_inside_site_content_wrapper_is_removed()
+    {
+        $html = '<html><body>'
+            . '<div class="site-content">'
+            . '<p>The article body copy continues for several sentences about roasting.</p>'
+            . '<aside class="widget-area">Recent posts, tag cloud, and a newsletter signup form.</aside>'
+            . '</div>'
+            . '</body></html>';
+
+        $result = $this->extract($html);
+
+        $this->assertStringContainsString('The article body copy continues', $result);
+        $this->assertStringNotContainsString('Recent posts, tag cloud', $result);
+    }
+
+    /**
+     * An <aside> inside .entry-content is still a pull quote, not a sidebar.
+     * Regression guard so the #content/.site-content narrowing does not
+     * spread to the entry-content-class candidate.
+     */
+    public function test_aside_inside_entry_content_class_still_survives()
+    {
+        $html = '<html><body>'
+            . '<div class="entry-content">'
+            . '<p>The article body copy continues for several sentences about roasting.</p>'
+            . '<aside class="pullquote">A pull quote that belongs to the article body.</aside>'
+            . '</div>'
+            . '</body></html>';
+
+        $result = $this->extract($html);
+
+        $this->assertStringContainsString('A pull quote that belongs to the article body', $result);
+    }
+
+    /**
+     * DOMDocument always exists under PHPUnit, so no test above can reach
+     * extract_main_content_fallback(). Call it directly via reflection to
+     * cover the path that runs on PHP builds without ext-dom.
+     */
+    public function test_fallback_strips_boilerplate_and_returns_body()
+    {
+        $html = '<html><body>'
+            . '<header>Site header chrome</header>'
+            . '<p>The only real prose on this fallback-parsed page.</p>'
+            . '<aside>Sidebar widget text</aside>'
+            . '<footer>Footer chrome</footer>'
+            . '</body></html>';
+
+        $ref = new ReflectionMethod('Bspt_Sync', 'extract_main_content_fallback');
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
+        $result = $ref->invoke(null, $html);
+
+        $this->assertStringContainsString('The only real prose on this fallback-parsed page', $result);
+        $this->assertStringNotContainsString('Site header chrome', $result);
+        $this->assertStringNotContainsString('Sidebar widget text', $result);
+        $this->assertStringNotContainsString('Footer chrome', $result);
     }
 }

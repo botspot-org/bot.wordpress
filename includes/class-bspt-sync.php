@@ -612,35 +612,51 @@ class Bspt_Sync
 
         $xpath = new DOMXPath($doc);
 
-        // Container candidates, most specific first. XPath class matching pads
-        // with spaces so "entry-content" does not match "entry-content-teaser".
+        // Container candidates, most specific first, paired with whether
+        // <aside> inside them is boilerplate rather than article content.
+        // //main, //article and the entry-content-class selector bound an
+        // article element directly, so an <aside> inside is a pull quote.
+        // The #content/#main/.site-content selectors are page-level wrappers
+        // in classic themes: they wrap the article AND <aside id="secondary">
+        // (the widget sidebar), so <aside> there is boilerplate and must go.
+        // XPath class matching pads with spaces so "entry-content" does not
+        // match "entry-content-teaser".
         $candidates = [
-            '//main',
-            '//article',
-            "//*[@id='content' or @id='main-content' or @id='primary' or @id='main']",
-            "//*[contains(concat(' ', normalize-space(@class), ' '), ' entry-content ')"
-                . " or contains(concat(' ', normalize-space(@class), ' '), ' post-content ')"
-                . " or contains(concat(' ', normalize-space(@class), ' '), ' page-content ')"
-                . " or contains(concat(' ', normalize-space(@class), ' '), ' content-area ')"
-                . " or contains(concat(' ', normalize-space(@class), ' '), ' main-content ')]",
-            "//*[contains(concat(' ', normalize-space(@class), ' '), ' site-content ')]",
+            ['query' => '//main', 'strip_aside' => false],
+            ['query' => '//article', 'strip_aside' => false],
+            [
+                'query' => "//*[@id='content' or @id='main-content' or @id='primary' or @id='main']",
+                'strip_aside' => true,
+            ],
+            [
+                'query' => "//*[contains(concat(' ', normalize-space(@class), ' '), ' entry-content ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' post-content ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' page-content ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' content-area ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' main-content ')]",
+                'strip_aside' => false,
+            ],
+            [
+                'query' => "//*[contains(concat(' ', normalize-space(@class), ' '), ' site-content ')]",
+                'strip_aside' => true,
+            ],
         ];
 
-        // Boilerplate to remove from inside a selected container. <header> and
-        // <aside> are deliberately absent: themes wrap the post H1 in
-        // <header class="entry-header">, and an in-content <aside> is a pull
-        // quote or callout. Both are boilerplate only at page level, which is
-        // the fallback branch below.
+        // Boilerplate to remove from inside a selected container. <header> is
+        // deliberately absent: themes wrap the post H1 in
+        // <header class="entry-header">, which is boilerplate only at page
+        // level (the fallback branch below).
         $inner_boilerplate = 'script|style|noscript|nav|form|footer|template|iframe';
 
-        foreach ($candidates as $query) {
-            $nodes = $xpath->query($query);
+        foreach ($candidates as $candidate) {
+            $nodes = $xpath->query($candidate['query']);
             if ($nodes === false || $nodes->length === 0) {
                 continue;
             }
 
             $node = $nodes->item(0);
-            self::remove_nodes($xpath, $node, $inner_boilerplate);
+            $tags = $candidate['strip_aside'] ? $inner_boilerplate . '|aside' : $inner_boilerplate;
+            self::remove_nodes($xpath, $node, $tags);
 
             $content = self::inner_html($node);
             if (mb_strlen(wp_strip_all_tags($content)) > 50) {
