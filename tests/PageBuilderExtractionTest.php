@@ -553,4 +553,61 @@ class PageBuilderExtractionTest extends TestCase
         $this->assertStringContainsString('Cold-brew', $result);
         $this->assertStringNotContainsString('section-hero-primary-container', $result);
     }
+
+    /**
+     * Fix round 2: Elementor does not clear post_content when applied to a
+     * pre-existing classic post, so a layout-heavy _elementor_data blob that
+     * harvests down to a single surviving token (any 12+ char lowercase
+     * value escapes the ^[a-z]{1,11}$ enum filter) must not win over a full
+     * article still sitting in post_content.
+     */
+    public function test_elementor_short_harvest_does_not_replace_long_existing_article()
+    {
+        $article = '<p>' . str_repeat(
+            'This classic-editor paragraph holds real editorial copy from before Elementor was applied. ',
+            5
+        ) . '</p>';
+
+        $data = wp_json_encode([
+            [
+                'elType' => 'widget',
+                'widgetType' => 'text-editor',
+                'settings' => [
+                    'editor' => 'testimonials',
+                ],
+            ],
+        ]);
+
+        $post = $this->make_post(216, $article, [
+            '_elementor_edit_mode' => 'builder',
+            '_elementor_data' => $data,
+        ]);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('This classic-editor paragraph', $result);
+        $this->assertStringNotContainsString('testimonials', $result);
+    }
+
+    /**
+     * Fix round 2: the relative-length comparison must not regress Task 1's
+     * fix. Divi and WPBakery must always prefer the extraction over their
+     * shortcode-laden post_content, however short the extraction is and
+     * however long the raw shortcode markup is.
+     */
+    public function test_divi_short_extraction_still_wins_over_long_shortcode_post_content()
+    {
+        $content = '[et_pb_section fb_built="1" admin_label="Section" _builder_version="4.9.0"]'
+            . '[et_pb_row _builder_version="4.9.0"][et_pb_column type="4_4"]'
+            . '[et_pb_text _builder_version="4.9.0"]'
+            . '<p>Cold brew.</p>'
+            . '[/et_pb_text][/et_pb_column][/et_pb_row][/et_pb_section]';
+
+        $post = $this->make_post(217, $content, ['_et_pb_use_builder' => 'on']);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('Cold brew.', $result);
+        $this->assertStringNotContainsString('[et_pb_', $result);
+    }
 }

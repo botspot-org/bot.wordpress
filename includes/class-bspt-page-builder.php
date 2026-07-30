@@ -53,14 +53,24 @@ class Bspt_Page_Builder
 
         $extracted = self::extract_for_builder($post, $builder);
 
-        // No length floor. extract_for_builder() only returns non-null when a
-        // builder was detected, and for those posts the alternative is raw
-        // post_content — shortcode markup for Divi/WPBakery, empty for the
-        // JSON-backed builders. Any extracted prose beats both, however short.
-        // The old >50 floor silently discarded short builder pages in favour of
-        // content strictly worse than what it threw away.
-        if ($extracted !== null && wp_strip_all_tags($extracted) !== '') {
-            return $extracted;
+        // Divi and WPBakery always prefer the extraction: their post_content
+        // *is* the shortcode markup, so any extracted prose beats it however
+        // short. The JSON-backed builders (Elementor, Bricks, Beaver) are
+        // different — they can be layered on top of a pre-existing classic
+        // post whose real editorial copy is still sitting in post_content
+        // (Elementor in particular never clears it). A layout-heavy
+        // _elementor_data blob can harvest down to a single surviving
+        // heading, and preferring that unconditionally would trade a full
+        // article for one word. For those builders, only take the
+        // extraction when it is not shorter than the post_content it would
+        // replace.
+        if ($extracted !== null) {
+            $extracted_len = mb_strlen(wp_strip_all_tags($extracted));
+            $content_len = mb_strlen(wp_strip_all_tags($content));
+            if ($extracted_len > 0
+                && ($builder === 'divi' || $builder === 'wpbakery' || $extracted_len >= $content_len)) {
+                return $extracted;
+            }
         }
 
         // Fallback: try rendering shortcodes in original content. has_shortcode()
