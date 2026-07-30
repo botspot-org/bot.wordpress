@@ -429,8 +429,27 @@ class Bspt_Sync
         $source_jsonld = self::extract_page_jsonld($post->ID);
 
         // Fetch rendered HTML from the live page for reliable content extraction
-        $content = self::fetch_rendered_content($post, $permalink);
+        list($content, $content_source) = self::fetch_rendered_content($post, $permalink);
         $page_builder = Bspt_Page_Builder::detect_builder($post->ID);
+
+        // Record which path produced the body so a site that silently falls back
+        // on every post (basic auth, unreachable permalink) is inspectable
+        // without WP_DEBUG. Write only on change: build_ingest_payload also runs
+        // in the bulk loop (see :977), and an unconditional update_post_meta
+        // there is one extra postmeta write per post per run. In steady state
+        // the value does not change, so this costs a cached read and no write.
+        if ($content_source !== get_post_meta($post->ID, "_bspt_content_source", true)) {
+            update_post_meta($post->ID, "_bspt_content_source", $content_source);
+        }
+
+        if ($content_source !== "rendered_fetch") {
+            self::log_debug(sprintf(
+                "Post %d: content came from %s (builder: %s)",
+                $post->ID,
+                $content_source,
+                $page_builder === null ? "none" : $page_builder
+            ));
+        }
 
         $payload = [
             "source_type" => "wordpress",
@@ -451,7 +470,6 @@ class Bspt_Sync
                 "format" => "html",
                 "content" => $content,
                 "excerpt" => $excerpt,
-                "page_builder" => $page_builder,
             ],
             "structured_data" => [
                 "schema_type" => "wordpress_" . $post->post_type,
@@ -461,6 +479,13 @@ class Bspt_Sync
                     "status" => $post->post_status,
                     "featured_image" => $featured_image ?: null,
                     "source_jsonld" => $source_jsonld,
+                    // body.page_builder was dropped on arrival: ContentBody in
+                    // locus-core declares only format/content/excerpt and does
+                    // not allow extras. structured_data.data is typed
+                    // dict[str, Any] and connector_ingest.py copies it verbatim
+                    // into the artifact's source_data, so these survive.
+                    "page_builder" => $page_builder,
+                    "content_source" => $content_source,
                 ],
             ],
             "media" => $media,
@@ -483,13 +508,17 @@ class Bspt_Sync
      * @since    2.10.0
      * @param    WP_Post   $post       The post object.
      * @param    string    $permalink  The post permalink.
-     * @return   string                Extracted HTML content.
+     * @return   array                 [ string $content, string $source ] where
+     *                                 $source is one of rendered_fetch,
+     *                                 not_published, fetch_error,
+     *                                 fetch_http_error, fetch_empty,
+     *                                 extract_too_short.
      */
     private static function fetch_rendered_content($post, $permalink)
     {
         // Skip fetch for non-published posts (preview URLs won't work)
         if ($post->post_status !== 'publish') {
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'not_published'];
         }
 
         // Add cache-busting param to ensure fresh content
@@ -510,7 +539,7 @@ class Bspt_Sync
                 $post->ID,
                 $response->get_error_message()
             ));
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'fetch_error'];
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -520,12 +549,12 @@ class Bspt_Sync
                 $post->ID,
                 $status_code
             ));
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'fetch_http_error'];
         }
 
         $html = wp_remote_retrieve_body($response);
         if (empty($html)) {
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'fetch_empty'];
         }
 
         // Extract main content from the HTML
@@ -539,10 +568,10 @@ class Bspt_Sync
                 $post->ID,
                 mb_strlen($stripped)
             ));
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'extract_too_short'];
         }
 
-        return $content;
+        return [$content, 'rendered_fetch'];
     }
 
     /**
