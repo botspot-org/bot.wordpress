@@ -449,4 +449,108 @@ class PageBuilderExtractionTest extends TestCase
 
         $this->assertStringContainsString('<h2>espresso</h2>', Bspt_Page_Builder::extract_content($post));
     }
+
+    /**
+     * Fix round 1 / I-3: is_skipped_key() must prune the whole subtree under
+     * a skipped array-valued key, not just a scalar at that key. Elementor's
+     * '__globals__' block is present on nearly every styled element; its
+     * inner key (typography_typography) has no skip fragment of its own and
+     * its value ("globals/typography?id=primary") passes every prose filter.
+     * Before the fix, the outer key was never checked because the array
+     * branch ran first — this must now produce nothing.
+     */
+    public function test_globals_block_subtree_is_pruned()
+    {
+        $data = wp_json_encode([
+            [
+                'elType' => 'widget',
+                'widgetType' => 'heading',
+                'settings' => [
+                    'title' => 'Our Coffee Program',
+                    '__globals__' => [
+                        'typography_typography' => 'globals/typography?id=primary',
+                    ],
+                ],
+            ],
+        ]);
+
+        $post = $this->make_post(212, '', [
+            '_elementor_edit_mode' => 'builder',
+            '_elementor_data' => $data,
+        ]);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('Our Coffee Program', $result);
+        $this->assertStringNotContainsString('globals/typography', $result);
+        $this->assertStringNotContainsString('id=primary', $result);
+    }
+
+    /**
+     * Fix round 1 / I-2: Beaver Builder's internal node/parent/uid
+     * properties hold short hex ids that clear every prose filter (length,
+     * no space, has digits so the lowercase-token rule misses them). A
+     * realistic node carries these alongside real settings; only the real
+     * copy must survive.
+     */
+    public function test_beaver_node_ids_are_not_emitted_as_content()
+    {
+        $node = new stdClass();
+        $node->type = 'module';
+        $node->node = 'a1b2c3d4e5';
+        $node->parent = 'f6a7b8c9d0';
+        $node->settings = (object) [
+            'heading' => 'Wholesale Enquiries',
+            'text' => 'We supply cafés across the region with weekly deliveries of fresh beans.',
+        ];
+
+        $post = $this->make_post(213, '', [
+            '_fl_builder_enabled' => '1',
+            '_fl_builder_data' => [$node],
+        ]);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('<h2>Wholesale Enquiries</h2>', $result);
+        $this->assertStringContainsString('We supply cafés across the region', $result);
+        $this->assertStringNotContainsString('a1b2c3d4e5', $result);
+        $this->assertStringNotContainsString('f6a7b8c9d0', $result);
+    }
+
+    /**
+     * Fix round 1 / M-4: the slug rule (no space, glued with - or _) fired on
+     * title-cased hyphenated copy too. Real slugs a builder emits are always
+     * lowercase ("text-editor", "section-hero-primary-container"); the rule
+     * must not reject title-cased product/list copy that happens to share
+     * the same no-space-plus-hyphen shape.
+     */
+    public function test_titlecase_hyphenated_content_survives_but_slugs_are_still_rejected()
+    {
+        $data = wp_json_encode([
+            [
+                'elType' => 'widget',
+                'widgetType' => 'icon-list',
+                'settings' => [
+                    'icon_list' => [
+                        ['text' => 'Ready-to-drink'],
+                        ['text' => 'Non-alcoholic'],
+                        ['text' => 'Cold-brew'],
+                    ],
+                    '_element_id' => 'section-hero-primary-container',
+                ],
+            ],
+        ]);
+
+        $post = $this->make_post(214, '', [
+            '_elementor_edit_mode' => 'builder',
+            '_elementor_data' => $data,
+        ]);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('Ready-to-drink', $result);
+        $this->assertStringContainsString('Non-alcoholic', $result);
+        $this->assertStringContainsString('Cold-brew', $result);
+        $this->assertStringNotContainsString('section-hero-primary-container', $result);
+    }
 }

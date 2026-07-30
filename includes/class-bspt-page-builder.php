@@ -428,11 +428,20 @@ class Bspt_Page_Builder
      * the _suffix rule would also eat display_name, which is real testimonial
      * text.
      *
+     * '__globals__' and '__dynamic__' are Elementor's global-style and
+     * dynamic-tag reference blocks (e.g. 'globals/typography?id=primary');
+     * their values are internal refs, not copy, and this check must run
+     * before recursion so the whole subtree under them is pruned, not just a
+     * scalar at the same key. 'node', 'parent' and 'uid' are Beaver
+     * Builder's internal node-id properties — short hex strings that clear
+     * every prose filter but carry no content.
+     *
      * @since 3.5.15
      * @var   array
      */
     private static $skip_key_exact = [
-        'name', 'eltype', 'widgettype',
+        'name', 'eltype', 'widgettype', '__globals__', '__dynamic__',
+        'node', 'parent', 'uid',
     ];
 
     /**
@@ -472,6 +481,18 @@ class Bspt_Page_Builder
         }
 
         foreach ($data as $key => $value) {
+            // Numeric list indices carry no signal; treat them as unnamed.
+            // This check must run before the is_array() branch below: a
+            // skipped key whose value is an array (Elementor's __globals__,
+            // Beaver's node/parent ids nested under a settings object) must
+            // have its whole subtree pruned, not just a scalar value at the
+            // same key.
+            $key_lower = is_string($key) ? strtolower($key) : '';
+
+            if ($key_lower !== '' && self::is_skipped_key($key_lower)) {
+                continue;
+            }
+
             if (is_object($value)) {
                 $value = (array) $value;
             }
@@ -490,13 +511,6 @@ class Bspt_Page_Builder
             }
 
             if (!is_string($value)) {
-                continue;
-            }
-
-            // Numeric list indices carry no signal; treat them as unnamed.
-            $key_lower = is_string($key) ? strtolower($key) : '';
-
-            if ($key_lower !== '' && self::is_skipped_key($key_lower)) {
                 continue;
             }
 
@@ -659,9 +673,14 @@ class Bspt_Page_Builder
             return true;
         }
 
-        // Slugs and identifiers: no word break, but glued with - or _.
-        // Prose that short ("Shipping", "Wholesale") has neither.
+        // Slugs and identifiers: no word break, all-lowercase, but glued with
+        // - or _ ("text-editor", "section-hero-primary-container"). The
+        // all-lowercase requirement is load-bearing: title-cased hyphenated
+        // copy ("Ready-to-drink", "Non-alcoholic", "Cold-brew") has the same
+        // no-space-plus-hyphen shape as a slug but is real content, and a
+        // builder never emits a slug with an uppercase letter in it.
         if (strpos($plain, ' ') === false
+            && $plain === strtolower($plain)
             && (strpos($plain, '-') !== false || strpos($plain, '_') !== false)) {
             return true;
         }
