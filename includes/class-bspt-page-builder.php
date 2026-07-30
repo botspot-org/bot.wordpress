@@ -37,55 +37,69 @@ class Bspt_Page_Builder
     {
         $post_id = $post->ID;
         $content = $post->post_content;
+        $builder = self::detect_builder($post_id);
 
-        // Check if content is already substantial (skip extraction)
-        $stripped = wp_strip_all_tags($content);
-        if (mb_strlen($stripped) > 200) {
-            return $content;
+        // Only trust the raw post_content length when no builder owns the page.
+        // Divi and WPBakery store their pages as shortcodes *inside*
+        // post_content, and wp_strip_all_tags() does not strip shortcodes — so a
+        // length check here would always pass and return shortcode markup as if
+        // it were prose.
+        if ($builder === null) {
+            $stripped = wp_strip_all_tags($content);
+            if (mb_strlen($stripped) > 200) {
+                return $content;
+            }
         }
 
-        // Try each page builder in order of popularity
-        $extracted = null;
+        $extracted = self::extract_for_builder($post, $builder);
 
-        // Elementor
-        if ($extracted === null && self::is_elementor_post($post_id)) {
-            $extracted = self::extract_elementor_content($post_id);
-        }
-
-        // Divi
-        if ($extracted === null && self::is_divi_post($post_id)) {
-            $extracted = self::extract_divi_content($post);
-        }
-
-        // WPBakery
-        if ($extracted === null && self::is_wpbakery_post($post)) {
-            $extracted = self::extract_wpbakery_content($post);
-        }
-
-        // Beaver Builder
-        if ($extracted === null && self::is_beaver_post($post_id)) {
-            $extracted = self::extract_beaver_content($post_id);
-        }
-
-        // Bricks
-        if ($extracted === null && self::is_bricks_post($post_id)) {
-            $extracted = self::extract_bricks_content($post_id);
-        }
-
-        // Return extracted content if we got something meaningful
-        if ($extracted !== null && mb_strlen(wp_strip_all_tags($extracted)) > 50) {
+        // No length floor. extract_for_builder() only returns non-null when a
+        // builder was detected, and for those posts the alternative is raw
+        // post_content — shortcode markup for Divi/WPBakery, empty for the
+        // JSON-backed builders. Any extracted prose beats both, however short.
+        // The old >50 floor silently discarded short builder pages in favour of
+        // content strictly worse than what it threw away.
+        if ($extracted !== null && wp_strip_all_tags($extracted) !== '') {
             return $extracted;
         }
 
-        // Fallback: try rendering shortcodes in original content
-        if (has_shortcode($content, '') || strpos($content, '[') !== false) {
+        // Fallback: try rendering shortcodes in original content. has_shortcode()
+        // returns false whenever the content holds no '[', so the strpos check
+        // alone is equivalent to the union it replaces.
+        if (strpos($content, '[') !== false) {
             $rendered = do_shortcode($content);
-            if (mb_strlen(wp_strip_all_tags($rendered)) > mb_strlen($stripped) + 50) {
+            if (mb_strlen(wp_strip_all_tags($rendered)) > mb_strlen(wp_strip_all_tags($content)) + 50) {
                 return $rendered;
             }
         }
 
         return $content;
+    }
+
+    /**
+     * Dispatch to the extractor for a detected builder.
+     *
+     * @since    3.5.15
+     * @param    object       $post       The post object.
+     * @param    string|null  $builder    Builder name from detect_builder().
+     * @return   string|null              Extracted HTML, or null.
+     */
+    private static function extract_for_builder($post, $builder)
+    {
+        switch ($builder) {
+            case 'elementor':
+                return self::extract_elementor_content($post->ID);
+            case 'divi':
+                return self::extract_divi_content($post);
+            case 'wpbakery':
+                return self::extract_wpbakery_content($post);
+            case 'beaver_builder':
+                return self::extract_beaver_content($post->ID);
+            case 'bricks':
+                return self::extract_bricks_content($post->ID);
+        }
+
+        return null;
     }
 
     /**

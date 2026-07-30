@@ -45,3 +45,37 @@ if (!function_exists('has_block')) {
             || strpos($content, '<!-- wp:' . $block_name . "\n") !== false;
     }
 }
+
+// Post-meta and post lookups, backed by test-controlled globals so a test can
+// stand up a fake Elementor/Divi/Bricks post without a WordPress install.
+$GLOBALS['bspt_test_post_meta'] = [];
+$GLOBALS['bspt_test_posts'] = [];
+
+if (!function_exists('get_post_meta')) {
+    function get_post_meta($post_id, $key = '', $single = false) {
+        $store = isset($GLOBALS['bspt_test_post_meta']) ? $GLOBALS['bspt_test_post_meta'] : [];
+        $value = isset($store["{$post_id}:{$key}"]) ? $store["{$post_id}:{$key}"] : '';
+        return $single ? $value : ($value === '' ? [] : [$value]);
+    }
+}
+if (!function_exists('get_post')) {
+    function get_post($post_id = null) {
+        $store = isset($GLOBALS['bspt_test_posts']) ? $GLOBALS['bspt_test_posts'] : [];
+        return isset($store[$post_id]) ? $store[$post_id] : null;
+    }
+}
+if (!function_exists('wp_strip_all_tags')) {
+    function wp_strip_all_tags($text, $remove_breaks = false) {
+        $text = preg_replace('@<(script|style)[^>]*?>.*?</\\1>@si', '', (string) $text);
+        $text = strip_tags($text);
+        if ($remove_breaks) {
+            $text = preg_replace('/[\r\n\t ]+/', ' ', $text);
+        }
+        return trim($text);
+    }
+}
+if (!function_exists('do_shortcode')) {
+    // No shortcode handlers are registered in unit tests, so core would return
+    // the content unchanged. Mirror that.
+    function do_shortcode($content, $ignore_html = false) { return $content; }
+}
