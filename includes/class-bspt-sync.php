@@ -548,8 +548,10 @@ class Bspt_Sync
     /**
      * Extract main content from full page HTML
      *
-     * Strips header, footer, nav, sidebar, scripts, styles, and other boilerplate.
-     * Looks for common content container selectors.
+     * Parses the document, picks the most likely content container, and strips
+     * boilerplate from within it. Regex container matching cannot express
+     * "the matching close tag", so a lazy capture silently truncated content at
+     * the first closing tag of any kind; DOM traversal has no such failure mode.
      *
      * @since    2.10.0
      * @param    string    $html    Full page HTML.
@@ -557,54 +559,159 @@ class Bspt_Sync
      */
     private static function extract_main_content($html)
     {
-        // Remove scripts, styles, and comments first
+        // ponytail: ext-dom is bundled with every mainstream PHP build, but it
+        // can be compiled out. Degrade to the old body-level strip rather than
+        // fatal on such a host.
+        if (!class_exists('DOMDocument')) {
+            return self::extract_main_content_fallback($html);
+        }
+
+        $doc = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        // loadHTML() assumes Latin-1 without an encoding declaration; the XML
+        // prolog forces UTF-8 without depending on the page having a meta tag.
+        $loaded = $doc->loadHTML(
+            '<?xml encoding="UTF-8">' . $html,
+            LIBXML_NONET | LIBXML_NOWARNING | LIBXML_NOERROR
+        );
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (!$loaded) {
+            return self::extract_main_content_fallback($html);
+        }
+
+        $xpath = new DOMXPath($doc);
+
+        // Container candidates, most specific first. XPath class matching pads
+        // with spaces so "entry-content" does not match "entry-content-teaser".
+        $candidates = [
+            '//main',
+            '//article',
+            "//*[@id='content' or @id='main-content' or @id='primary' or @id='main']",
+            "//*[contains(concat(' ', normalize-space(@class), ' '), ' entry-content ')"
+                . " or contains(concat(' ', normalize-space(@class), ' '), ' post-content ')"
+                . " or contains(concat(' ', normalize-space(@class), ' '), ' page-content ')"
+                . " or contains(concat(' ', normalize-space(@class), ' '), ' content-area ')"
+                . " or contains(concat(' ', normalize-space(@class), ' '), ' main-content ')]",
+            "//*[contains(concat(' ', normalize-space(@class), ' '), ' site-content ')]",
+        ];
+
+        // Boilerplate to remove from inside a selected container. <header> and
+        // <aside> are deliberately absent: themes wrap the post H1 in
+        // <header class="entry-header">, and an in-content <aside> is a pull
+        // quote or callout. Both are boilerplate only at page level, which is
+        // the fallback branch below.
+        $inner_boilerplate = 'script|style|noscript|nav|form|footer|template|iframe';
+
+        foreach ($candidates as $query) {
+            $nodes = $xpath->query($query);
+            if ($nodes === false || $nodes->length === 0) {
+                continue;
+            }
+
+            $node = $nodes->item(0);
+            self::remove_nodes($xpath, $node, $inner_boilerplate);
+
+            $content = self::inner_html($node);
+            if (mb_strlen(wp_strip_all_tags($content)) > 50) {
+                return trim($content);
+            }
+        }
+
+        // No usable container. Fall back to the body with the full strip — at
+        // this level the page <header> really is site chrome.
+        $body = $xpath->query('//body');
+        if ($body !== false && $body->length > 0) {
+            $node = $body->item(0);
+            self::remove_nodes($xpath, $node, $inner_boilerplate . '|header|aside');
+            return trim(self::inner_html($node));
+        }
+
+        return self::extract_main_content_fallback($html);
+    }
+
+    /**
+     * Remove every descendant of $context whose tag name is in $tags.
+     *
+     * @since    3.5.15
+     * @param    DOMXPath   $xpath
+     * @param    DOMNode    $context
+     * @param    string     $tags      Pipe-separated tag names.
+     * @return   void
+     */
+    private static function remove_nodes($xpath, $context, $tags)
+    {
+        $names = explode('|', $tags);
+        $conditions = [];
+        foreach ($names as $name) {
+            $conditions[] = "self::" . $name;
+        }
+
+        // Comments are nodes too. The regex implementation stripped them before
+        // matching; DOM serialisation would otherwise emit caching-plugin
+        // footprints and minifier banners straight into the ingest body.
+        $query = './/*[' . implode(' or ', $conditions) . '] | .//comment()';
+
+        $nodes = $xpath->query($query, $context);
+        if ($nodes === false) {
+            return;
+        }
+
+        // Snapshot before mutating. DOMXPath::query() already returns a static
+        // list (unlike getElementsByTagName), so this is belt-and-braces rather
+        // than load-bearing — but removing while iterating a DOMNodeList is a
+        // trap worth not re-learning.
+        $doomed = [];
+        foreach ($nodes as $node) {
+            $doomed[] = $node;
+        }
+        foreach ($doomed as $node) {
+            if ($node->parentNode !== null) {
+                $node->parentNode->removeChild($node);
+            }
+        }
+    }
+
+    /**
+     * Serialise a node's children (inner HTML).
+     *
+     * @since    3.5.15
+     * @param    DOMNode   $node
+     * @return   string
+     */
+    private static function inner_html($node)
+    {
+        $html = '';
+        foreach ($node->childNodes as $child) {
+            $html .= $node->ownerDocument->saveHTML($child);
+        }
+        return $html;
+    }
+
+    /**
+     * Body-level regex strip, used only when DOM parsing is unavailable.
+     *
+     * @since    3.5.15
+     * @param    string    $html
+     * @return   string
+     */
+    private static function extract_main_content_fallback($html)
+    {
         $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
         $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
         $html = preg_replace('/<!--.*?-->/s', '', $html);
         $html = preg_replace('/<noscript\b[^>]*>.*?<\/noscript>/is', '', $html);
+        $html = preg_replace('/<header\b[^>]*>.*?<\/header>/is', '', $html);
+        $html = preg_replace('/<footer\b[^>]*>.*?<\/footer>/is', '', $html);
+        $html = preg_replace('/<nav\b[^>]*>.*?<\/nav>/is', '', $html);
+        $html = preg_replace('/<aside\b[^>]*>.*?<\/aside>/is', '', $html);
+        $html = preg_replace('/<form\b[^>]*>.*?<\/form>/is', '', $html);
 
-        // Remove common boilerplate elements
-        $boilerplate_patterns = [
-            '/<header\b[^>]*>.*?<\/header>/is',
-            '/<footer\b[^>]*>.*?<\/footer>/is',
-            '/<nav\b[^>]*>.*?<\/nav>/is',
-            '/<aside\b[^>]*>.*?<\/aside>/is',
-            '/<form\b[^>]*>.*?<\/form>/is',
-        ];
-
-        foreach ($boilerplate_patterns as $pattern) {
-            $html = preg_replace($pattern, '', $html);
-        }
-
-        // Try to find main content container
-        $content_selectors = [
-            // Standard HTML5
-            '/<main\b[^>]*>(.*?)<\/main>/is',
-            '/<article\b[^>]*>(.*?)<\/article>/is',
-            // Common content IDs
-            '/<[^>]+id=["\'](?:content|main-content|primary|main)["\'][^>]*>(.*?)<\/[^>]+>/is',
-            // Common content classes
-            '/<[^>]+class=["\'][^"\']*\b(?:entry-content|post-content|page-content|content-area|main-content)[^"\']*["\'][^>]*>(.*?)<\/[^>]+>/is',
-            // WordPress specific
-            '/<div[^>]+class=["\'][^"\']*\bsite-content[^"\']*["\'][^>]*>(.*?)<\/div>/is',
-        ];
-
-        foreach ($content_selectors as $selector) {
-            if (preg_match($selector, $html, $matches)) {
-                $content = $matches[1];
-                // Validate it's not empty
-                if (mb_strlen(wp_strip_all_tags($content)) > 50) {
-                    return trim($content);
-                }
-            }
-        }
-
-        // Fallback: extract body content
         if (preg_match('/<body\b[^>]*>(.*?)<\/body>/is', $html, $matches)) {
             return trim($matches[1]);
         }
 
-        // Last resort: return cleaned HTML
         return trim($html);
     }
 
