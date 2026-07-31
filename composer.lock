@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ffa3b8c2b2254060823a8f98120141d2",
+    "content-hash": "feea2b5991fb3736f3a2b24fe5a904a5",
     "packages": [
         {
             "name": "jaybizzle/crawler-detect",

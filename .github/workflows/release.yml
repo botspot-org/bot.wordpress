@@ -1,20 +1,142 @@
 name: Release
 
+# Merging a PR into `release` ships the plugin. The git tag is created at the
+# END, on success, so a tag always means "this shipped" rather than "someone
+# intended to ship this".
+#
+# See RELEASING.md for the process and the failure-recovery table.
+#
+# Ordering principle: reversible steps first, the irreversible step behind an
+# approval gate, and the mutable pointer customers pull from last.
+#
+#   verify   reuse the full CI gate (static, package, plugin-check)
+#   guard    version agreement, changelog, wp.org tag still free
+#   publish  GCS versioned upload (reversible; nothing points at it yet)
+#   -- manual approval --
+#   wporg    svn trunk + tags/<version> in one commit  <- IRREVERSIBLE
+#   finalize GCS latest/ promotion, git tag, GitHub Release
+#
+# wp.org tags are immutable and publicly archived, and sites with auto-updates
+# pull them within hours. That is the only step here with no recovery path, so
+# it is the only one gated on a human.
+
 on:
   push:
     branches: [release]
+  workflow_dispatch:
+    inputs:
+      skip_wporg:
+        description: 'Skip the WordPress.org publish (GCS + GitHub Release only)'
+        type: boolean
+        default: false
 
 env:
   PLUGIN_SLUG: botspot
   BUCKET: botspot-plugins
 
+# Never run two releases at once, and never cancel one midway: a cancelled run
+# between the wp.org commit and the tag would leave the release half-finished.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
-  release:
+  # The same jobs that gate every PR. Reused rather than duplicated so the
+  # release path cannot drift from what reviewers saw.
+  verify:
+    name: Verify
+    uses: ./.github/workflows/ci.yml
+
+  guard:
+    name: Release guard
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve and cross-check the version
+        id: version
+        run: |
+          set -euo pipefail
+          header=$(grep -m1 ' \* Version:' botspot.php | awk '{print $3}')
+          docblock=$(grep -m1 '@version' botspot.php | awk '{print $3}')
+          constant=$(grep -m1 "define('BSPT_VERSION'" botspot.php | sed "s/.*'\([0-9.]*\)'.*/\1/")
+          stable=$(grep -m1 '^Stable tag:' readme.txt | awk '{print $3}')
+          echo "header=$header docblock=$docblock constant=$constant stable=$stable"
+          if [ "$header" != "$docblock" ] || [ "$header" != "$constant" ] || [ "$header" != "$stable" ]; then
+            echo "::error::Version metadata disagrees across botspot.php and readme.txt"
+            exit 1
+          fi
+          if ! echo "$header" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '$header' is not X.Y.Z"
+            exit 1
+          fi
+          echo "version=$header" >> "$GITHUB_OUTPUT"
+
+      # wp.org renders this on the public page, and a release with no changelog
+      # entry is indistinguishable from one that was never released.
+      - name: Require a changelog entry
+        run: |
+          set -euo pipefail
+          V="${{ steps.version.outputs.version }}"
+          grep -qE "^= ${V}( |$)" readme.txt \
+            || { echo "::error::readme.txt has no '= ${V}' changelog entry"; exit 1; }
+
+      # The git tag is created at the end of a successful release, so an existing
+      # tag means this version already shipped.
+      - name: Refuse to re-release an existing version
+        run: |
+          set -euo pipefail
+          V="v${{ steps.version.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$V" >/dev/null 2>&1; then
+            echo "::error::Tag $V already exists — bump the version instead of re-releasing"
+            exit 1
+          fi
+
+      # Releasing a commit that is not on main means shipping code that skipped
+      # main's review.
+      - name: Require the commit to be on main
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_SHA is not an ancestor of origin/main"
+            exit 1
+          fi
+
+      # wp.org tags are immutable, so checking here — before anything is
+      # published anywhere — is much cheaper than discovering it mid-release.
+      #
+      # Skipped when skip_wporg is set, which is the recovery path for "wp.org
+      # published but a later stage failed": the tag legitimately exists by
+      # then, and requiring it to be free would block the re-run.
+      - name: Check the WordPress.org tag is free
+        id: wporg
+        if: ${{ !inputs.skip_wporg }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq subversion
+          V="${{ steps.version.outputs.version }}"
+          if svn ls "https://plugins.svn.wordpress.org/${PLUGIN_SLUG}/tags/" | grep -qx "${V}/"; then
+            echo "::error::wp.org tags/${V} already exists — it is immutable; bump the version"
+            exit 1
+          fi
+          echo "wp.org tags/${V} is free"
+
+  # Reversible: the versioned GCS path is not what any install points at.
+  build:
+    name: Build and stage
+    needs: [verify, guard]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
-
     steps:
       - uses: actions/checkout@v7
 
@@ -22,22 +144,30 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          coverage: none
           tools: composer:v2
-
-      - name: Get version from plugin header
-        id: version
-        run: |
-          VERSION=$(grep "Version:" botspot.php | awk '{print $3}' | head -1)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Clear composer GitHub token
         run: composer config --global --unset github-oauth.github.com || true
 
-      - name: Build production zip
-        run: TARGET=production ./build.sh
+      - name: Build production and staging zips
+        run: |
+          ./build.sh --production
+          ./build.sh --staging
 
-      - name: Build staging zip
-        run: TARGET=staging ./build.sh
+      # build.sh is only reproducible with Strauss's include_modified_date
+      # disabled; without it every build differs and SVN sees phantom diffs.
+      - name: Assert the build is reproducible
+        run: |
+          set -euo pipefail
+          V="${{ needs.guard.outputs.version }}"
+          cp "dist/${PLUGIN_SLUG}-${V}.zip" /tmp/a.zip
+          ./build.sh --production >/dev/null
+          mkdir -p /tmp/ax /tmp/bx
+          unzip -q /tmp/a.zip -d /tmp/ax
+          unzip -q "dist/${PLUGIN_SLUG}-${V}.zip" -d /tmp/bx
+          diff -r /tmp/ax /tmp/bx \
+            || { echo "::error::build.sh is not reproducible (check extra.strauss.include_modified_date)"; exit 1; }
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -48,30 +178,176 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v3
 
-      - name: Upload to versioned path
+      - name: Upload to the versioned path
         run: |
+          V="${{ needs.guard.outputs.version }}"
           gcloud storage cp \
-            "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}.zip" \
-            "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}-staging.zip" \
-            "gs://${BUCKET}/${PLUGIN_SLUG}/v${{ steps.version.outputs.version }}/"
+            "dist/${PLUGIN_SLUG}-${V}.zip" \
+            "dist/${PLUGIN_SLUG}-${V}-staging.zip" \
+            "gs://${BUCKET}/${PLUGIN_SLUG}/v${V}/"
 
+      # Carried to later jobs so wp.org publishes the exact bytes verified here,
+      # rather than a rebuild that could differ.
+      - name: Upload zips as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-zips
+          path: dist/*.zip
+          retention-days: 30
+
+  # The irreversible step. The `wporg` environment carries the required
+  # reviewer and holds SVN_PW, so no earlier job can read that credential.
+  wporg:
+    name: Publish to WordPress.org
+    needs: [guard, build]
+    if: ${{ !inputs.skip_wporg }}
+    runs-on: ubuntu-latest
+    environment: wporg
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-zips
+          path: dist
+
+      - name: Install subversion
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq subversion
+
+      - name: Publish trunk and the tag in one commit
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PW: ${{ secrets.SVN_PW }}
+        run: |
+          set -euo pipefail
+          V="${{ needs.guard.outputs.version }}"
+          SVN_URL="https://plugins.svn.wordpress.org/${PLUGIN_SLUG}"
+          ZIP="dist/${PLUGIN_SLUG}-${V}.zip"
+
+          # Sparse checkout: tags/ at depth empty, so we do not download every
+          # historical release just to add one. svn cp still records a proper
+          # copy-with-history from this state.
+          svn co --depth empty "$SVN_URL" svn-wc -q
+          ( cd svn-wc && svn up --set-depth infinity trunk assets -q && svn up --set-depth empty tags -q )
+
+          mkdir -p /tmp/rel && unzip -q "$ZIP" -d /tmp/rel
+
+          # Trailing slash on the source copies the CONTENTS of botspot/.
+          # Without it you get trunk/botspot/botspot.php, which breaks every
+          # download while looking fine in SVN.
+          rsync -a --delete --exclude='.svn' "/tmp/rel/${PLUGIN_SLUG}/" svn-wc/trunk/
+          rsync -a --delete --exclude='.svn' assets/ svn-wc/assets/
+
+          cd svn-wc
+          # --force is required: trunk/ and assets/ are already versioned.
+          svn add --force --parents --depth infinity -q trunk assets
+          # Removing a file from disk does not remove it from SVN.
+          svn status trunk assets | awk '/^!/ {print $2}' | while read -r f; do
+            [ -n "$f" ] && svn rm --force -q "$f"
+          done
+
+          test -f trunk/botspot.php
+          test -f trunk/readme.txt
+          test ! -d "trunk/${PLUGIN_SLUG}"
+          grep -q "^Stable tag: ${V}$" trunk/readme.txt
+          if svn status | grep -iE 'dist/|/tests/|node_modules|phpunit|\.git|\.DS_Store|strauss|squizlabs'; then
+            echo "::error::junk staged for commit"; exit 1
+          fi
+
+          svn status
+
+          # A lazy server-side copy: the tag is a reference to trunk, so a full
+          # snapshot transmits almost nothing.
+          svn cp trunk "tags/${V}"
+
+          # One commit for trunk + tag: wp.org rebuilds the zips for EVERY
+          # version on every commit.
+          # --password-from-stdin keeps the secret out of the process list.
+          printf '%s' "$SVN_PW" | svn ci -m "Release ${V}" \
+            --username "$SVN_USERNAME" --password-from-stdin \
+            --non-interactive --no-auth-cache
+
+      - name: Confirm the tag exists remotely
+        run: |
+          set -euo pipefail
+          V="${{ needs.guard.outputs.version }}"
+          svn ls "https://plugins.svn.wordpress.org/${PLUGIN_SLUG}/tags/" | grep -qx "${V}/" \
+            || { echo "::error::tags/${V} missing after commit"; exit 1; }
+          echo "Published https://wordpress.org/plugins/${PLUGIN_SLUG}/ ${V}"
+
+  # Only now move the mutable pointer and record the receipt. If wp.org failed,
+  # `latest/` still serves the previous version and no tag is created.
+  finalize:
+    name: Promote and tag
+    needs: [guard, build, wporg]
+    # `!cancelled()` rather than `always()`: if someone cancels mid-release we
+    # must not promote latest/ or create a tag claiming success.
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.wporg.result == 'success' || needs.wporg.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-zips
+          path: dist
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      # latest/ is what live installs pull from, so it moves only after
+      # everything else has succeeded.
       - name: Promote to latest
         run: |
-          gcloud storage cp "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}.zip" "gs://${BUCKET}/${PLUGIN_SLUG}/latest/${PLUGIN_SLUG}.zip"
-          gcloud storage cp "dist/${PLUGIN_SLUG}-${{ steps.version.outputs.version }}-staging.zip" "gs://${BUCKET}/${PLUGIN_SLUG}/latest/${PLUGIN_SLUG}-staging.zip"
+          set -euo pipefail
+          V="${{ needs.guard.outputs.version }}"
+          gcloud storage cp "dist/${PLUGIN_SLUG}-${V}.zip" \
+            "gs://${BUCKET}/${PLUGIN_SLUG}/latest/${PLUGIN_SLUG}.zip"
+          gcloud storage cp "dist/${PLUGIN_SLUG}-${V}-staging.zip" \
+            "gs://${BUCKET}/${PLUGIN_SLUG}/latest/${PLUGIN_SLUG}-staging.zip"
 
-      - name: Create git tag
+      # The tag is the receipt: it exists because the release succeeded.
+      - name: Tag the release
         run: |
+          set -euo pipefail
+          V="${{ needs.guard.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.version.outputs.version }}" -m "${{ env.PLUGIN_SLUG }} ${{ steps.version.outputs.version }}" || true
-          git push origin "v${{ steps.version.outputs.version }}" || true
+          git tag -a "v${V}" -m "${PLUGIN_SLUG} ${V}"
+          git push origin "v${V}"
 
-      - name: Create GitHub Release
+      - name: Create the GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v${{ steps.version.outputs.version }}
+          tag_name: v${{ needs.guard.outputs.version }}
+          name: ${{ env.PLUGIN_SLUG }} ${{ needs.guard.outputs.version }}
           files: |
-            dist/${{ env.PLUGIN_SLUG }}-${{ steps.version.outputs.version }}.zip
-            dist/${{ env.PLUGIN_SLUG }}-${{ steps.version.outputs.version }}-staging.zip
+            dist/${{ env.PLUGIN_SLUG }}-${{ needs.guard.outputs.version }}.zip
+            dist/${{ env.PLUGIN_SLUG }}-${{ needs.guard.outputs.version }}-staging.zip
           generate_release_notes: true
+
+      - name: Summarise
+        run: |
+          V="${{ needs.guard.outputs.version }}"
+          {
+            echo "### Released ${PLUGIN_SLUG} ${V}"
+            echo
+            if [ "${{ needs.wporg.result }}" = "success" ]; then
+              echo "- wp.org: https://wordpress.org/plugins/${PLUGIN_SLUG}/"
+            else
+              echo "- wp.org: **skipped**"
+            fi
+            echo "- GCS: \`gs://${BUCKET}/${PLUGIN_SLUG}/v${V}/\` and \`latest/\`"
+            echo "- Tag: \`v${V}\`"
+            echo
+            echo "The wp.org zip can take up to 6h to rebuild. Then run \`just verify-published\`."
+          } >> "$GITHUB_STEP_SUMMARY"

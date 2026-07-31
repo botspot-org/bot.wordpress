@@ -146,6 +146,12 @@ Creates a production distributable zip in `dist/botspot-{version}.zip`. Use `TAR
 
 The package includes `readme.txt`, `LICENSE.txt`, `THIRD-PARTY-LICENSES.txt`, and Strauss-prefixed Composer runtime dependencies.
 
+`just --list` shows the full set of build, QA, and release tasks.
+
+## Releasing
+
+Merging a PR from `main` into `release` publishes to WordPress.org and GCS, then tags. See [RELEASING.md](RELEASING.md).
+
 ## Debugging
 
 Enable Debug Mode in the Display & Injection tab. Errors are always logged to PHP `error_log` regardless of `WP_DEBUG`. Recent errors display as admin notices on the dashboard, settings page, and post edit screens.

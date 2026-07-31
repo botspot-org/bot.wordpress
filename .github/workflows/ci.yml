@@ -5,6 +5,9 @@ on:
     branches: [main, release]
   push:
     branches: [main]
+  # Lets release.yml run these exact gates before publishing, so the release
+  # path cannot drift from the PR path.
+  workflow_call:
 
 permissions:
   contents: read
@@ -14,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Tier 0 + 1 from docs/verification.md: metadata, syntax, PHPCS, unit tests.
+  # Tier 0 + 1: version metadata, PHP syntax, PHPCS, unit tests.
   static:
     name: Static analysis
     runs-on: ubuntu-latest
@@ -56,7 +59,7 @@ jobs:
       - name: Unit tests
         run: vendor/bin/phpunit
 
-  # Tier 0 + 3: version metadata agreement and packaged-zip invariants.
+  # Version metadata agreement and packaged-zip invariants.
   package:
     name: Package integrity
     runs-on: ubuntu-latest
@@ -132,7 +135,7 @@ jobs:
           path: dist/*.zip
           retention-days: 14
 
-  # Tier 2: the check WordPress.org reviewers actually run. Gates the packaged
+  # The check WordPress.org reviewers actually run. Gates the packaged
   # output, not the source tree, because reviewers only ever see the zip.
   plugin-check:
     name: WordPress.org Plugin Check
