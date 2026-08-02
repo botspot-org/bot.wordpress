@@ -19,6 +19,7 @@
 # Internal docs (not for public repo)
 docs/
 context/
+.superpowers/
 # Configuration
 wp-config.php
 
