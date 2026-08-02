@@ -428,6 +428,10 @@ class Bspt_Page_Builder
     private static $skip_key_names = [
         'id', 'ids', 'url', 'link', 'class', 'icon', 'image', 'align',
         'size', 'width', 'height', 'template', 'shortcode', 'type', 'target',
+        // Code-widget bodies (Elementor 'code', 'custom_code', 'php_snippet').
+        // Raw JS/PHP clears every prose filter but is not copy, and shipping it
+        // pollutes the enrichment corpus.
+        'code', 'snippet', 'script',
     ];
 
     /**
@@ -742,6 +746,15 @@ class Bspt_Page_Builder
      */
     private static function clean_content($content)
     {
+        // Drop <script>/<style> blocks and their bodies. The old per-widget
+        // allowlist never read a key that could hold them; harvesting by value
+        // shape does, so an Elementor HTML widget would otherwise ship its
+        // JavaScript as page copy. Runs before entity decoding so an encoded
+        // tag cannot slip through by decoding into one afterwards.
+        $content = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $content);
+        // Unclosed opener: drop the rest rather than keep a dangling body.
+        $content = preg_replace('#<(script|style)\b[^>]*>.*#is', '', $content);
+
         // Decode HTML entities
         $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
 

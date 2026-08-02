@@ -610,4 +610,87 @@ class PageBuilderExtractionTest extends TestCase
         $this->assertStringContainsString('Cold brew.', $result);
         $this->assertStringNotContainsString('[et_pb_', $result);
     }
+
+    /**
+     * Harvesting by value shape reaches keys the old per-widget allowlist never
+     * read. An Elementor HTML widget holds raw markup under 'html', so without
+     * stripping, its <script> body shipped as page copy.
+     */
+    public function test_script_body_is_not_harvested_as_copy()
+    {
+        $data = wp_json_encode([
+            [
+                'elType' => 'widget',
+                'widgetType' => 'html',
+                'settings' => [
+                    'html' => '<script>alert("xss")</script><p>Visible copy here.</p>',
+                ],
+            ],
+        ]);
+
+        $post = $this->make_post(218, 'short', [
+            '_elementor_edit_mode' => 'builder',
+            '_elementor_data' => $data,
+        ]);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('Visible copy here.', $result);
+        $this->assertStringNotContainsString('<script', $result);
+        $this->assertStringNotContainsString('alert(', $result);
+    }
+
+    public function test_style_body_is_not_harvested_as_copy()
+    {
+        $data = wp_json_encode([
+            [
+                'elType' => 'widget',
+                'widgetType' => 'html',
+                'settings' => [
+                    'html' => '<style>.hero { color: red; }</style><p>Real sentence of copy.</p>',
+                ],
+            ],
+        ]);
+
+        $post = $this->make_post(219, 'short', [
+            '_elementor_edit_mode' => 'builder',
+            '_elementor_data' => $data,
+        ]);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('Real sentence of copy.', $result);
+        $this->assertStringNotContainsString('<style', $result);
+        $this->assertStringNotContainsString('color: red', $result);
+    }
+
+    /**
+     * Code-widget bodies clear every prose filter but are not copy. Shipping
+     * them pollutes the enrichment corpus downstream.
+     */
+    public function test_code_widget_body_is_skipped()
+    {
+        $data = wp_json_encode([
+            [
+                'elType' => 'widget',
+                'widgetType' => 'code',
+                'settings' => [
+                    'code' => 'function foo() { return 42; }',
+                    'php_snippet' => 'echo get_the_title();',
+                    'title' => 'Our Approach',
+                ],
+            ],
+        ]);
+
+        $post = $this->make_post(220, 'short', [
+            '_elementor_edit_mode' => 'builder',
+            '_elementor_data' => $data,
+        ]);
+
+        $result = Bspt_Page_Builder::extract_content($post);
+
+        $this->assertStringContainsString('Our Approach', $result);
+        $this->assertStringNotContainsString('function foo', $result);
+        $this->assertStringNotContainsString('get_the_title', $result);
+    }
 }
