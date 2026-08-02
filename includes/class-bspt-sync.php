@@ -429,8 +429,27 @@ class Bspt_Sync
         $source_jsonld = self::extract_page_jsonld($post->ID);
 
         // Fetch rendered HTML from the live page for reliable content extraction
-        $content = self::fetch_rendered_content($post, $permalink);
+        list($content, $content_source) = self::fetch_rendered_content($post, $permalink);
         $page_builder = Bspt_Page_Builder::detect_builder($post->ID);
+
+        // Record which path produced the body so a site that silently falls back
+        // on every post (basic auth, unreachable permalink) is inspectable
+        // without WP_DEBUG. Write only on change: build_ingest_payload also runs
+        // in the bulk loop (see :977), and an unconditional update_post_meta
+        // there is one extra postmeta write per post per run. In steady state
+        // the value does not change, so this costs a cached read and no write.
+        if ($content_source !== get_post_meta($post->ID, "_bspt_content_source", true)) {
+            update_post_meta($post->ID, "_bspt_content_source", $content_source);
+        }
+
+        if ($content_source !== "rendered_fetch") {
+            self::log_debug(sprintf(
+                "Post %d: content came from %s (builder: %s)",
+                $post->ID,
+                $content_source,
+                $page_builder === null ? "none" : $page_builder
+            ));
+        }
 
         $payload = [
             "source_type" => "wordpress",
@@ -451,7 +470,6 @@ class Bspt_Sync
                 "format" => "html",
                 "content" => $content,
                 "excerpt" => $excerpt,
-                "page_builder" => $page_builder,
             ],
             "structured_data" => [
                 "schema_type" => "wordpress_" . $post->post_type,
@@ -461,6 +479,13 @@ class Bspt_Sync
                     "status" => $post->post_status,
                     "featured_image" => $featured_image ?: null,
                     "source_jsonld" => $source_jsonld,
+                    // body.page_builder was dropped on arrival: ContentBody in
+                    // locus-core declares only format/content/excerpt and does
+                    // not allow extras. structured_data.data is typed
+                    // dict[str, Any] and connector_ingest.py copies it verbatim
+                    // into the artifact's source_data, so these survive.
+                    "page_builder" => $page_builder,
+                    "content_source" => $content_source,
                 ],
             ],
             "media" => $media,
@@ -483,13 +508,17 @@ class Bspt_Sync
      * @since    2.10.0
      * @param    WP_Post   $post       The post object.
      * @param    string    $permalink  The post permalink.
-     * @return   string                Extracted HTML content.
+     * @return   array                 [ string $content, string $source ] where
+     *                                 $source is one of rendered_fetch,
+     *                                 not_published, fetch_error,
+     *                                 fetch_http_error, fetch_empty,
+     *                                 extract_too_short.
      */
     private static function fetch_rendered_content($post, $permalink)
     {
         // Skip fetch for non-published posts (preview URLs won't work)
         if ($post->post_status !== 'publish') {
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'not_published'];
         }
 
         // Add cache-busting param to ensure fresh content
@@ -510,7 +539,7 @@ class Bspt_Sync
                 $post->ID,
                 $response->get_error_message()
             ));
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'fetch_error'];
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -520,12 +549,12 @@ class Bspt_Sync
                 $post->ID,
                 $status_code
             ));
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'fetch_http_error'];
         }
 
         $html = wp_remote_retrieve_body($response);
         if (empty($html)) {
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'fetch_empty'];
         }
 
         // Extract main content from the HTML
@@ -539,17 +568,19 @@ class Bspt_Sync
                 $post->ID,
                 mb_strlen($stripped)
             ));
-            return Bspt_Page_Builder::extract_content($post);
+            return [Bspt_Page_Builder::extract_content($post), 'extract_too_short'];
         }
 
-        return $content;
+        return [$content, 'rendered_fetch'];
     }
 
     /**
      * Extract main content from full page HTML
      *
-     * Strips header, footer, nav, sidebar, scripts, styles, and other boilerplate.
-     * Looks for common content container selectors.
+     * Parses the document, picks the most likely content container, and strips
+     * boilerplate from within it. Regex container matching cannot express
+     * "the matching close tag", so a lazy capture silently truncated content at
+     * the first closing tag of any kind; DOM traversal has no such failure mode.
      *
      * @since    2.10.0
      * @param    string    $html    Full page HTML.
@@ -557,54 +588,175 @@ class Bspt_Sync
      */
     private static function extract_main_content($html)
     {
-        // Remove scripts, styles, and comments first
+        // ponytail: ext-dom is bundled with every mainstream PHP build, but it
+        // can be compiled out. Degrade to the old body-level strip rather than
+        // fatal on such a host.
+        if (!class_exists('DOMDocument')) {
+            return self::extract_main_content_fallback($html);
+        }
+
+        $doc = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        // loadHTML() assumes Latin-1 without an encoding declaration; the XML
+        // prolog forces UTF-8 without depending on the page having a meta tag.
+        $loaded = $doc->loadHTML(
+            '<?xml encoding="UTF-8">' . $html,
+            LIBXML_NONET | LIBXML_NOWARNING | LIBXML_NOERROR
+        );
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (!$loaded) {
+            return self::extract_main_content_fallback($html);
+        }
+
+        $xpath = new DOMXPath($doc);
+
+        // Container candidates, most specific first, paired with whether
+        // <aside> inside them is boilerplate rather than article content.
+        // //main, //article and the entry-content-class selector bound an
+        // article element directly, so an <aside> inside is a pull quote.
+        // The #content/#main/.site-content selectors are page-level wrappers
+        // in classic themes: they wrap the article AND <aside id="secondary">
+        // (the widget sidebar), so <aside> there is boilerplate and must go.
+        // XPath class matching pads with spaces so "entry-content" does not
+        // match "entry-content-teaser".
+        $candidates = [
+            ['query' => '//main', 'strip_aside' => false],
+            ['query' => '//article', 'strip_aside' => false],
+            [
+                'query' => "//*[@id='content' or @id='main-content' or @id='primary' or @id='main']",
+                'strip_aside' => true,
+            ],
+            [
+                'query' => "//*[contains(concat(' ', normalize-space(@class), ' '), ' entry-content ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' post-content ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' page-content ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' content-area ')"
+                    . " or contains(concat(' ', normalize-space(@class), ' '), ' main-content ')]",
+                'strip_aside' => false,
+            ],
+            [
+                'query' => "//*[contains(concat(' ', normalize-space(@class), ' '), ' site-content ')]",
+                'strip_aside' => true,
+            ],
+        ];
+
+        // Boilerplate to remove from inside a selected container. <header> is
+        // deliberately absent: themes wrap the post H1 in
+        // <header class="entry-header">, which is boilerplate only at page
+        // level (the fallback branch below).
+        $inner_boilerplate = 'script|style|noscript|nav|form|footer|template|iframe';
+
+        foreach ($candidates as $candidate) {
+            $nodes = $xpath->query($candidate['query']);
+            if ($nodes === false || $nodes->length === 0) {
+                continue;
+            }
+
+            $node = $nodes->item(0);
+            $tags = $candidate['strip_aside'] ? $inner_boilerplate . '|aside' : $inner_boilerplate;
+            self::remove_nodes($xpath, $node, $tags);
+
+            $content = self::inner_html($node);
+            if (mb_strlen(wp_strip_all_tags($content)) > 50) {
+                return trim($content);
+            }
+        }
+
+        // No usable container. Fall back to the body with the full strip — at
+        // this level the page <header> really is site chrome.
+        $body = $xpath->query('//body');
+        if ($body !== false && $body->length > 0) {
+            $node = $body->item(0);
+            self::remove_nodes($xpath, $node, $inner_boilerplate . '|header|aside');
+            return trim(self::inner_html($node));
+        }
+
+        return self::extract_main_content_fallback($html);
+    }
+
+    /**
+     * Remove every descendant of $context whose tag name is in $tags.
+     *
+     * @since    3.5.15
+     * @param    DOMXPath   $xpath
+     * @param    DOMNode    $context
+     * @param    string     $tags      Pipe-separated tag names.
+     * @return   void
+     */
+    private static function remove_nodes($xpath, $context, $tags)
+    {
+        $names = explode('|', $tags);
+        $conditions = [];
+        foreach ($names as $name) {
+            $conditions[] = "self::" . $name;
+        }
+
+        // Comments are nodes too. The regex implementation stripped them before
+        // matching; DOM serialisation would otherwise emit caching-plugin
+        // footprints and minifier banners straight into the ingest body.
+        $query = './/*[' . implode(' or ', $conditions) . '] | .//comment()';
+
+        $nodes = $xpath->query($query, $context);
+        if ($nodes === false) {
+            return;
+        }
+
+        // Snapshot before mutating. DOMXPath::query() already returns a static
+        // list (unlike getElementsByTagName), so this is belt-and-braces rather
+        // than load-bearing — but removing while iterating a DOMNodeList is a
+        // trap worth not re-learning.
+        $doomed = [];
+        foreach ($nodes as $node) {
+            $doomed[] = $node;
+        }
+        foreach ($doomed as $node) {
+            if ($node->parentNode !== null) {
+                $node->parentNode->removeChild($node);
+            }
+        }
+    }
+
+    /**
+     * Serialise a node's children (inner HTML).
+     *
+     * @since    3.5.15
+     * @param    DOMNode   $node
+     * @return   string
+     */
+    private static function inner_html($node)
+    {
+        $html = '';
+        foreach ($node->childNodes as $child) {
+            $html .= $node->ownerDocument->saveHTML($child);
+        }
+        return $html;
+    }
+
+    /**
+     * Body-level regex strip, used only when DOM parsing is unavailable.
+     *
+     * @since    3.5.15
+     * @param    string    $html
+     * @return   string
+     */
+    private static function extract_main_content_fallback($html)
+    {
         $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
         $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
         $html = preg_replace('/<!--.*?-->/s', '', $html);
         $html = preg_replace('/<noscript\b[^>]*>.*?<\/noscript>/is', '', $html);
+        $html = preg_replace('/<header\b[^>]*>.*?<\/header>/is', '', $html);
+        $html = preg_replace('/<footer\b[^>]*>.*?<\/footer>/is', '', $html);
+        $html = preg_replace('/<nav\b[^>]*>.*?<\/nav>/is', '', $html);
+        $html = preg_replace('/<aside\b[^>]*>.*?<\/aside>/is', '', $html);
+        $html = preg_replace('/<form\b[^>]*>.*?<\/form>/is', '', $html);
 
-        // Remove common boilerplate elements
-        $boilerplate_patterns = [
-            '/<header\b[^>]*>.*?<\/header>/is',
-            '/<footer\b[^>]*>.*?<\/footer>/is',
-            '/<nav\b[^>]*>.*?<\/nav>/is',
-            '/<aside\b[^>]*>.*?<\/aside>/is',
-            '/<form\b[^>]*>.*?<\/form>/is',
-        ];
-
-        foreach ($boilerplate_patterns as $pattern) {
-            $html = preg_replace($pattern, '', $html);
-        }
-
-        // Try to find main content container
-        $content_selectors = [
-            // Standard HTML5
-            '/<main\b[^>]*>(.*?)<\/main>/is',
-            '/<article\b[^>]*>(.*?)<\/article>/is',
-            // Common content IDs
-            '/<[^>]+id=["\'](?:content|main-content|primary|main)["\'][^>]*>(.*?)<\/[^>]+>/is',
-            // Common content classes
-            '/<[^>]+class=["\'][^"\']*\b(?:entry-content|post-content|page-content|content-area|main-content)[^"\']*["\'][^>]*>(.*?)<\/[^>]+>/is',
-            // WordPress specific
-            '/<div[^>]+class=["\'][^"\']*\bsite-content[^"\']*["\'][^>]*>(.*?)<\/div>/is',
-        ];
-
-        foreach ($content_selectors as $selector) {
-            if (preg_match($selector, $html, $matches)) {
-                $content = $matches[1];
-                // Validate it's not empty
-                if (mb_strlen(wp_strip_all_tags($content)) > 50) {
-                    return trim($content);
-                }
-            }
-        }
-
-        // Fallback: extract body content
         if (preg_match('/<body\b[^>]*>(.*?)<\/body>/is', $html, $matches)) {
             return trim($matches[1]);
         }
 
-        // Last resort: return cleaned HTML
         return trim($html);
     }
 

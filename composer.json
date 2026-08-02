@@ -5,6 +5,7 @@
   "license": "GPL-2.0-or-later",
   "require": {
     "php": ">=7.4",
+    "ext-dom": "*",
     "jaybizzle/crawler-detect": "^1.2",
     "monperrus/crawler-user-agents": "dev-master"
   },

@@ -388,8 +388,15 @@ check-version:
         exit 1
     fi
 
-# Fast local gate: no network, no browser. Run before pushing.[group('qa')]
-verify: check-version check-syntax check
+# Unit tests. No WordPress install required; stubs live in tests/bootstrap.php.
+[group('qa')]
+test:
+    @test -x vendor/bin/phpunit || composer install
+    vendor/bin/phpunit
+
+# Fast local gate: no network, no browser. Run before pushing.
+[group('qa')]
+verify: check-version check-syntax check test
     @echo "Local verification passed."
 
 # Full pre-submission gate incl. official Plugin Check. Run before submitting.

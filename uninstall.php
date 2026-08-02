@@ -101,6 +101,7 @@ $wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_artifact_id"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_enrichment_tier"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_enrichment_status"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_pre_enrich_jsonld"]);
+$wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_content_source"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_impressions_pending"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_impressions_inflight"]);
 $wpdb->delete($wpdb->postmeta, ["meta_key" => "_bspt_impressions_inflight_batch"]);
