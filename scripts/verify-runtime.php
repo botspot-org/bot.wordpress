@@ -56,7 +56,22 @@ echo "\n=== 1. Plugin loads and registers its hooks ===\n";
 
 check('plugin is active', is_plugin_active('botspot/botspot.php'));
 check('BSPT_VERSION is defined', defined('BSPT_VERSION'));
-check('version constant matches 3.5.14', defined('BSPT_VERSION') && BSPT_VERSION === '3.5.14');
+
+// Read the expected version from the plugin header rather than hardcoding it.
+// A literal here is a fifth place a release has to remember to bump, and it is
+// the one `just check-version` cannot see — so it only ever fails later, inside
+// Playground, long after the other four were updated together.
+$bspt_plugin_file = WP_PLUGIN_DIR . '/botspot/botspot.php';
+$bspt_header_version = '';
+if (file_exists($bspt_plugin_file)) {
+    $bspt_plugin_data = get_plugin_data($bspt_plugin_file, false, false);
+    $bspt_header_version = isset($bspt_plugin_data['Version']) ? $bspt_plugin_data['Version'] : '';
+}
+check(
+    'version constant matches the plugin header',
+    $bspt_header_version !== '' && defined('BSPT_VERSION') && BSPT_VERSION === $bspt_header_version,
+    'header=' . $bspt_header_version . ' constant=' . (defined('BSPT_VERSION') ? BSPT_VERSION : 'undefined')
+);
 check('injector class loaded', class_exists('Bspt_Content_Injector'));
 check('public class loaded', class_exists('Bspt_Public'));
 check('cache class loaded', class_exists('Bspt_Cache'));
