@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.5.14
+Stable tag: 3.5.15
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,14 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.5.15 =
+
+* Page-builder pages now sync their real content. Divi and WPBakery were shipping raw shortcode markup, and Elementor, Bricks and Beaver Builder only had a dozen widget types read by a hardcoded allowlist.
+* Content is now harvested by value shape rather than a per-widget allowlist, so third-party and newly added widgets are picked up without a plugin update.
+* Fixed main-content extraction truncating an article at the first nested closing tag; the page is now parsed with DOM instead of a regex.
+* Script, style and code-widget bodies are no longer sent as page copy.
+* The extraction path used for each page is now reported alongside the content.
 
 = 3.5.14 =
 
