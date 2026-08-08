@@ -1247,9 +1247,10 @@ JS;
 
         // Push failure never rolls back the local save -- wp_options already
         // holds the admin's change. A stale transient warns them the
-        // dashboard may not have it yet.
+        // dashboard may not have it yet. A null result means the site has no
+        // API key yet, which is not connected, not failed -- no notice for it.
         $pushed = Bspt_Webhook_Handler::push_platform_settings();
-        if (!$pushed) {
+        if ($pushed === false) {
             set_transient("bspt_settings_push_failed_notice", true, HOUR_IN_SECONDS);
         }
 

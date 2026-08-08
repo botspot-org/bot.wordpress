@@ -450,7 +450,10 @@ class Bspt_Webhook_Handler
      * back as a settings.updated webhook, so no loop is possible.
      *
      * @since    3.6.0
-     * @return   bool    True when the platform accepted the write.
+     * @return   bool|null    True when the platform accepted the write, false
+     *                        when the request was attempted and rejected, or
+     *                        null when skipped because no API key is set (the
+     *                        site is not connected yet -- not a failure).
      */
     public static function push_platform_settings()
     {
@@ -458,7 +461,7 @@ class Bspt_Webhook_Handler
         $api_key = Bspt_Options::get("api_key");
 
         if (empty($api_key)) {
-            return false;
+            return null;
         }
 
         $settings = [
