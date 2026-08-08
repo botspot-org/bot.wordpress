@@ -79,3 +79,23 @@ if (!function_exists('do_shortcode')) {
     // the content unchanged. Mirror that.
     function do_shortcode($content, $ignore_html = false) { return $content; }
 }
+
+// Option storage, backed by a test-controlled global so options tests need no
+// WordPress install.
+$GLOBALS['bspt_test_options'] = [];
+
+if (!function_exists('get_option')) {
+    function get_option($name, $default = false) {
+        $store = isset($GLOBALS['bspt_test_options']) ? $GLOBALS['bspt_test_options'] : [];
+        return array_key_exists($name, $store) ? $store[$name] : $default;
+    }
+}
+if (!function_exists('update_option')) {
+    function update_option($name, $value, $autoload = null) {
+        $GLOBALS['bspt_test_options'][$name] = $value;
+        return true;
+    }
+}
+if (!function_exists('sanitize_text_field')) {
+    function sanitize_text_field($str) { return trim(strip_tags((string) $str)); }
+}
