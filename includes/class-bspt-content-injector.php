@@ -429,11 +429,9 @@ class Bspt_Content_Injector
 
         $position = $this->resolve_injection_position();
 
-        // Skip the_content path for manual placement. bottom_of_content /
-        // above_footer / bottom_of_page all render here; the JS placement script
-        // (inject_placement_script) repositions above_footer/bottom_of_page at runtime.
-        if ($position === "manual") {
-            return $content . $this->bsa_debug_comment("the_content", "position_manual", ["position" => $position]);
+        // manual renders via shortcode; end_of_page renders at wp_footer.
+        if ($position === "manual" || $position === "end_of_page") {
+            return $content . $this->bsa_debug_comment("the_content", "position_deferred", ["position" => $position]);
         }
 
         // Check for manual placement
@@ -563,84 +561,61 @@ class Bspt_Content_Injector
     }
 
     /**
-     * Output the client-side placement script that relocates the appendix
-     * marker (<div data-bsa-appendix>) to be the previous/next sibling of the
-     * real <footer> element when position is above_footer / bottom_of_page.
+     * Build the anchor-relocation script, or "" when no anchor applies.
      *
-     * For position=bottom_of_content or manual the script is a no-op.
+     * Only end_of_page with an explicit selector relocates. Every other mode
+     * renders where it renders. This replaced a 13-selector footer search that
+     * guessed wrong on themes which position their own components (BOT-348).
      *
-     * Hook: wp_footer (priority 1) — runs before theme scripts so the <script>
-     * tag is in the DOM early, but the placement runs on DOMContentLoaded so
-     * the body is fully parsed.
+     * @since 3.6.0
+     * @return string    JavaScript body, or "" when nothing to do.
+     */
+    private function build_anchor_script()
+    {
+        if ($this->resolve_injection_position() !== "end_of_page") {
+            return "";
+        }
+
+        $anchor = Bspt_Options::sanitize_option_value(
+            "placement_anchor",
+            Bspt_Options::get("placement_anchor")
+        );
+        if ($anchor === null) {
+            return "";
+        }
+
+        $config = wp_json_encode($anchor);
+        if ($config === false) {
+            return "";
+        }
+
+        return '(function(){var cfg=' . $config . ';' .
+            'var node=document.querySelector("[data-bsa-appendix]");if(!node)return;' .
+            'var target=document.querySelector(cfg.selector);' .
+            'if(!target){node.setAttribute("data-bsa-anchor-missed",cfg.selector);' .
+            'if(window.console&&console.warn)console.warn("[BotSpot] placement anchor not found: "+cfg.selector);return;}' .
+            'if(cfg.position==="after"){target.parentNode.insertBefore(node,target.nextSibling);}' .
+            'else{target.parentNode.insertBefore(node,target);}})();';
+    }
+
+    /**
+     * Output the anchor-relocation script.
+     *
+     * Hook: wp_footer (priority 20) — after inject_appendix_footer_fallback
+     * has rendered the marker, so the node exists when the script runs.
      *
      * @since 2.7.0
      */
     public function inject_placement_script()
     {
-        // Skip emitting on pages where injection is gated off — saves bytes.
         if (!$this->should_inject_appendix()) {
             return;
         }
-        $position = $this->resolve_injection_position();
-        if ($position === "manual") {
-            // Manual placement; no JS reposition needed.
-            return;
-        }
 
-        $script = <<<'JS'
-(function () {
-    var SELECTORS = [
-        "[data-botspot-footer]",
-        "footer",
-        "[role=contentinfo]",
-        ".site-footer",
-        "#colophon",
-        ".footer",
-        ".page-footer",
-        "#footer",
-        "#site-footer",
-        ".elementor-location-footer",
-        ".fl-builder-footer",
-        "#main-footer",
-        ".wp-block-template-part[data-area=footer]"
-    ];
-    function findFooter() {
-        for (var i = 0; i < SELECTORS.length; i++) {
-            var el = document.querySelector(SELECTORS[i]);
-            if (el) return el;
-        }
-        return null;
-    }
-    function place() {
-        var node = document.querySelector("[data-bsa-appendix]");
-        if (!node) return;
-        var pos = node.getAttribute("data-bsa-position");
-        if (pos !== "above_footer" && pos !== "bottom_of_page") return;
-        var footer = findFooter();
-        if (!footer) {
-            if (window.console && console.warn) {
-                console.warn("[BotSpot] footer not detected, appendix left in-content");
-            }
-            var urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get("bsa-debug") === "1") {
-                var comment = document.createComment(" bsa-footer-detection: failed, fallback to bottom_of_content ");
-                node.parentNode.insertBefore(comment, node);
-            }
+        $script = $this->build_anchor_script();
+        if ($script === "") {
             return;
         }
-        if (pos === "above_footer") {
-            footer.parentNode.insertBefore(node, footer);
-        } else {
-            footer.parentNode.insertBefore(node, footer.nextSibling);
-        }
-    }
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", place);
-    } else {
-        place();
-    }
-})();
-JS;
 
         wp_register_script("bspt-placement", false, [], BSPT_VERSION, true);
         wp_enqueue_script("bspt-placement");
@@ -648,11 +623,10 @@ JS;
     }
 
     /**
-     * Page-builder fallback: when the_content filter is bypassed by a page
-     * builder (Elementor, Divi, WPBakery, Beaver Builder, Bricks), render the
-     * wrapped appendix at wp_footer so the JS placement script can still
-     * relocate it. For non-page-builder pages the_content already handled the
-     * render, so this method is a no-op.
+     * Render end_of_page here unconditionally, since the_content defers it.
+     * Also the page-builder fallback for in_content: Elementor, Divi,
+     * WPBakery, Beaver Builder, and Bricks all discard the_content output, so
+     * those pages get their appendix here instead, or not at all.
      *
      * Hook: wp_footer (priority 5)
      *
@@ -666,17 +640,16 @@ JS;
             return;
         }
 
-        // Only fall back when a page builder discarded the_content output.
-        // Otherwise the_content's gate (in_the_loop, queried-object) already
-        // chose not to inject and we should respect that.
-        if (!$this->is_page_builder_active()) {
-            $this->print_debug_comment("wp_footer", "no_page_builder_skip");
-            return;
-        }
-
         $position = $this->resolve_injection_position();
         if ($position === "manual") {
             $this->print_debug_comment("wp_footer", "position_manual");
+            return;
+        }
+
+        // end_of_page always renders here. Other positions reach wp_footer only
+        // as the page-builder fallback, because a builder discarded the_content.
+        if ($position !== "end_of_page" && !$this->is_page_builder_active()) {
+            $this->print_debug_comment("wp_footer", "no_page_builder_skip");
             return;
         }
 
@@ -684,25 +657,15 @@ JS;
     }
 
     /**
-     * Resolve the effective injection position, normalizing unknown / empty
-     * values to "bottom_of_content" so the appendix never silently disappears when the
-     * stored option is missing or corrupt.
+     * Resolve the effective injection position.
      *
-     * Recognized positions: bottom_of_content, above_footer, bottom_of_page, manual.
-     * Anything else falls back to "bottom_of_content".
+     * Recognized positions: in_content, end_of_page, manual. Anything else,
+     * including legacy stored values, migrates through migrate_placement_value.
      */
     private function resolve_injection_position()
     {
-        $stored = Bspt_Options::get("injection_position", "bottom_of_content");
-        $allowed = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
-        if (!is_string($stored) || !in_array($stored, $allowed, true)) {
-            $this->log_debug(sprintf(
-                "Unknown injection_position '%s', falling back to 'bottom_of_content'",
-                is_string($stored) ? $stored : gettype($stored)
-            ));
-            return "bottom_of_content";
-        }
-        return $stored;
+        $stored = Bspt_Options::get("injection_position", "in_content");
+        return Bspt_Options::migrate_placement_value($stored);
     }
 
     /**
@@ -814,13 +777,13 @@ JS;
      * Shared logic for footer-based injection.
      *
      * Output is wrapped in <div data-bsa-appendix data-bsa-position="X"> so
-     * the JS placement script (inject_placement_script) can relocate it for
-     * above_footer / bottom_of_page positions. For position=bottom_of_content
-     * on a page builder, the marker keeps its starting position.
+     * the JS placement script (inject_placement_script) can relocate it when
+     * an explicit placement_anchor is set. Without an anchor, the marker
+     * keeps its position in the wp_footer render.
      *
      * @since    1.4.0
      * @param    string    $position    The configured injection_position
-     *                                  (bottom_of_content / above_footer / bottom_of_page).
+     *                                  (in_content / end_of_page / manual).
      */
     private function inject_footer_position($position)
     {
