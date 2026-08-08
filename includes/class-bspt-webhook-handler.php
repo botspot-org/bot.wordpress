@@ -233,15 +233,21 @@ class Bspt_Webhook_Handler
      */
     private static function normalize_platform_settings($settings)
     {
-        $allowed_placements = ["auto", "footer", "manual", "bottom_of_content"];
+        // BOT-348: this list held ["auto", "footer", "manual", "bottom_of_content"]
+        // and silently dropped every other placement, so a dashboard change never
+        // reached the site. Migrate instead of rejecting.
         $placement = isset($settings["placement_mode"]) ? $settings["placement_mode"] : null;
+        $anchor = isset($settings["placement_anchor"]) ? $settings["placement_anchor"] : null;
 
         $normalized = [
             "sync_post_types" => isset($settings["sync_post_types"]) ? (array) $settings["sync_post_types"] : null,
             "inject_on_post_types" => isset($settings["output_post_types"]) ? (array) $settings["output_post_types"] : null,
             "appendix_enabled" => isset($settings["appendix_enabled"]) ? (bool) $settings["appendix_enabled"] : null,
             "jsonld_enabled" => isset($settings["jsonld_enabled"]) ? (bool) $settings["jsonld_enabled"] : null,
-            "injection_position" => ($placement && in_array($placement, $allowed_placements, true)) ? $placement : null,
+            "injection_position" => $placement !== null ? Bspt_Options::migrate_placement_value($placement) : null,
+            "placement_anchor" => $anchor !== null
+                ? Bspt_Options::sanitize_option_value("placement_anchor", $anchor)
+                : null,
         ];
 
         return array_filter($normalized, function ($v) {
