@@ -444,6 +444,51 @@ class Bspt_Webhook_Handler
     }
 
     /**
+     * Push local settings to the platform after an admin save.
+     *
+     * Last write wins against the dashboard. The platform does not echo this
+     * back as a settings.updated webhook, so no loop is possible.
+     *
+     * @since    3.6.0
+     * @return   bool    True when the platform accepted the write.
+     */
+    public static function push_platform_settings()
+    {
+        $api_url = Bspt_Options::get_locus_api_url();
+        $api_key = Bspt_Options::get("api_key");
+
+        if (empty($api_key)) {
+            return false;
+        }
+
+        $settings = [
+            "sync_post_types" => Bspt_Options::get("sync_post_types"),
+            "output_post_types" => Bspt_Options::get("inject_on_post_types"),
+            "appendix_enabled" => (bool) Bspt_Options::get("appendix_enabled"),
+            "jsonld_enabled" => (bool) Bspt_Options::get("jsonld_enabled"),
+            "placement_mode" => Bspt_Options::get("injection_position"),
+            "placement_anchor" => Bspt_Options::get("placement_anchor"),
+        ];
+
+        $response = wp_remote_request(rtrim($api_url, "/") . "/api/v1/wp/settings", [
+            "method" => "PUT",
+            "headers" => [
+                "X-API-Key" => $api_key,
+                "X-Site-URL" => home_url(),
+                "Content-Type" => "application/json",
+            ],
+            "body" => wp_json_encode(["settings" => $settings]),
+            "timeout" => 15,
+        ]);
+
+        if (is_wp_error($response)) {
+            return false;
+        }
+
+        return wp_remote_retrieve_response_code($response) === 200;
+    }
+
+    /**
      * Bootstrap platform settings from current local settings.
      *
      * Called when platform has no settings for this site (first-time migration).

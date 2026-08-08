@@ -1245,9 +1245,18 @@ JS;
         // Clear status snapshot so next load picks up changes
         delete_transient("bspt_status_snapshot");
 
+        // Push failure never rolls back the local save -- wp_options already
+        // holds the admin's change. A stale transient warns them the
+        // dashboard may not have it yet.
+        $pushed = Bspt_Webhook_Handler::push_platform_settings();
+        if (!$pushed) {
+            set_transient("bspt_settings_push_failed_notice", true, HOUR_IN_SECONDS);
+        }
+
         wp_send_json_success([
             "saved" => $saved,
             "message" => __("Settings saved.", "botspot"),
+            "synced_to_platform" => $pushed,
         ]);
     }
 }
