@@ -120,6 +120,15 @@ class Bspt_Webhook_Handler
 
         if ($event === "settings.updated") {
             $settings = isset($data["data"]["settings"]) ? $data["data"]["settings"] : [];
+            $site_domain = isset($data["data"]["site_domain"]) ? $data["data"]["site_domain"] : null;
+
+            if (!self::payload_targets_this_site($site_domain)) {
+                return new WP_REST_Response([
+                    "status" => "ignored",
+                    "event" => "settings.updated",
+                    "reason" => "site_domain_mismatch",
+                ], 200);
+            }
 
             $this->handle_settings_updated($settings);
 
@@ -253,6 +262,49 @@ class Bspt_Webhook_Handler
         return array_filter($normalized, function ($v) {
             return $v !== null;
         });
+    }
+
+    /**
+     * Reduce a URL or bare domain to a comparable host.
+     *
+     * @since    3.6.0
+     * @param    string    $value    A URL or a bare domain.
+     * @return   string              Lowercased host without a "www." prefix.
+     */
+    private static function comparable_host($value)
+    {
+        $value = trim((string) $value);
+        $host = wp_parse_url($value, PHP_URL_HOST);
+        if (!is_string($host) || $host === "") {
+            $host = $value;
+        }
+        $host = strtolower(rtrim($host, "."));
+        if (strpos($host, "www.") === 0) {
+            $host = substr($host, 4);
+        }
+
+        return $host;
+    }
+
+    /**
+     * Whether a settings.updated payload belongs to this site.
+     *
+     * An org can register several WordPress sites against one tenant. A payload
+     * that names a different site would overwrite this site's settings
+     * (BOT-348). A payload with no site_domain comes from a core build that
+     * predates the field, so it applies.
+     *
+     * @since    3.6.0
+     * @param    string|null    $site_domain    Domain from the payload, or null.
+     * @return   bool                           True when the event applies here.
+     */
+    private static function payload_targets_this_site($site_domain)
+    {
+        if ($site_domain === null || $site_domain === "") {
+            return true;
+        }
+
+        return self::comparable_host($site_domain) === self::comparable_host(home_url());
     }
 
     /**
