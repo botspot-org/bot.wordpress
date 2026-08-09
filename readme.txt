@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.5.15
+Stable tag: 3.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,16 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.6.0 =
+
+* Placement now has three settings: in the content, at the end of the page, or manual shortcode. Older settings migrate automatically.
+* Sites set to "above footer" now render the appendix below the footer.
+* The appendix renders at the chosen position on the server. JavaScript no longer moves it after the page loads.
+* A new optional CSS selector places the appendix next to a specific element. The appendix stays at the end of the page if the selector matches nothing.
+* Placement and post-type changes made in the BotSpot dashboard now reach the site right away.
+* Placement and post-type changes made in WordPress now push back to the dashboard. The most recent change wins.
+* The settings screen no longer locks itself after a dashboard change.
 
 = 3.5.15 =
 
@@ -267,6 +277,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.6.0 =
+
+Placement settings are renamed and now render server-side. Sites previously set to "above footer" will show the appendix below the footer instead; re-check placement after updating.
 
 = 3.5.13 =
 
