@@ -584,7 +584,10 @@ class Bspt_Content_Injector
             return "";
         }
 
-        $config = wp_json_encode($anchor);
+        // JSON_HEX_TAG: the value lands inside an inline <script>, where a "<"
+        // in the selector would close the element. sanitize_text_field strips
+        // tags upstream; this does not depend on that.
+        $config = wp_json_encode($anchor, JSON_HEX_TAG);
         if ($config === false) {
             return "";
         }
@@ -687,7 +690,7 @@ class Bspt_Content_Injector
      * delimiters, so callers escape it before output.
      *
      * @since 3.5.14
-     * @param string $where    Hook name: the_content / above_footer / bottom_of_page.
+     * @param string $where    Hook name: the_content / wp_footer.
      * @param string $reason   Short tag identifying which branch we took.
      * @param array  $extra    Optional structured payload to aid diagnosis.
      * @return string          JSON payload, or "" when debug is inactive.
@@ -713,7 +716,7 @@ class Bspt_Content_Injector
      * Used by the the_content path, whose return value is the output; the
      * payload is escaped here because that is the point of output.
      *
-     * @param string $where    Hook name: the_content / above_footer / bottom_of_page.
+     * @param string $where    Hook name: the_content / wp_footer.
      * @param string $reason   Short tag identifying which branch we took.
      * @param array  $extra    Optional structured payload to aid diagnosis.
      */
