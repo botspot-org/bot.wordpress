@@ -51,7 +51,8 @@ class Bspt_Options
         "appendix_enabled" => true,
         "jsonld_enabled" => true,
         "jsonld_conflict_mode" => "merge",
-        "injection_position" => "bottom_of_content",
+        "injection_position" => "in_content",
+        "placement_anchor" => null,
         "inject_on_post_types" => ["post", "page"],
 
         // Cache
@@ -320,9 +321,21 @@ class Bspt_Options
                 return in_array($value, $allowed, true) ? $value : "merge";
 
             case "injection_position":
-                $value = self::migrate_placement_value($value);
-                $allowed = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
-                return in_array($value, $allowed, true) ? $value : "bottom_of_content";
+                return self::migrate_placement_value($value);
+
+            case "placement_anchor":
+                if (!is_array($value) || !isset($value["selector"]) || !is_string($value["selector"])) {
+                    return null;
+                }
+                $selector = trim(sanitize_text_field($value["selector"]));
+                if ($selector === "") {
+                    return null;
+                }
+                $position = isset($value["position"]) ? $value["position"] : "before";
+                if ($position !== "before" && $position !== "after") {
+                    $position = "before";
+                }
+                return ["selector" => $selector, "position" => $position];
 
             case "sync_post_types":
             case "inject_on_post_types":
@@ -343,20 +356,37 @@ class Bspt_Options
     }
 
     /**
-     * Migrate legacy placement values to new vocabulary.
+     * Map any stored placement value to the canonical vocabulary.
      *
-     * @since    1.1.0
-     * @param    string    $value    The placement value.
-     * @return   string              The migrated value.
+     * above_footer and bottom_of_page shared one render path, so both collapse
+     * to end_of_page. Sites on above_footer see the appendix move below the
+     * footer; placement_anchor is how to put it back.
+     *
+     * @since    3.6.0
+     * @param    mixed     $value    The stored placement value.
+     * @return   string              One of in_content, end_of_page, manual.
      */
-    private static function migrate_placement_value($value)
+    public static function migrate_placement_value($value)
     {
+        $canonical = ["in_content", "end_of_page", "manual"];
+        if (is_string($value) && in_array($value, $canonical, true)) {
+            return $value;
+        }
+
         $migration_map = [
-            "bottom"       => "bottom_of_content",
-            "below_footer" => "bottom_of_page",
-            "shortcode"    => "manual",
+            "bottom_of_content" => "in_content",
+            "bottom"            => "in_content",
+            "above_footer"      => "end_of_page",
+            "bottom_of_page"    => "end_of_page",
+            "below_footer"      => "end_of_page",
+            "shortcode"         => "manual",
         ];
-        return isset($migration_map[$value]) ? $migration_map[$value] : $value;
+
+        if (is_string($value) && isset($migration_map[$value])) {
+            return $migration_map[$value];
+        }
+
+        return "in_content";
     }
 
     /**

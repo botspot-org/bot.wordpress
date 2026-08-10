@@ -113,7 +113,10 @@ class Bspt_Admin
         ]);
         register_setting("bspt_settings", "bspt_injection_position", [
             "sanitize_callback" => [$this, "sanitize_position"],
-            "default" => "bottom_of_content",
+            "default" => "in_content",
+        ]);
+        register_setting("bspt_settings", "bspt_placement_anchor", [
+            "sanitize_callback" => [$this, "sanitize_placement_anchor"],
         ]);
         register_setting("bspt_settings", "bspt_inject_on_post_types", [
             "sanitize_callback" => [$this, "sanitize_post_types"],
@@ -219,15 +222,15 @@ class Bspt_Admin
             ],
         ]);
 
-        // Settings page footer detection note toggle
+        // Settings page anchor fields toggle
         $toggle_script = <<<'JS'
 (function() {
     var radios = document.querySelectorAll('input[name="bspt_injection_position"]');
-    var note = document.getElementById('bsa-footer-detection-note');
-    if (!radios.length || !note) return;
+    var fields = document.getElementById('bspt-anchor-fields');
+    if (!radios.length || !fields) return;
     function toggle() {
         var val = document.querySelector('input[name="bspt_injection_position"]:checked');
-        note.style.display = (val && (val.value === 'above_footer' || val.value === 'bottom_of_page')) ? 'block' : 'none';
+        fields.style.display = (val && val.value === 'end_of_page') ? 'block' : 'none';
     }
     radios.forEach(function(r) { r.addEventListener('change', toggle); });
     toggle();
@@ -656,6 +659,16 @@ JS;
     public function sanitize_position($value)
     {
         return Bspt_Options::sanitize_option_value("injection_position", $value);
+    }
+
+    /**
+     * Sanitize placement anchor value
+     *
+     * @since    3.6.0
+     */
+    public function sanitize_placement_anchor($value)
+    {
+        return Bspt_Options::sanitize_option_value("placement_anchor", $value);
     }
 
     /**
@@ -1220,6 +1233,7 @@ JS;
             "jsonld_enabled" => [$this, "sanitize_checkbox"],
             "jsonld_conflict_mode" => [$this, "sanitize_jsonld_conflict_mode"],
             "injection_position" => [$this, "sanitize_position"],
+            "placement_anchor" => [$this, "sanitize_placement_anchor"],
             "inject_on_post_types" => [$this, "sanitize_post_types"],
             "cache_ttl" => "absint",
             "debug_mode" => [$this, "sanitize_checkbox"],
@@ -1245,9 +1259,19 @@ JS;
         // Clear status snapshot so next load picks up changes
         delete_transient("bspt_status_snapshot");
 
+        // Push failure never rolls back the local save -- wp_options already
+        // holds the admin's change. A stale transient warns them the
+        // dashboard may not have it yet. A null result means the site has no
+        // API key yet, which is not connected, not failed -- no notice for it.
+        $pushed = Bspt_Webhook_Handler::push_platform_settings();
+        if ($pushed === false) {
+            set_transient("bspt_settings_push_failed_notice", true, HOUR_IN_SECONDS);
+        }
+
         wp_send_json_success([
             "saved" => $saved,
             "message" => __("Settings saved.", "botspot"),
+            "synced_to_platform" => $pushed,
         ]);
     }
 }

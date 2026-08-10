@@ -537,6 +537,16 @@
             if (el) settings[radio.key] = el.value;
         });
 
+        // Placement anchor - two inputs, one option (see sanitize_option_value("placement_anchor"))
+        var anchorSelector = form.querySelector('[name="bspt_placement_anchor_selector"]');
+        var anchorPosition = form.querySelector('[name="bspt_placement_anchor_position"]');
+        if (anchorSelector) {
+            settings.placement_anchor = {
+                selector: anchorSelector.value,
+                position: anchorPosition ? anchorPosition.value : "before",
+            };
+        }
+
         // Multi-selects / checkboxes for arrays
         var syncPostTypes = form.querySelectorAll('[name="bspt_sync_post_types[]"]:checked');
         settings.sync_post_types = Array.prototype.map.call(syncPostTypes, function (el) { return el.value; });
@@ -572,6 +582,10 @@
             if (Array.isArray(v)) {
                 v.forEach(function (item) {
                     body.append("settings[" + k + "][]", item);
+                });
+            } else if (v !== null && typeof v === "object") {
+                Object.keys(v).forEach(function (subKey) {
+                    body.append("settings[" + k + "][" + subKey + "]", v[subKey]);
                 });
             } else {
                 body.append("settings[" + k + "]", v);

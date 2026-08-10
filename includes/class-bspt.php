@@ -255,12 +255,12 @@ class Bspt
         // Appendix injection via the_content (priority 20)
         $this->loader->add_filter("the_content", $content_injector, "inject_appendix_content", 20);
 
-        // Placement script: emit early so the <script> tag is in the DOM before
-        // theme scripts; the script itself runs on DOMContentLoaded.
-        $this->loader->add_action("wp_footer", $content_injector, "inject_placement_script", 1);
-
         // Page-builder fallback: only fires when a page builder bypassed the_content.
         $this->loader->add_action("wp_footer", $content_injector, "inject_appendix_footer_fallback", 5);
+
+        // Anchor script: priority 20, after the footer fallback above, so the
+        // appendix marker exists in the DOM before the script looks for it.
+        $this->loader->add_action("wp_footer", $content_injector, "inject_placement_script", 20);
 
         // Register shortcode
         $this->loader->add_action("init", $public, "register_shortcode");

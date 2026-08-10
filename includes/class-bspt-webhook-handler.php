@@ -120,6 +120,15 @@ class Bspt_Webhook_Handler
 
         if ($event === "settings.updated") {
             $settings = isset($data["data"]["settings"]) ? $data["data"]["settings"] : [];
+            $site_domain = isset($data["data"]["site_domain"]) ? $data["data"]["site_domain"] : null;
+
+            if (!self::payload_targets_this_site($site_domain)) {
+                return new WP_REST_Response([
+                    "status" => "ignored",
+                    "event" => "settings.updated",
+                    "reason" => "site_domain_mismatch",
+                ], 200);
+            }
 
             $this->handle_settings_updated($settings);
 
@@ -233,20 +242,69 @@ class Bspt_Webhook_Handler
      */
     private static function normalize_platform_settings($settings)
     {
-        $allowed_placements = ["auto", "footer", "manual", "bottom_of_content"];
+        // BOT-348: this list held ["auto", "footer", "manual", "bottom_of_content"]
+        // and silently dropped every other placement, so a dashboard change never
+        // reached the site. Migrate instead of rejecting.
         $placement = isset($settings["placement_mode"]) ? $settings["placement_mode"] : null;
+        $anchor = isset($settings["placement_anchor"]) ? $settings["placement_anchor"] : null;
 
         $normalized = [
             "sync_post_types" => isset($settings["sync_post_types"]) ? (array) $settings["sync_post_types"] : null,
             "inject_on_post_types" => isset($settings["output_post_types"]) ? (array) $settings["output_post_types"] : null,
             "appendix_enabled" => isset($settings["appendix_enabled"]) ? (bool) $settings["appendix_enabled"] : null,
             "jsonld_enabled" => isset($settings["jsonld_enabled"]) ? (bool) $settings["jsonld_enabled"] : null,
-            "injection_position" => ($placement && in_array($placement, $allowed_placements, true)) ? $placement : null,
+            "injection_position" => $placement !== null ? Bspt_Options::migrate_placement_value($placement) : null,
+            "placement_anchor" => $anchor !== null
+                ? Bspt_Options::sanitize_option_value("placement_anchor", $anchor)
+                : null,
         ];
 
         return array_filter($normalized, function ($v) {
             return $v !== null;
         });
+    }
+
+    /**
+     * Reduce a URL or bare domain to a comparable host.
+     *
+     * @since    3.6.0
+     * @param    string    $value    A URL or a bare domain.
+     * @return   string              Lowercased host without a "www." prefix.
+     */
+    private static function comparable_host($value)
+    {
+        $value = trim((string) $value);
+        $host = wp_parse_url($value, PHP_URL_HOST);
+        if (!is_string($host) || $host === "") {
+            $host = $value;
+        }
+        $host = strtolower(rtrim($host, "."));
+        if (strpos($host, "www.") === 0) {
+            $host = substr($host, 4);
+        }
+
+        return $host;
+    }
+
+    /**
+     * Whether a settings.updated payload belongs to this site.
+     *
+     * An org can register several WordPress sites against one tenant. A payload
+     * that names a different site would overwrite this site's settings
+     * (BOT-348). A payload with no site_domain comes from a core build that
+     * predates the field, so it applies.
+     *
+     * @since    3.6.0
+     * @param    string|null    $site_domain    Domain from the payload, or null.
+     * @return   bool                           True when the event applies here.
+     */
+    private static function payload_targets_this_site($site_domain)
+    {
+        if ($site_domain === null || $site_domain === "") {
+            return true;
+        }
+
+        return self::comparable_host($site_domain) === self::comparable_host(home_url());
     }
 
     /**
@@ -270,12 +328,6 @@ class Bspt_Webhook_Handler
         $updated["fetched_at"] = gmdate("c");
 
         update_option("bspt_platform_settings", $updated);
-
-        // Explicit lock flag: ONLY a real dashboard push locks the settings UI
-        // to read-only. Connect/bootstrap never set this, so a fresh or
-        // reconnected site keeps its local override controls until the dashboard
-        // actually pushes settings. See tab-settings.php.
-        update_option("bspt_settings_dashboard_locked", true);
 
         foreach ($platform_settings as $key => $value) {
             Bspt_Options::set($key, $value);
@@ -435,6 +487,54 @@ class Bspt_Webhook_Handler
         }
 
         return $platform_settings;
+    }
+
+    /**
+     * Push local settings to the platform after an admin save.
+     *
+     * Last write wins against the dashboard. The platform does not echo this
+     * back as a settings.updated webhook, so no loop is possible.
+     *
+     * @since    3.6.0
+     * @return   bool|null    True when the platform accepted the write, false
+     *                        when the request was attempted and rejected, or
+     *                        null when skipped because no API key is set (the
+     *                        site is not connected yet -- not a failure).
+     */
+    public static function push_platform_settings()
+    {
+        $api_url = Bspt_Options::get_locus_api_url();
+        $api_key = Bspt_Options::get("api_key");
+
+        if (empty($api_key)) {
+            return null;
+        }
+
+        $settings = [
+            "sync_post_types" => Bspt_Options::get("sync_post_types"),
+            "output_post_types" => Bspt_Options::get("inject_on_post_types"),
+            "appendix_enabled" => (bool) Bspt_Options::get("appendix_enabled"),
+            "jsonld_enabled" => (bool) Bspt_Options::get("jsonld_enabled"),
+            "placement_mode" => Bspt_Options::get("injection_position"),
+            "placement_anchor" => Bspt_Options::get("placement_anchor"),
+        ];
+
+        $response = wp_remote_request(rtrim($api_url, "/") . "/api/v1/wp/settings", [
+            "method" => "PUT",
+            "headers" => [
+                "X-API-Key" => $api_key,
+                "X-Site-URL" => home_url(),
+                "Content-Type" => "application/json",
+            ],
+            "body" => wp_json_encode(["settings" => $settings]),
+            "timeout" => 15,
+        ]);
+
+        if (is_wp_error($response)) {
+            return false;
+        }
+
+        return wp_remote_retrieve_response_code($response) === 200;
     }
 
     /**
