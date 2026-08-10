@@ -377,9 +377,15 @@ class Bspt_Webhook_Handler
     }
 
     /**
-     * Register webhook with locus-core.
+     * Register this site as a WordPress integration with locus-core.
      *
-     * Called during plugin activation or when API key is first configured.
+     * Called during plugin activation or when the API key is first configured.
+     *
+     * Registers the site as well as the webhook. Core sets sites.source_type to
+     * 'wordpress' here, before any content syncs. Ingest used to set it, which
+     * left a site provisioned by the Account flow at the 'website' default
+     * forever, and the Dashboard reads source_type to decide which integrations
+     * are connected. A site with zero published posts stayed invisible (BOT-350).
      *
      * @since    2.8.0
      * @return   bool    True if registration succeeded.
@@ -393,19 +399,99 @@ class Bspt_Webhook_Handler
             return false;
         }
 
+        $webhook_url = rest_url("botspot/v1/webhook");
+
         // Always (re)register with the server rather than trusting a locally
         // cached id: the server row can be deleted (env reset, cleanup) while the
         // plugin still holds a stale bspt_webhook_id, which previously caused the
         // plugin to believe it was registered when no row existed. The core
-        // endpoint upserts by (org_id, url), so this is idempotent and returns the
-        // authoritative id + secret to re-sync locally.
+        // endpoint upserts by (org_id, domain) and (org_id, url), so this is
+        // idempotent and returns the authoritative id + secret to re-sync locally.
+        $response = wp_remote_post(
+            rtrim($api_url, "/") . "/api/v1/integrations/wordpress/register",
+            [
+                "headers" => [
+                    "X-API-Key" => $api_key,
+                    "Content-Type" => "application/json",
+                ],
+                "body" => wp_json_encode([
+                    "site_url" => home_url(),
+                    "webhook_url" => $webhook_url,
+                    "site_name" => get_bloginfo("name"),
+                ]),
+                "timeout" => 15,
+            ]
+        );
+
+        if (is_wp_error($response)) {
+            return false;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+
+        // A core older than the endpoint. The plugin updates on its own schedule,
+        // so it reaches sites whose core has not been deployed yet.
+        if (404 === $status_code) {
+            return self::register_webhook_legacy($webhook_url);
+        }
+
+        // Another connector owns this domain. Retrying never clears it, and
+        // overwriting would hide that integration from the Dashboard.
+        if (409 === $status_code) {
+            Bspt_Logger::log_error(
+                "[WebhookHandler] " .
+                    home_url() .
+                    " is registered to another integration in bot.spot. " .
+                    "Disconnect it there before connecting WordPress."
+            );
+            return false;
+        }
+
+        if (200 !== $status_code) {
+            return false;
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (
+            !is_array($body) ||
+            empty($body["webhook_id"]) ||
+            empty($body["webhook_secret"])
+        ) {
+            return false;
+        }
+
+        update_option("bspt_webhook_id", $body["webhook_id"]);
+        update_option("bspt_webhook_secret", $body["webhook_secret"]);
+
+        if (!empty($body["site_id"])) {
+            update_option("bspt_site_id", $body["site_id"]);
+        }
+
+        return true;
+    }
+
+    /**
+     * Register the webhook alone, for a core without the register endpoint.
+     *
+     * Leaves sites.source_type untouched, so the Dashboard keeps showing no
+     * WordPress integration until that core is deployed and the site reconnects.
+     *
+     * @since    3.7.0
+     * @param    string    $webhook_url    The plugin's webhook receiver URL.
+     * @return   bool                      True if registration succeeded.
+     */
+    private static function register_webhook_legacy($webhook_url)
+    {
+        $api_url = Bspt_Options::get_locus_api_url();
+        $api_key = Bspt_Options::get("api_key");
+
         $response = wp_remote_post(rtrim($api_url, "/") . "/api/v1/webhooks", [
             "headers" => [
                 "X-API-Key" => $api_key,
                 "Content-Type" => "application/json",
             ],
             "body" => wp_json_encode([
-                "url" => rest_url("botspot/v1/webhook"),
+                "url" => $webhook_url,
                 "events" => ["appendix.updated", "settings.updated"],
                 "name" => "WordPress: " . home_url(),
             ]),
@@ -416,8 +502,7 @@ class Bspt_Webhook_Handler
             return false;
         }
 
-        $status_code = wp_remote_retrieve_response_code($response);
-        if ($status_code !== 201) {
+        if (201 !== wp_remote_retrieve_response_code($response)) {
             return false;
         }
 

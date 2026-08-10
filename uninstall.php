@@ -24,6 +24,7 @@ $bspt_options = [
     "bspt_webhook_id",
     "bspt_connection_id",
     "bspt_tenant_id",
+    "bspt_site_id",
     // Sync
     "bspt_auto_sync_enabled",
     "bspt_sync_sensitivity",
