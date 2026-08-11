@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.6.0
+Stable tag: 3.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,11 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.0 =
+
+* Connecting now registers the site with bot.spot straight away. Sites with no published posts appear as connected instead of waiting for the first content sync.
+* Connecting to a domain another integration already owns now reports the clash instead of failing silently.
 
 = 3.6.0 =
 
@@ -277,6 +282,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.7.0 =
+
+WordPress now appears as a connected integration as soon as you connect, even with no published posts. Reconnect once after updating if your site is missing from the dashboard.
 
 = 3.6.0 =
 
