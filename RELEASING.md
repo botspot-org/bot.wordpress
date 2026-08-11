@@ -31,6 +31,45 @@ Every gate below exists to protect that single moment, which is also why there
 is a manual approval immediately before it.
 
 
+We cannot reach a customer site
+-------------------------------
+
+No shell, no WP-CLI, no database. A fix that reads "run
+`wp option delete bspt_foo` on the affected site" is not deliverable. Anything a
+release has to undo on a site belongs in plugin code that runs on upgrade.
+`Bspt_Activator::migrate_clear_stale_settings_lock()` is the pattern: guard on a
+`bspt_migrated_*` option, do the work once, record the timestamp.
+
+The same constraint decides how a release pairs with a locus-core deploy.
+
+
+Ordering against locus-core
+---------------------------
+
+A release that depends on a core change ships **after** that core deploy, so the
+plugin never calls an endpoint that returns 404. `register_webhook()` shows the
+alternative: it falls back to `/api/v1/webhooks` on a 404, which lets the plugin
+ship first.
+
+Reverse the order when a core deploy makes older plugin builds behave worse.
+BOT-348 is the case that established this. Core began dispatching
+`settings.updated`, which every build up to 3.5.14 answers by writing
+`bspt_settings_dashboard_locked` and locking its own settings screen. The
+documented remedy was `wp option delete`, which the section above rules out.
+Shipping the plugin first lets auto-updates carry sites past the build that sets
+the lock.
+
+Before deploying a core change that reaches the plugin, ask which released
+builds receive it and what they do with it. `SELECT plugin_version, count(*) FROM
+connectors GROUP BY 1` answers the first half when connectors report a version;
+that table was empty on production on 2026-08-11, so the answer came from reading
+the released tag instead:
+
+```bash
+git grep -n 'the_option_name' v3.5.14 -- '*.php'
+```
+
+
 1. Bump the version
 -------------------
 
