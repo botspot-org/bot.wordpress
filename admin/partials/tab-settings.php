@@ -107,22 +107,31 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
         </div>
         <div class="bsa-settings-row__body">
             <div class="bsa-check-list">
-                <label class="bsa-check">
+                <label class="bsa-check bsa-check--tipped">
                     <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="in_content" <?php checked($bspt_injection_position, "in_content"); ?> />
                     <span>
-                        <?php esc_html_e("In content", "botspot"); ?>
+                        <?php esc_html_e("End of the content", "botspot"); ?>
                         <span class="bsa-check__tag"><?php esc_html_e("recommended", "botspot"); ?></span>
                     </span>
+                    <span class="bsa-tip" role="note">
+                        <?php esc_html_e("Directly under the post or page text, above the comments and the footer. Elementor, Divi, WPBakery, Beaver Builder and Bricks discard that spot, so pages built with them fall back to the end of the page.", "botspot"); ?>
+                    </span>
                 </label>
-                <label class="bsa-check">
+                <label class="bsa-check bsa-check--tipped">
                     <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="end_of_page" <?php checked($bspt_injection_position, "end_of_page"); ?> />
-                    <span><?php esc_html_e("End of page", "botspot"); ?></span>
+                    <span><?php esc_html_e("End of the page", "botspot"); ?></span>
+                    <span class="bsa-tip" role="note">
+                        <?php esc_html_e("Below everything the theme renders, under the footer. Use this when the appendix breaks a template that wraps the post text.", "botspot"); ?>
+                    </span>
                 </label>
-                <label class="bsa-check">
+                <label class="bsa-check bsa-check--tipped">
                     <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="manual" <?php checked($bspt_injection_position, "manual"); ?> />
                     <span>
                         <?php esc_html_e("Manual (shortcode)", "botspot"); ?>
                         <span class="bsa-check__tag"><code class="bsa-code">[botspot_appendix]</code></span>
+                    </span>
+                    <span class="bsa-tip" role="note">
+                        <?php esc_html_e("The plugin renders nothing on its own. The appendix appears where you place the shortcode.", "botspot"); ?>
                     </span>
                 </label>
             </div>

@@ -131,7 +131,8 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 = 3.7.1 =
 
-* The placement settings no longer ask for a CSS selector. Placement is in the content, at the end of the page, or a manual shortcode.
+* The placement settings no longer ask for a CSS selector. Placement is at the end of the content, at the end of the page, or a manual shortcode.
+* "In content" is now called "End of the content", and each placement option describes where the appendix lands when you hover it.
 
 = 3.7.0 =
 

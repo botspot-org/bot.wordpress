@@ -1333,6 +1333,42 @@
     transform: rotate(90deg);
 }
 
+/* The tip stays in the label so a screen reader reads it with the option.
+   :focus-within covers keyboard users, who never fire :hover. */
+.botspot-admin-root .bsa-check--tipped {
+    position: relative;
+}
+
+/* `.bsa-check > span` above sets inline-flex and wins on specificity without
+   the `.bsa-check >` prefix here. */
+.botspot-admin-root .bsa-check > .bsa-tip {
+    display: block;
+    position: absolute;
+    inset-inline-start: 24px;
+    inset-block-start: calc(100% + 6px);
+    z-index: 10;
+    width: max-content;
+    max-width: 320px;
+    padding: 8px 10px;
+    border: 1px solid var(--bsa-border);
+    border-radius: 4px;
+    background: var(--bsa-void);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--bsa-text-faint);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+.botspot-admin-root .bsa-check--tipped:hover > .bsa-tip,
+.botspot-admin-root .bsa-check--tipped:focus-within > .bsa-tip {
+    opacity: 1;
+    visibility: visible;
+}
+
 .botspot-admin-root .bsa-check__tag {
     font-family: var(--bsa-font-mono);
     font-size: 10px;
