@@ -537,15 +537,9 @@
             if (el) settings[radio.key] = el.value;
         });
 
-        // Placement anchor - two inputs, one option (see sanitize_option_value("placement_anchor"))
-        var anchorSelector = form.querySelector('[name="bspt_placement_anchor_selector"]');
-        var anchorPosition = form.querySelector('[name="bspt_placement_anchor_position"]');
-        if (anchorSelector) {
-            settings.placement_anchor = {
-                selector: anchorSelector.value,
-                position: anchorPosition ? anchorPosition.value : "before",
-            };
-        }
+        // placement_anchor is deliberately absent. The settings screen no longer
+        // exposes it, and the save handler skips keys the payload omits, so a
+        // value set from the dashboard survives a local save.
 
         // Multi-selects / checkboxes for arrays
         var syncPostTypes = form.querySelectorAll('[name="bspt_sync_post_types[]"]:checked');

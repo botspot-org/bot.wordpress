@@ -221,22 +221,6 @@ class Bspt_Admin
                 "copied" => __("Copied to clipboard", "botspot"),
             ],
         ]);
-
-        // Settings page anchor fields toggle
-        $toggle_script = <<<'JS'
-(function() {
-    var radios = document.querySelectorAll('input[name="bspt_injection_position"]');
-    var fields = document.getElementById('bspt-anchor-fields');
-    if (!radios.length || !fields) return;
-    function toggle() {
-        var val = document.querySelector('input[name="bspt_injection_position"]:checked');
-        fields.style.display = (val && val.value === 'end_of_page') ? 'block' : 'none';
-    }
-    radios.forEach(function(r) { r.addEventListener('change', toggle); });
-    toggle();
-})();
-JS;
-        wp_add_inline_script("bspt-admin", $toggle_script);
     }
 
     /**

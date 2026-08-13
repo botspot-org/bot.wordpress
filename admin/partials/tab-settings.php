@@ -27,12 +27,6 @@ $bspt_inject_post_types = Bspt_Options::get("inject_on_post_types", ["post", "pa
 $bspt_injection_position = Bspt_Options::migrate_placement_value(
     Bspt_Options::get("injection_position", "in_content")
 );
-$bspt_anchor = Bspt_Options::sanitize_option_value(
-    "placement_anchor",
-    Bspt_Options::get("placement_anchor")
-);
-$bspt_anchor_selector = $bspt_anchor ? $bspt_anchor["selector"] : "";
-$bspt_anchor_position = $bspt_anchor ? $bspt_anchor["position"] : "before";
 $bspt_jsonld_conflict = Bspt_Options::get("jsonld_conflict_mode", "merge");
 $bspt_auto_sync = (bool) Bspt_Options::get("auto_sync_enabled", true);
 $bspt_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "high");
@@ -50,7 +44,7 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
     <div class="bsa-section-head bsa-reveal bsa-reveal--1">
         <h1 class="bsa-h1"><?php esc_html_e("Settings", "botspot"); ?></h1>
         <p class="bsa-description">
-            <?php esc_html_e("Optional WordPress-specific runtime settings. Content, review flow, styling, and publishing are managed in bot.spot.", "botspot"); ?>
+            <?php esc_html_e("How this site behaves. Content, review flow, styling, and publishing are managed in bot.spot.", "botspot"); ?>
         </p>
     </div>
 
@@ -131,18 +125,6 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
                         <span class="bsa-check__tag"><code class="bsa-code">[botspot_appendix]</code></span>
                     </span>
                 </label>
-            </div>
-            <div id="bspt-anchor-fields" class="bsa-settings-row__note" style="display:none">
-                <p class="description">
-                    <?php esc_html_e("Optional: place the appendix relative to a specific element instead of the end of the page.", "botspot"); ?>
-                </p>
-                <input type="text" name="bspt_placement_anchor_selector" class="regular-text"
-                    value="<?php echo esc_attr($bspt_anchor_selector); ?>"
-                    placeholder=".site-footer" />
-                <select name="bspt_placement_anchor_position">
-                    <option value="before" <?php selected($bspt_anchor_position, "before"); ?>><?php esc_html_e("Before", "botspot"); ?></option>
-                    <option value="after" <?php selected($bspt_anchor_position, "after"); ?>><?php esc_html_e("After", "botspot"); ?></option>
-                </select>
             </div>
         </div>
     </section>
