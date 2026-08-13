@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.7.1
+Stable tag: 3.7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,7 +21,7 @@ Features include:
 * Sync selected post types, including posts and pages.
 * Fetch and render appendix HTML from BotSpot.
 * Emit JSON-LD structured data in the page head.
-* Choose automatic placement, footer-aware placement, or manual placement with a shortcode.
+* Place the appendix at the end of the content, at the end of the page, or manually with a shortcode.
 * Add appendix placement with the `[botspot_appendix]` shortcode or the BotSpot Appendix block.
 * Cache rendered content with WordPress transients.
 * Retry failed syncs with WP-Cron.
@@ -129,7 +129,7 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Changelog ==
 
-= 3.7.1 =
+= 3.7.2 =
 
 * The placement settings no longer ask for a CSS selector. Placement is at the end of the content, at the end of the page, or a manual shortcode.
 * "In content" is now called "End of the content", and each placement option describes where the appendix lands when you hover it.
