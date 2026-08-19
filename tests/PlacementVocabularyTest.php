@@ -25,27 +25,47 @@ class PlacementVocabularyTest extends TestCase
     public static function placementProvider(): array
     {
         return [
-            ['in_content', 'in_content'],
-            ['end_of_page', 'end_of_page'],
+            ['bottom_of_content', 'bottom_of_content'],
+            ['above_footer', 'above_footer'],
+            ['bottom_of_page', 'bottom_of_page'],
             ['manual', 'manual'],
-            ['bottom_of_content', 'in_content'],
-            ['bottom', 'in_content'],
-            ['above_footer', 'end_of_page'],
-            ['bottom_of_page', 'end_of_page'],
-            ['below_footer', 'end_of_page'],
+            ['in_content', 'bottom_of_content'],
+            ['end_of_content', 'bottom_of_content'],
+            ['bottom', 'bottom_of_content'],
+            ['end_of_page', 'bottom_of_page'],
+            ['below_footer', 'bottom_of_page'],
             ['shortcode', 'manual'],
-            ['auto', 'in_content'],
-            ['footer', 'in_content'],
-            ['', 'in_content'],
+            ['auto', 'bottom_of_content'],
+            ['footer', 'bottom_of_content'],
+            ['', 'bottom_of_content'],
         ];
     }
 
     public function test_sanitize_position_migrates_legacy(): void
     {
         $this->assertSame(
-            'end_of_page',
-            Bspt_Options::sanitize_option_value('injection_position', 'above_footer')
+            'bottom_of_page',
+            Bspt_Options::sanitize_option_value('injection_position', 'end_of_page')
         );
+    }
+
+    /**
+     * @dataProvider footerPlacementProvider
+     */
+    public function test_is_footer_placement(string $value, bool $expected): void
+    {
+        $this->assertSame($expected, Bspt_Options::is_footer_placement($value));
+    }
+
+    public static function footerPlacementProvider(): array
+    {
+        return [
+            ['above_footer', true],
+            ['bottom_of_page', true],
+            ['bottom_of_content', false],
+            ['manual', false],
+            ['end_of_page', false],
+        ];
     }
 
     public function test_sanitize_anchor_accepts_valid_shape(): void

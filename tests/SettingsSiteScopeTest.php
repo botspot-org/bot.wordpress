@@ -68,7 +68,7 @@ class SettingsSiteScopeTest extends TestCase
     {
         $this->apply(['placement_mode' => 'end_of_page'], 'alpha.com');
 
-        $this->assertSame('end_of_page', get_option('bspt_injection_position'));
+        $this->assertSame('bottom_of_page', get_option('bspt_injection_position'));
     }
 
     public function test_www_prefix_still_matches(): void
@@ -77,7 +77,7 @@ class SettingsSiteScopeTest extends TestCase
 
         $this->apply(['placement_mode' => 'end_of_page'], 'alpha.com');
 
-        $this->assertSame('end_of_page', get_option('bspt_injection_position'));
+        $this->assertSame('bottom_of_page', get_option('bspt_injection_position'));
     }
 
     public function test_mismatched_domain_is_ignored(): void
@@ -92,6 +92,6 @@ class SettingsSiteScopeTest extends TestCase
     {
         $this->apply(['placement_mode' => 'end_of_page'], null);
 
-        $this->assertSame('end_of_page', get_option('bspt_injection_position'));
+        $this->assertSame('bottom_of_page', get_option('bspt_injection_position'));
     }
 }

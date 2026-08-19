@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BotSpot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 3.7.2
+ * Version: 3.7.3
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: GPLv2 or later
@@ -67,7 +67,7 @@ register_shutdown_function(function () {
 /**
  * Plugin version.
  */
-define('BSPT_VERSION', '3.7.2');
+define('BSPT_VERSION', '3.7.3');
 
 /**
  * Plugin file path
