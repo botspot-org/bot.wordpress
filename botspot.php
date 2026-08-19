@@ -14,7 +14,7 @@
  * Requires PHP: 7.4
  *
  * @package Bspt
- * @version 3.7.2
+ * @version 3.7.3
  */
 
 // If this file is called directly, abort.
