@@ -28,6 +28,37 @@ if (!defined("WPINC")) {
 class Bspt_Options
 {
     /**
+     * Canonical placement values, matching locus_models.public.placement.
+     *
+     * @since 3.7.3
+     * @var   string[]
+     */
+    const CANONICAL_PLACEMENTS = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
+
+    /**
+     * Placement values that render at wp_footer.
+     *
+     * Both names reach the same output. Code that branches on placement tests
+     * this list, since comparing against one name misses the other.
+     *
+     * @since 3.7.3
+     * @var   string[]
+     */
+    const FOOTER_PLACEMENTS = ["above_footer", "bottom_of_page"];
+
+    /**
+     * True when a placement renders at wp_footer.
+     *
+     * @since 3.7.3
+     * @param string $position Canonical placement value.
+     * @return bool
+     */
+    public static function is_footer_placement($position)
+    {
+        return in_array($position, self::FOOTER_PLACEMENTS, true);
+    }
+
+    /**
      * Default plugin options
      *
      * @since    1.0.0
@@ -51,7 +82,7 @@ class Bspt_Options
         "appendix_enabled" => true,
         "jsonld_enabled" => true,
         "jsonld_conflict_mode" => "merge",
-        "injection_position" => "in_content",
+        "injection_position" => "bottom_of_content",
         "placement_anchor" => null,
         "inject_on_post_types" => ["post", "page"],
 
@@ -358,35 +389,34 @@ class Bspt_Options
     /**
      * Map any stored placement value to the canonical vocabulary.
      *
-     * above_footer and bottom_of_page shared one render path, so both collapse
-     * to end_of_page. Sites on above_footer see the appendix move below the
-     * footer; placement_anchor is how to put it back.
+     * The vocabulary matches locus_models.public.placement, which follows the
+     * dashboard. above_footer and bottom_of_page stay distinct names over one
+     * render path, and placement_anchor refines the position from there.
      *
      * @since    3.6.0
      * @param    mixed     $value    The stored placement value.
-     * @return   string              One of in_content, end_of_page, manual.
+     * @return   string              One of self::CANONICAL_PLACEMENTS.
      */
     public static function migrate_placement_value($value)
     {
-        $canonical = ["in_content", "end_of_page", "manual"];
-        if (is_string($value) && in_array($value, $canonical, true)) {
+        if (is_string($value) && in_array($value, self::CANONICAL_PLACEMENTS, true)) {
             return $value;
         }
 
         $migration_map = [
-            "bottom_of_content" => "in_content",
-            "bottom"            => "in_content",
-            "above_footer"      => "end_of_page",
-            "bottom_of_page"    => "end_of_page",
-            "below_footer"      => "end_of_page",
-            "shortcode"         => "manual",
+            "in_content"     => "bottom_of_content",
+            "end_of_content" => "bottom_of_content",
+            "bottom"         => "bottom_of_content",
+            "end_of_page"    => "bottom_of_page",
+            "below_footer"   => "bottom_of_page",
+            "shortcode"      => "manual",
         ];
 
         if (is_string($value) && isset($migration_map[$value])) {
             return $migration_map[$value];
         }
 
-        return "in_content";
+        return "bottom_of_content";
     }
 
     /**

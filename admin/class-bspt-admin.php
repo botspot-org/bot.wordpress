@@ -113,7 +113,7 @@ class Bspt_Admin
         ]);
         register_setting("bspt_settings", "bspt_injection_position", [
             "sanitize_callback" => [$this, "sanitize_position"],
-            "default" => "in_content",
+            "default" => "bottom_of_content",
         ]);
         register_setting("bspt_settings", "bspt_placement_anchor", [
             "sanitize_callback" => [$this, "sanitize_placement_anchor"],

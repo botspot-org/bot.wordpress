@@ -429,8 +429,8 @@ class Bspt_Content_Injector
 
         $position = $this->resolve_injection_position();
 
-        // manual renders via shortcode; end_of_page renders at wp_footer.
-        if ($position === "manual" || $position === "end_of_page") {
+        // manual renders via shortcode; the footer placements render at wp_footer.
+        if ($position === "manual" || Bspt_Options::is_footer_placement($position)) {
             return $content . $this->bsa_debug_comment("the_content", "position_deferred", ["position" => $position]);
         }
 
@@ -563,7 +563,7 @@ class Bspt_Content_Injector
     /**
      * Build the anchor-relocation script, or "" when no anchor applies.
      *
-     * Only end_of_page with an explicit selector relocates. Every other mode
+     * Only a footer placement with an explicit selector relocates. Every other mode
      * renders where it renders. This replaced a 13-selector footer search that
      * guessed wrong on themes which position their own components (BOT-348).
      *
@@ -572,7 +572,7 @@ class Bspt_Content_Injector
      */
     private function build_anchor_script()
     {
-        if ($this->resolve_injection_position() !== "end_of_page") {
+        if (!Bspt_Options::is_footer_placement($this->resolve_injection_position())) {
             return "";
         }
 
@@ -626,8 +626,8 @@ class Bspt_Content_Injector
     }
 
     /**
-     * Render end_of_page here unconditionally, since the_content defers it.
-     * Also the page-builder fallback for in_content: Elementor, Divi,
+     * Render a footer placement here unconditionally, since the_content defers it.
+     * Also the page-builder fallback for bottom_of_content: Elementor, Divi,
      * WPBakery, Beaver Builder, and Bricks all discard the_content output, so
      * those pages get their appendix here instead, or not at all.
      *
@@ -649,9 +649,9 @@ class Bspt_Content_Injector
             return;
         }
 
-        // end_of_page always renders here. Other positions reach wp_footer only
+        // A footer placement always renders here. Others reach wp_footer only
         // as the page-builder fallback, because a builder discarded the_content.
-        if ($position !== "end_of_page" && !$this->is_page_builder_active()) {
+        if (!Bspt_Options::is_footer_placement($position) && !$this->is_page_builder_active()) {
             $this->print_debug_comment("wp_footer", "no_page_builder_skip");
             return;
         }
@@ -662,12 +662,13 @@ class Bspt_Content_Injector
     /**
      * Resolve the effective injection position.
      *
-     * Recognized positions: in_content, end_of_page, manual. Anything else,
+     * Recognized positions: bottom_of_content, above_footer, bottom_of_page,
+     * manual. Anything else,
      * including legacy stored values, migrates through migrate_placement_value.
      */
     private function resolve_injection_position()
     {
-        $stored = Bspt_Options::get("injection_position", "in_content");
+        $stored = Bspt_Options::get("injection_position", "bottom_of_content");
         return Bspt_Options::migrate_placement_value($stored);
     }
 
@@ -786,7 +787,8 @@ class Bspt_Content_Injector
      *
      * @since    1.4.0
      * @param    string    $position    The configured injection_position
-     *                                  (in_content / end_of_page / manual).
+     *                                  (bottom_of_content / above_footer /
+     *                                  bottom_of_page / manual).
      */
     private function inject_footer_position($position)
     {

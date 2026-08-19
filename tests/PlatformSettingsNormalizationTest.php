@@ -39,12 +39,12 @@ class PlatformSettingsNormalizationTest extends TestCase
     public static function placementProvider(): array
     {
         return [
-            ['in_content', 'in_content'],
-            ['end_of_page', 'end_of_page'],
+            ['bottom_of_content', 'bottom_of_content'],
+            ['above_footer', 'above_footer'],
+            ['bottom_of_page', 'bottom_of_page'],
             ['manual', 'manual'],
-            ['above_footer', 'end_of_page'],
-            ['bottom_of_page', 'end_of_page'],
-            ['bottom_of_content', 'in_content'],
+            ['in_content', 'bottom_of_content'],
+            ['end_of_page', 'bottom_of_page'],
         ];
     }
 

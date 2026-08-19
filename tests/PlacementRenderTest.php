@@ -37,16 +37,16 @@ class PlacementRenderTest extends TestCase
 
     public function test_resolve_migrates_legacy_stored_value(): void
     {
-        $GLOBALS['bspt_test_options']['bspt_injection_position'] = 'above_footer';
+        $GLOBALS['bspt_test_options']['bspt_injection_position'] = 'end_of_page';
 
-        $this->assertSame('end_of_page', $this->invoke('resolve_injection_position'));
+        $this->assertSame('bottom_of_page', $this->invoke('resolve_injection_position'));
     }
 
-    public function test_resolve_falls_back_to_in_content(): void
+    public function test_resolve_falls_back_to_bottom_of_content(): void
     {
         $GLOBALS['bspt_test_options']['bspt_injection_position'] = 'nonsense';
 
-        $this->assertSame('in_content', $this->invoke('resolve_injection_position'));
+        $this->assertSame('bottom_of_content', $this->invoke('resolve_injection_position'));
     }
 
     public function test_anchor_script_is_empty_without_anchor(): void
@@ -69,6 +69,17 @@ class PlacementRenderTest extends TestCase
         $this->assertStringContainsString('.site-footer', $script);
         $this->assertStringContainsString('"before"', $script);
         $this->assertStringNotContainsString('#colophon', $script);
+    }
+
+    public function test_anchor_script_carries_the_selector_for_above_footer(): void
+    {
+        $GLOBALS['bspt_test_options']['bspt_injection_position'] = 'above_footer';
+        $GLOBALS['bspt_test_options']['bspt_placement_anchor'] = [
+            'selector' => '.site-footer',
+            'position' => 'before',
+        ];
+
+        $this->assertStringContainsString('.site-footer', $this->invoke('build_anchor_script'));
     }
 
     public function test_anchor_script_is_empty_for_in_content(): void
