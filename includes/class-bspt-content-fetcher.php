@@ -94,6 +94,7 @@ class Bspt_Content_Fetcher
                 "X-API-Key" => $api_key,
                 "Accept" => "application/json",
                 "Origin" => home_url(),
+                "X-Plugin-Version" => defined('BSPT_VERSION') ? BSPT_VERSION : 'unknown',
             ],
             "timeout" => 15,
         ]);
@@ -206,6 +207,7 @@ class Bspt_Content_Fetcher
                 "X-API-Key" => $api_key,
                 "Accept" => "application/json",
                 "Origin" => home_url(),
+                "X-Plugin-Version" => defined('BSPT_VERSION') ? BSPT_VERSION : 'unknown',
             ],
             "timeout" => 15,
         ]);
@@ -284,6 +286,7 @@ class Bspt_Content_Fetcher
                 "X-API-Key" => $api_key,
                 "Accept" => "application/json",
                 "Origin" => home_url(),
+                "X-Plugin-Version" => defined('BSPT_VERSION') ? BSPT_VERSION : 'unknown',
             ],
             "timeout" => 5,
         ]);
