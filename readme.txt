@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.7.3
+Stable tag: 3.7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.4 =
+
+* The plugin now reports its own version to BotSpot, so support can see which build a site runs without asking. No settings change and no new data about your content.
 
 = 3.7.3 =
 
@@ -291,6 +295,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.7.4 =
+
+The plugin now tells BotSpot which version it is running, so support can answer version questions without asking you. Nothing else changes.
 
 = 3.7.0 =
 
