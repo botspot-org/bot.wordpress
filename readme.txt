@@ -2,7 +2,7 @@
 Contributors: haavardmk
 Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 3.7.4
 License: GPLv2 or later
