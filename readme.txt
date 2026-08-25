@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.7.4
+Stable tag: 3.7.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,6 +49,7 @@ Data sent to BotSpot may include:
 * Site URL, site name, and webhook URL during connection.
 * Selected published content, including title, content, excerpt, permalink, post type, status, author display name, language, publish/update dates, categories, tags, featured image URL, and existing source JSON-LD during sync.
 * The current page path, site origin, and API authentication headers when fetching rendered appendix content or JSON-LD.
+* On each frontend page view: the requested path, the visitor's user agent string, and the referring URL. This measures how often AI and search crawlers reach the site. No cookies are set or read, and no IP address is stored.
 
 BotSpot may send webhook requests back to the WordPress site to update enrichment status, clear local caches, and push configuration changes. These requests are authenticated with an HMAC signature.
 
@@ -128,6 +129,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.5 =
+
+* BotSpot now measures how often AI and search crawlers reach your pages. Each frontend page view sends the path, the user agent, and the referrer to BotSpot in a background request that does not delay the page. No cookies are set or read, and no IP address is stored.
 
 = 3.7.4 =
 
@@ -295,6 +300,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.7.5 =
+
+Adds crawler visit measurement so you can see which AI and search bots read your pages. Page load speed is unaffected, no cookies are used, and no IP address is stored.
 
 = 3.7.4 =
 

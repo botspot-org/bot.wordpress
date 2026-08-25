@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BotSpot
  * Description: Push-based content sync and AI appendix injection. Syncs content to locus-core and renders JSON-LD + appendix.
- * Version: 3.7.4
+ * Version: 3.7.5
  * Author: bot.spot Team
  * Author URI: https://bot.spot
  * License: GPLv2 or later
@@ -14,7 +14,7 @@
  * Requires PHP: 7.4
  *
  * @package Bspt
- * @version 3.7.4
+ * @version 3.7.5
  */
 
 // If this file is called directly, abort.
@@ -67,7 +67,7 @@ register_shutdown_function(function () {
 /**
  * Plugin version.
  */
-define('BSPT_VERSION', '3.7.4');
+define('BSPT_VERSION', '3.7.5');
 
 /**
  * Plugin file path
@@ -238,9 +238,12 @@ function bspt_init() {
 
     try {
         require_once BSPT_PLUGIN_PATH . 'includes/class-bspt.php';
+        require_once BSPT_PLUGIN_PATH . 'includes/class-bspt-tracking.php';
 
         $plugin = new Bspt();
         $plugin->run();
+
+        new Bspt_Tracking();
     } catch (Exception $e) {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional fatal-error capture at bootstrap
         error_log('BotSpot WP Initialization Error: ' . $e->getMessage());
