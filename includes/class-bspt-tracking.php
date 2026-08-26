@@ -55,11 +55,14 @@ class Bspt_Tracking {
 
         $api_url = rtrim(Bspt_Options::get_locus_api_url(), '/');
 
-        $data = [
-            'path'       => $this->get_request_path(),
-            'user_agent' => $this->get_user_agent(),
-            'referrer'   => $this->get_referrer(),
-        ];
+        $data = array_merge(
+            [
+                'path'       => $this->get_request_path(),
+                'user_agent' => $this->get_user_agent(),
+                'referrer'   => $this->get_referrer(),
+            ],
+            $this->get_utm_params()
+        );
 
         // blocking => false with a near-zero timeout: the socket is opened and
         // abandoned, so a slow or down API never delays the page.
@@ -85,6 +88,32 @@ class Bspt_Tracking {
         $uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '/';
         $path = strtok($uri, '?');
         return false === $path ? '/' : $path;
+    }
+
+    /**
+     * Get the campaign parameters from the query string.
+     *
+     * ChatGPT tags its outbound citation links with utm_source=chatgpt.com, so
+     * this is the only signal that attributes a human click back to an assistant.
+     * The path stays query-stripped because it becomes a metric attribute and a
+     * campaign value would mint one series per visit.
+     *
+     * @return array
+     */
+    private function get_utm_params() {
+        $keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+        $params = [];
+
+        foreach ($keys as $key) {
+            // phpcs:ignore WordPress.Security.NonceVerification.Recording -- read-only page view, no state change
+            if (empty($_GET[$key]) || !is_string($_GET[$key])) {
+                continue;
+            }
+            // phpcs:ignore WordPress.Security.NonceVerification.Recording -- read-only page view, no state change
+            $params[$key] = substr(sanitize_text_field(wp_unslash($_GET[$key])), 0, 128);
+        }
+
+        return $params;
     }
 
     /**
