@@ -101,14 +101,48 @@ jobs:
 
       # Releasing a commit that is not on main means shipping code that skipped
       # main's review.
+      #
+      # RELEASING.md says to open a PR from main into release and merge it.
+      # GitHub records that as a merge commit on release, and a merge commit is
+      # never an ancestor of main, so the plain ancestor test rejects every
+      # release performed the documented way. It blocked 3.7.5 on 2026-08-26.
+      #
+      # A merge that adds nothing beyond main is accepted instead: every parent
+      # already on main, and a tree identical to one of those parents. The tree
+      # comparison is what rules out conflict resolution, the only way a merge
+      # of reviewed parents can introduce unreviewed content.
       - name: Require the commit to be on main
         run: |
           set -euo pipefail
           git fetch --quiet origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "::error::$GITHUB_SHA is not an ancestor of origin/main"
+
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "$GITHUB_SHA is on main"
+            exit 0
+          fi
+
+          parents=$(git rev-list --parents -n 1 "$GITHUB_SHA" | cut -d' ' -f2-)
+          if [ -z "$parents" ]; then
+            echo "::error::$GITHUB_SHA is a root commit and is not on main"
             exit 1
           fi
+
+          for parent in $parents; do
+            if ! git merge-base --is-ancestor "$parent" origin/main; then
+              echo "::error::parent $parent of $GITHUB_SHA is not on main"
+              exit 1
+            fi
+          done
+
+          for parent in $parents; do
+            if [ "$(git rev-parse "$GITHUB_SHA^{tree}")" = "$(git rev-parse "$parent^{tree}")" ]; then
+              echo "$GITHUB_SHA merges reviewed commits and matches parent $parent"
+              exit 0
+            fi
+          done
+
+          echo "::error::$GITHUB_SHA differs from every parent, so it carries content that never went through main"
+          exit 1
 
       # wp.org tags are immutable, so checking here — before anything is
       # published anywhere — is much cheaper than discovering it mid-release.
