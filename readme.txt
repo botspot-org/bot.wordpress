@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.7.5
+Stable tag: 3.7.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,6 +129,11 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.6 =
+
+* Crawler measurement now recognises many more AI assistants and search crawlers, including ChatGPT search, Claude, Perplexity, Gemini, and Meta AI, and reports each one separately instead of grouping them.
+* Visits that arrive with campaign tags in the address (utm_source and friends) now report those tags, so you can see when an AI assistant sends a reader to your page. No cookies are set or read, and no IP address is stored.
 
 = 3.7.5 =
 
@@ -300,6 +305,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.7.6 =
+
+Recognises many more AI crawlers by name and reports campaign tags on incoming links, so you can tell which assistant sent a reader. No cookies are used and no IP address is stored.
 
 = 3.7.5 =
 
