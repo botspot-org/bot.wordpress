@@ -105,11 +105,11 @@ class Bspt_Tracking {
         $params = [];
 
         foreach ($keys as $key) {
-            // phpcs:ignore WordPress.Security.NonceVerification.Recording -- read-only page view, no state change
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only page view, no state change
             if (empty($_GET[$key]) || !is_string($_GET[$key])) {
                 continue;
             }
-            // phpcs:ignore WordPress.Security.NonceVerification.Recording -- read-only page view, no state change
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only page view, no state change
             $params[$key] = substr(sanitize_text_field(wp_unslash($_GET[$key])), 0, 128);
         }
 
