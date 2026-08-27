@@ -25,9 +25,9 @@ Bspt_Options::migrate_injection_toggles();
 $bspt_site_domain = wp_parse_url(home_url(), PHP_URL_HOST);
 $bspt_post_types = get_post_types(["public" => true], "objects");
 $bspt_has_api_key = !empty(Bspt_Options::get("api_key"));
-$bspt_webhook_id = Bspt_Options::get("webhook_id");
+$bspt_connection_id = Bspt_Options::get("connection_id");
 $bspt_tenant_id = Bspt_Options::get("tenant_id");
-$bspt_is_connected = $bspt_has_api_key && !empty($bspt_webhook_id);
+$bspt_is_connected = $bspt_has_api_key && !empty($bspt_connection_id);
 
 // WooCommerce detection
 $bspt_woocommerce_active = class_exists("WooCommerce");

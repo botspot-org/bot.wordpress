@@ -462,6 +462,7 @@ class Bspt_Webhook_Handler
 
         update_option("bspt_webhook_id", $body["webhook_id"]);
         update_option("bspt_webhook_secret", $body["webhook_secret"]);
+        Bspt_Options::set("connection_id", $body["webhook_id"]);
 
         if (!empty($body["site_id"])) {
             update_option("bspt_site_id", $body["site_id"]);
@@ -513,6 +514,7 @@ class Bspt_Webhook_Handler
 
         update_option("bspt_webhook_id", $body["id"]);
         update_option("bspt_webhook_secret", $body["secret"]);
+        Bspt_Options::set("connection_id", $body["id"]);
 
         return true;
     }
