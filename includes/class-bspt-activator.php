@@ -64,7 +64,9 @@ class Bspt_Activator {
             Bspt_Options::set('webhook_secret', '');
         }
         if (!Bspt_Options::exists('connection_id')) {
-            Bspt_Options::set('connection_id', '');
+            // Migrate from legacy webhook_id if present
+            $webhook_id = Bspt_Options::get('webhook_id');
+            Bspt_Options::set('connection_id', $webhook_id ?: '');
         }
 
         // Sync defaults
