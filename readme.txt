@@ -310,6 +310,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Upgrade Notice ==
 
+= 3.7.7 =
+
+Fixes the connection status shown on the settings screen. The header and the Connect tab could disagree, one reporting connected while the other reported disconnected. No settings change.
+
 = 3.7.6 =
 
 Recognises many more AI crawlers by name and reports campaign tags on incoming links, so you can tell which assistant sent a reader. No cookies are used and no IP address is stored.
