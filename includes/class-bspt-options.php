@@ -36,6 +36,18 @@ class Bspt_Options
     const CANONICAL_PLACEMENTS = ["bottom_of_content", "above_footer", "bottom_of_page", "manual"];
 
     /**
+     * Placement a site gets when nothing is stored.
+     *
+     * Every default and fallback reads this constant. A site activated before
+     * 3.7.8 already carries a stored value from the activator, so it keeps its
+     * placement; only fresh activations land here.
+     *
+     * @since 3.7.8
+     * @var   string
+     */
+    const DEFAULT_PLACEMENT = "bottom_of_page";
+
+    /**
      * Placement values that render at wp_footer.
      *
      * Both names reach the same output. Code that branches on placement tests
@@ -82,7 +94,7 @@ class Bspt_Options
         "appendix_enabled" => true,
         "jsonld_enabled" => true,
         "jsonld_conflict_mode" => "merge",
-        "injection_position" => "bottom_of_content",
+        "injection_position" => self::DEFAULT_PLACEMENT,
         "placement_anchor" => null,
         "inject_on_post_types" => ["post", "page"],
 
@@ -416,7 +428,7 @@ class Bspt_Options
             return $migration_map[$value];
         }
 
-        return "bottom_of_content";
+        return self::DEFAULT_PLACEMENT;
     }
 
     /**

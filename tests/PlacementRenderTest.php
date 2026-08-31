@@ -42,9 +42,16 @@ class PlacementRenderTest extends TestCase
         $this->assertSame('bottom_of_page', $this->invoke('resolve_injection_position'));
     }
 
-    public function test_resolve_falls_back_to_bottom_of_content(): void
+    public function test_resolve_falls_back_to_the_default_placement(): void
     {
         $GLOBALS['bspt_test_options']['bspt_injection_position'] = 'nonsense';
+
+        $this->assertSame('bottom_of_page', $this->invoke('resolve_injection_position'));
+    }
+
+    public function test_resolve_keeps_a_stored_end_of_content_choice(): void
+    {
+        $GLOBALS['bspt_test_options']['bspt_injection_position'] = 'bottom';
 
         $this->assertSame('bottom_of_content', $this->invoke('resolve_injection_position'));
     }

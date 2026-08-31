@@ -25,7 +25,7 @@ if (!isset($bspt_post_types) || !is_array($bspt_post_types)) {
 $bspt_sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
 $bspt_inject_post_types = Bspt_Options::get("inject_on_post_types", ["post", "page"]);
 $bspt_injection_position = Bspt_Options::migrate_placement_value(
-    Bspt_Options::get("injection_position", "bottom_of_content")
+    Bspt_Options::get("injection_position", Bspt_Options::DEFAULT_PLACEMENT)
 );
 $bspt_jsonld_conflict = Bspt_Options::get("jsonld_conflict_mode", "merge");
 $bspt_auto_sync = (bool) Bspt_Options::get("auto_sync_enabled", true);
@@ -111,7 +111,6 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
                     <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_content" <?php checked($bspt_injection_position, "bottom_of_content"); ?> />
                     <span>
                         <?php esc_html_e("End of the content", "botspot"); ?>
-                        <span class="bsa-check__tag"><?php esc_html_e("recommended", "botspot"); ?></span>
                     </span>
                     <span class="bsa-tip" role="note">
                         <?php esc_html_e("Directly under the post or page text, above the comments and the footer. Elementor, Divi, WPBakery, Beaver Builder and Bricks discard that spot, so pages built with them fall back to the end of the page.", "botspot"); ?>
@@ -119,7 +118,10 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
                 </label>
                 <label class="bsa-check bsa-check--tipped">
                     <input type="radio" class="bsa-check-as-check" name="bspt_injection_position" value="bottom_of_page" <?php checked(Bspt_Options::is_footer_placement($bspt_injection_position), true); ?> />
-                    <span><?php esc_html_e("End of the page", "botspot"); ?></span>
+                    <span>
+                        <?php esc_html_e("End of the page", "botspot"); ?>
+                        <span class="bsa-check__tag"><?php esc_html_e("recommended", "botspot"); ?></span>
+                    </span>
                     <span class="bsa-tip" role="note">
                         <?php esc_html_e("Below everything the theme renders, under the footer. Use this when the appendix breaks a template that wraps the post text.", "botspot"); ?>
                     </span>
