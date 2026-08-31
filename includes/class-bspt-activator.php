@@ -91,7 +91,7 @@ class Bspt_Activator {
             Bspt_Options::set('jsonld_conflict_mode', 'merge');
         }
         if (!Bspt_Options::exists('injection_position')) {
-            Bspt_Options::set('injection_position', 'bottom');
+            Bspt_Options::set('injection_position', Bspt_Options::DEFAULT_PLACEMENT);
         }
         if (!Bspt_Options::exists('inject_on_post_types')) {
             Bspt_Options::set('inject_on_post_types', self::get_default_post_types());
