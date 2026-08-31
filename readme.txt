@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.7.7
+Stable tag: 3.7.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,6 +129,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.8 =
+
+* New installs now place the appendix at the end of the page instead of the end of the content. The end of the page survives page builders and themes that wrap the post text. Sites installed before this release keep the placement they already have.
 
 = 3.7.7 =
 
@@ -309,6 +313,14 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.7.8 =
+
+Changes the appendix placement that new installs start with, from the end of the content to the end of the page. Your existing placement is untouched.
+
+= 3.7.7 =
+
+Fixes the connection status shown on the settings screen. The header and the Connect tab could disagree, one reporting connected while the other reported disconnected. No settings change.
 
 = 3.7.6 =
 

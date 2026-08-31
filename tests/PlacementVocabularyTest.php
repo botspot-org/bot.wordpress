@@ -35,9 +35,9 @@ class PlacementVocabularyTest extends TestCase
             ['end_of_page', 'bottom_of_page'],
             ['below_footer', 'bottom_of_page'],
             ['shortcode', 'manual'],
-            ['auto', 'bottom_of_content'],
-            ['footer', 'bottom_of_content'],
-            ['', 'bottom_of_content'],
+            ['auto', 'bottom_of_page'],
+            ['footer', 'bottom_of_page'],
+            ['', 'bottom_of_page'],
         ];
     }
 

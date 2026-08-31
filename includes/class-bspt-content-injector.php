@@ -668,7 +668,7 @@ class Bspt_Content_Injector
      */
     private function resolve_injection_position()
     {
-        $stored = Bspt_Options::get("injection_position", "bottom_of_content");
+        $stored = Bspt_Options::get("injection_position", Bspt_Options::DEFAULT_PLACEMENT);
         return Bspt_Options::migrate_placement_value($stored);
     }
 
