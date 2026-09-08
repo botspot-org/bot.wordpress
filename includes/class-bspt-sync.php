@@ -143,19 +143,7 @@ class Bspt_Sync
             return;
         }
 
-        // Skip non-synced post types
-        $sync_post_types = Bspt_Options::get("sync_post_types", ["post", "page"]);
-        if (!in_array($post->post_type, $sync_post_types, true)) {
-            return;
-        }
-
-        // Only sync published posts
-        if ($post->post_status !== "publish") {
-            return;
-        }
-
-        // Apply filter to allow skipping specific posts
-        if (!apply_filters("bspt_should_sync", true, $post_id, $post)) {
+        if (!self::can_sync_post($post)) {
             return;
         }
 
@@ -421,7 +409,9 @@ class Bspt_Sync
 
         // Truncate fields to match DB column limits (safety net)
         $title = mb_substr($post->post_title, 0, 500);
-        $author = $author ? mb_substr($author, 0, 255) : null;
+        // The platform republishes this as a schema.org Person in the appendix
+        // JSON-LD, so a site that hides bylines needs a way to withhold it.
+        $author = $author && Bspt_Options::get("send_author") ? mb_substr($author, 0, 255) : null;
         $excerpt = $post->post_excerpt ? mb_substr($post->post_excerpt, 0, 2000) : null;
         $url = mb_substr($permalink, 0, 2048);
 
@@ -510,15 +500,23 @@ class Bspt_Sync
      * @param    string    $permalink  The post permalink.
      * @return   array                 [ string $content, string $source ] where
      *                                 $source is one of rendered_fetch,
-     *                                 not_published, fetch_error,
-     *                                 fetch_http_error, fetch_empty,
-     *                                 extract_too_short.
+     *                                 not_published, password_protected,
+     *                                 fetch_error, fetch_http_error,
+     *                                 fetch_empty, extract_too_short.
      */
     private static function fetch_rendered_content($post, $permalink)
     {
         // Skip fetch for non-published posts (preview URLs won't work)
         if ($post->post_status !== 'publish') {
             return [Bspt_Page_Builder::extract_content($post), 'not_published'];
+        }
+
+        // can_sync_post() already rejects these, so reaching here means a
+        // caller skipped the eligibility gate. Return nothing rather than fall
+        // through: every failure path below ends at extract_content(), which
+        // hands back the protected post_content verbatim.
+        if (!empty($post->post_password)) {
+            return ['', 'password_protected'];
         }
 
         // Add cache-busting param to ensure fresh content
@@ -1007,6 +1005,7 @@ class Bspt_Sync
         $posts = get_posts([
             "post_type" => $sync_post_types,
             "post_status" => "publish",
+            "has_password" => false,
             "posts_per_page" => -1,
             "orderby" => "ID",
             "order" => "ASC",
@@ -1113,6 +1112,7 @@ class Bspt_Sync
             $posts = get_posts([
                 "post_type" => $sync_post_types,
                 "post_status" => "publish",
+                "has_password" => false,
                 "posts_per_page" => $batch_size,
                 "offset" => $offset,
                 "orderby" => "ID",
@@ -1287,6 +1287,15 @@ class Bspt_Sync
         }
 
         if ($post->post_status !== "publish") {
+            return false;
+        }
+
+        // A password-protected post keeps status "publish", so the check above
+        // passes it. Its body still reaches the payload: fetch_rendered_content()
+        // requests the permalink unauthenticated, WordPress answers 200 with the
+        // password form, and the too-short fallback then returns the raw
+        // post_content the password exists to hide.
+        if (!empty($post->post_password)) {
             return false;
         }
 

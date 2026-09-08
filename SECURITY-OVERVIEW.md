@@ -32,19 +32,22 @@ status, any JSON-LD an SEO plugin already emits for the page, and the name of
 the page builder in use.
 
 Only posts with status `publish` and a post type you selected are eligible.
-Drafts, pending, private, and trashed posts are never sent. The plugin
-re-sends a page only when its content hash changes and the word count moves
-past the sync sensitivity threshold, so ordinary metadata edits do not generate
-traffic.
+Drafts, pending, private, trashed, and password-protected posts are never sent.
+The plugin re-sends a page only when its content hash changes and the word
+count moves past the sync sensitivity threshold, so ordinary metadata edits do
+not generate traffic.
+
+Password protection is enforced on every path: the per-post eligibility check,
+the bulk sync query, and the page registration query all exclude protected
+posts, and the content fetcher refuses to read one even if a custom
+integration reaches it directly. Releases before 3.7.9 excluded protected posts
+on none of those paths; upgrade if you rely on this.
 
 The author display name is the one field in this payload that is personal data.
-If your editorial workflow treats author names as confidential, set display
-names to a role or a pseudonym before enabling sync.
-
-Known limitation: eligibility is decided on post status alone, so a
-password-protected post, which WordPress still stores with status `publish`, is
-sent. Exclude those post types from the sync list, or filter them out with the
-`bspt_should_sync` filter, if that matters to you.
+The setting "Send author names", under the advanced settings, controls it. It
+is on by default, because the platform republishes the name as schema.org
+authorship in the appendix, which is an SEO signal. Turn it off if your site
+hides bylines or treats author names as confidential.
 
 ### Page view telemetry, on every front-end request
 

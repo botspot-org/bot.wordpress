@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.7.8
+Stable tag: 3.7.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,6 +129,11 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.9 =
+
+* Security: password-protected posts are no longer synced. A protected post keeps the "published" status, so it passed the previous eligibility check, and its body could reach bot.spot. Protected posts are now excluded on every sync path, including bulk sync and page registration.
+* New setting: "Send author names", on by default. Turn it off to keep post author display names out of synced content and out of the appendix structured data.
 
 = 3.7.8 =
 

@@ -89,6 +89,7 @@ class Bspt_Options
         "auto_sync_enabled" => true,
         "sync_sensitivity" => "medium",
         "sync_post_types" => ["post", "page"],
+        "send_author" => true,
 
         // Display
         "appendix_enabled" => true,
@@ -302,6 +303,7 @@ class Bspt_Options
             case "appendix_enabled":
             case "jsonld_enabled":
             case "debug_mode":
+            case "send_author":
                 return (bool) $value;
 
             case "cache_ttl":
@@ -353,6 +355,7 @@ class Bspt_Options
             case "appendix_enabled":
             case "jsonld_enabled":
             case "debug_mode":
+            case "send_author":
                 return (bool) $value;
 
             case "sync_sensitivity":

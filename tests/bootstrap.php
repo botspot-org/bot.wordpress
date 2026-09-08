@@ -46,6 +46,32 @@ if (!function_exists('has_block')) {
     }
 }
 
+// Bspt_Sync::can_sync_post() rejects anything that is not a WP_Post, so an
+// eligibility test needs the class to exist. Core's WP_Post is final with a
+// private constructor; this stands in for it as a plain property bag.
+if (!class_exists('WP_Post')) {
+    class WP_Post
+    {
+        public $ID = 0;
+        public $post_type = 'post';
+        public $post_status = 'publish';
+        public $post_password = '';
+        public $post_title = '';
+        public $post_content = '';
+        public $post_excerpt = '';
+        public $post_author = 0;
+        public $post_date_gmt = '2026-01-01 00:00:00';
+        public $post_modified_gmt = '2026-01-01 00:00:00';
+
+        public function __construct(array $properties = [])
+        {
+            foreach ($properties as $name => $value) {
+                $this->$name = $value;
+            }
+        }
+    }
+}
+
 // Post-meta and post lookups, backed by test-controlled globals so a test can
 // stand up a fake Elementor/Divi/Bricks post without a WordPress install.
 $GLOBALS['bspt_test_post_meta'] = [];

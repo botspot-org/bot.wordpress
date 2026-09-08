@@ -1213,6 +1213,7 @@ class Bspt_Admin
             "auto_sync_enabled" => [$this, "sanitize_checkbox"],
             "sync_sensitivity" => [$this, "sanitize_sensitivity"],
             "sync_post_types" => [$this, "sanitize_post_types"],
+            "send_author" => [$this, "sanitize_checkbox"],
             "appendix_enabled" => [$this, "sanitize_checkbox"],
             "jsonld_enabled" => [$this, "sanitize_checkbox"],
             "jsonld_conflict_mode" => [$this, "sanitize_jsonld_conflict_mode"],

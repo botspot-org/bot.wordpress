@@ -29,6 +29,7 @@ $bspt_injection_position = Bspt_Options::migrate_placement_value(
 );
 $bspt_jsonld_conflict = Bspt_Options::get("jsonld_conflict_mode", "merge");
 $bspt_auto_sync = (bool) Bspt_Options::get("auto_sync_enabled", true);
+$bspt_send_author = (bool) Bspt_Options::get("send_author", true);
 $bspt_sync_sensitivity = Bspt_Options::get("sync_sensitivity", "high");
 $bspt_appendix_enabled = (bool) Bspt_Options::get("appendix_enabled", true);
 $bspt_jsonld_enabled = (bool) Bspt_Options::get("jsonld_enabled", true);
@@ -179,6 +180,19 @@ $bspt_custom_types = array_filter($bspt_post_types, function ($bspt_pt) use ($bs
                 <label class="bsa-check">
                     <input type="checkbox" name="bspt_auto_sync_enabled" value="1" <?php checked($bspt_auto_sync); ?> />
                     <span><?php esc_html_e("Enable auto-sync", "botspot"); ?></span>
+                </label>
+            </div>
+        </section>
+
+        <section class="bsa-settings-row">
+            <div class="bsa-settings-row__meta">
+                <h3 class="bsa-settings-row__title"><?php esc_html_e("Author names", "botspot"); ?></h3>
+                <p class="bsa-settings-row__desc"><?php esc_html_e("Send the post author's display name with synced content. bot.spot republishes it as schema.org authorship in the appendix. Turn this off if your site hides bylines.", "botspot"); ?></p>
+            </div>
+            <div class="bsa-settings-row__body">
+                <label class="bsa-check">
+                    <input type="checkbox" name="bspt_send_author" value="1" <?php checked($bspt_send_author); ?> />
+                    <span><?php esc_html_e("Send author names", "botspot"); ?></span>
                 </label>
             </div>
         </section>
