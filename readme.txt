@@ -319,6 +319,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 == Upgrade Notice ==
 
+= 3.7.9 =
+
+Security fix. Password-protected posts were eligible for sync, and their content could reach bot.spot. They are now excluded on every sync path. Update if you use password protection on any synced post type. Also adds a setting to stop sending author names.
+
 = 3.7.8 =
 
 Changes the appendix placement that new installs start with, from the end of the content to the end of the page. Your existing placement is untouched.
