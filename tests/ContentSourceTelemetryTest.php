@@ -96,7 +96,7 @@ if (!function_exists('get_the_post_thumbnail_url')) {
 if (!function_exists('get_the_author_meta')) {
     function get_the_author_meta($field, $author_id = 0)
     {
-        return '';
+        return isset($GLOBALS['bspt_test_author']) ? $GLOBALS['bspt_test_author'] : '';
     }
 }
 if (!function_exists('get_post_time')) {

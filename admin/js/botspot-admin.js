@@ -509,6 +509,7 @@
         // Checkboxes - booleans
         var checkboxes = [
             { name: "bspt_auto_sync_enabled", key: "auto_sync_enabled" },
+            { name: "bspt_send_author", key: "send_author" },
             { name: "bspt_appendix_enabled", key: "appendix_enabled" },
             { name: "bspt_jsonld_enabled", key: "jsonld_enabled" },
             { name: "bspt_debug_mode", key: "debug_mode" },

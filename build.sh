@@ -119,6 +119,8 @@ fi
 cp readme.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
 cp LICENSE.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
 cp THIRD-PARTY-LICENSES.txt "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp SECURITY.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
+cp SECURITY-OVERVIEW.md "${BUILD_DIR}/${PLUGIN_SLUG}/"
 
 # Copy uninstall script
 cp uninstall.php "${BUILD_DIR}/${PLUGIN_SLUG}/"
