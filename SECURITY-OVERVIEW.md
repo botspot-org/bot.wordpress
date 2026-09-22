@@ -126,23 +126,18 @@ connection, trigger a sync, or read the stored credentials.
 
 ## Where the data goes
 
-The BotSpot platform runs on Google Cloud in the European Union. The API,
-databases, and vector store are in `europe-north1` (Finland). The enrichment
-workers, the text embedding model, and the entity and inference models run in
-`europe-west4` (Netherlands). Your content is stored only in those two regions,
-and so are the backups.
+The BotSpot platform runs on Google Cloud. The API, the databases and the
+content store run in `europe-north1` (Finland). The enrichment workers and the
+AI models run in `europe-west4` (Netherlands). Your content and its backups
+stay in those two regions.
 
-Text generation is the one exception, and it is worth reading closely. The
-appendix is written by Google Gemini models through Vertex AI's global
-endpoint. That endpoint carries no processing-location guarantee, so the
-generation step is not EU-guaranteed. Neither model BotSpot uses is served from
-a single EU region today. Embeddings are separate: `text-embedding-005` runs in
-`europe-west4`.
+Google's generative AI service writes the appendix. It runs on a global
+endpoint. That endpoint gives no guarantee about the processing location. The
+model that indexes your content runs in `europe-west4`.
 
-PostgreSQL, Qdrant, and Memgraph hold the content, its vectors, and the derived
-knowledge graph, all self-hosted in the same project rather than with a
-third-party vendor. WorkOS validates API keys and holds organization identity;
-it receives no page content.
+BotSpot hosts the content stores itself, in the same project. No third-party
+database vendor holds your content. WorkOS validates API keys and holds
+organization identity. It receives no page content.
 
 All tenant data is scoped by organization ID at every layer: separate Qdrant
 collections per tenant, tenant tags on every graph node, and organization
