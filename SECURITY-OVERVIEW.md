@@ -129,10 +129,16 @@ connection, trigger a sync, or read the stored credentials.
 The BotSpot platform runs on Google Cloud in the European Union. The API,
 databases, and vector store are in `europe-north1` (Finland). The enrichment
 workers, the text embedding model, and the entity and inference models run in
-`europe-west4` (Netherlands). Content is not copied outside the EU.
+`europe-west4` (Netherlands). Your content is stored only in those two regions,
+and so are the backups.
 
-The processing chain uses Google Vertex AI for embeddings and for the Gemini
-models that generate the appendix, both called within those EU regions.
+Text generation is the one exception, and it is worth reading closely. The
+appendix is written by Google Gemini models through Vertex AI's global
+endpoint. That endpoint carries no processing-location guarantee, so the
+generation step is not EU-guaranteed. Neither model BotSpot uses is served from
+a single EU region today. Embeddings are separate: `text-embedding-005` runs in
+`europe-west4`.
+
 PostgreSQL, Qdrant, and Memgraph hold the content, its vectors, and the derived
 knowledge graph, all self-hosted in the same project rather than with a
 third-party vendor. WorkOS validates API keys and holds organization identity;
