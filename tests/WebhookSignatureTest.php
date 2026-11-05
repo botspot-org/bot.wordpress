@@ -5,21 +5,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-if (!class_exists('Bspt_Logger')) {
-    // Same shape as the stub in WordPressRegistrationTest; whichever file
-    // loads first defines the class for the whole run.
-    class Bspt_Logger
-    {
-        public static function log_error($message)
-        {
-            $GLOBALS['bspt_test_errors'][] = $message;
-        }
-        public static function log_debug($message)
-        {
-        }
-    }
-}
-
 class Bspt_Test_Signed_Request
 {
     private $headers;
@@ -111,7 +96,7 @@ class WebhookSignatureTest extends TestCase
         ]);
 
         $this->assertFalse($this->verify($request));
-        $this->assertStringContainsString('missing V2 signature', $GLOBALS['bspt_test_errors'][0]);
+        $this->assertSame([], $GLOBALS['bspt_test_errors'], 'rejections must not reach the admin error store');
     }
 
     public function test_wrong_v2_signature_is_rejected()
@@ -123,7 +108,6 @@ class WebhookSignatureTest extends TestCase
         ]);
 
         $this->assertFalse($this->verify($request));
-        $this->assertStringContainsString('mismatch', $GLOBALS['bspt_test_errors'][0]);
     }
 
     public function test_signature_over_a_different_timestamp_is_rejected()
@@ -156,7 +140,6 @@ class WebhookSignatureTest extends TestCase
         ]);
 
         $this->assertFalse($this->verify($request));
-        $this->assertStringContainsString('window', $GLOBALS['bspt_test_errors'][0]);
     }
 
     public function test_future_timestamp_is_rejected()
@@ -168,7 +151,6 @@ class WebhookSignatureTest extends TestCase
         ]);
 
         $this->assertFalse($this->verify($request));
-        $this->assertStringContainsString('window', $GLOBALS['bspt_test_errors'][0]);
     }
 
     public function test_missing_timestamp_is_rejected()
@@ -178,7 +160,39 @@ class WebhookSignatureTest extends TestCase
         ]);
 
         $this->assertFalse($this->verify($request));
-        $this->assertStringContainsString('missing timestamp', $GLOBALS['bspt_test_errors'][0]);
+    }
+
+    public function test_permissive_timestamp_formats_are_rejected()
+    {
+        foreach (['now', 'x', '2026-11-05', '@1790000000', gmdate('Y-m-d\TH:i:s', self::NOW)] as $ts) {
+            $request = $this->request([
+                'X-Webhook-Timestamp' => $ts,
+                'X-Webhook-Signature-V2' => $this->sign($ts),
+            ]);
+            $this->assertFalse($this->verify($request), $ts);
+        }
+    }
+
+    public function test_the_python_isoformat_with_microseconds_and_offset_passes()
+    {
+        $ts = gmdate('Y-m-d\TH:i:s', self::NOW) . '.811234+00:00';
+        $request = $this->request([
+            'X-Webhook-Timestamp' => $ts,
+            'X-Webhook-Signature-V2' => $this->sign($ts),
+        ]);
+
+        $this->assertTrue($this->verify($request));
+    }
+
+    public function test_an_empty_secret_is_rejected()
+    {
+        $ts = $this->iso(0);
+        $request = $this->request([
+            'X-Webhook-Timestamp' => $ts,
+            'X-Webhook-Signature-V2' => 'sha256=' . hash_hmac('sha256', $ts . '.' . self::BODY, ''),
+        ]);
+
+        $this->assertFalse(Bspt_Webhook_Handler::verify_signed_request($request, '', self::NOW));
     }
 
     public function test_unparseable_timestamp_is_rejected()
@@ -189,6 +203,5 @@ class WebhookSignatureTest extends TestCase
         ]);
 
         $this->assertFalse($this->verify($request));
-        $this->assertStringContainsString('unparseable', $GLOBALS['bspt_test_errors'][0]);
     }
 }

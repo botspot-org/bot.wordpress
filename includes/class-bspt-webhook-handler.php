@@ -233,6 +233,9 @@ class Bspt_Webhook_Handler
         $signature = $request->get_header("X-Webhook-Signature-V2");
         $timestamp = $request->get_header("X-Webhook-Timestamp");
 
+        if (empty($secret)) {
+            return self::reject_signature("no webhook secret configured");
+        }
         if (empty($signature)) {
             return self::reject_signature("missing V2 signature");
         }
@@ -240,8 +243,14 @@ class Bspt_Webhook_Handler
             return self::reject_signature("missing timestamp");
         }
 
-        $sent_at = strtotime($timestamp);
-        if ($sent_at === false) {
+        // strtotime() accepts "now", "@123" and bare dates; the sender emits
+        // one ISO-8601 shape, so accept only that.
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/', $timestamp)) {
+            return self::reject_signature("unparseable timestamp");
+        }
+        try {
+            $sent_at = (new DateTimeImmutable($timestamp))->getTimestamp();
+        } catch (Exception $e) {
             return self::reject_signature("unparseable timestamp");
         }
 
@@ -258,9 +267,15 @@ class Bspt_Webhook_Handler
         return true;
     }
 
+    /**
+     * Bspt_Logger::log_error() also writes the admin error store, which an
+     * unauthenticated caller must not be able to fill or flood, so rejections
+     * go to error_log only.
+     */
     private static function reject_signature($reason)
     {
-        Bspt_Logger::log_error("[Webhook] Rejected: " . $reason);
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Rejections must reach the server log without touching the admin error store.
+        error_log("[BotSpot WP] Webhook rejected: " . $reason);
         return false;
     }
 

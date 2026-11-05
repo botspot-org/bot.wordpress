@@ -92,11 +92,13 @@ The plugin exposes four REST routes that the platform calls: three aliases of a
 fan-in webhook endpoint (`bspt/v1/webhook`, `botspot/v1/webhook`,
 `botspot-wp/v1/webhook`) and a resync trigger (`bspt/v1/trigger-resync`). All
 four accept unauthenticated HTTP at the WordPress level and authenticate in the
-handler instead, by verifying an HMAC-SHA256 signature computed over the raw
-request body with the site's webhook secret. The signature arrives as
-`X-Webhook-Signature: sha256=<hex>` and is compared in constant time with
-`hash_equals()`. Requests with a missing or wrong signature are rejected before
-anything else happens. If no webhook secret is configured, every request to
+handler instead, by verifying an HMAC-SHA256 signature computed over the
+request timestamp and raw body (`<timestamp>.<body>`) with the site's webhook
+secret. The signature arrives as `X-Webhook-Signature-V2: sha256=<hex>`, the
+timestamp as `X-Webhook-Timestamp`, and the signature is compared in constant
+time with `hash_equals()`. Requests with a missing or wrong signature, or a
+missing, malformed, or more than 300-second-old or future timestamp, are
+rejected before anything else happens. If no webhook secret is configured, every request to
 these routes is refused.
 
 These endpoints trigger a content resync, apply platform-pushed display

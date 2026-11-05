@@ -60,10 +60,14 @@ The plugin registers four unauthenticated REST routes:
 - `POST /wp-json/bspt/v1/trigger-resync`
 
 Their `permission_callback` is `__return_true` by design. Authentication is an
-HMAC-SHA256 signature over the raw request body, sent as
-`X-Webhook-Signature: sha256=<hex>` and compared with `hash_equals()`. The key
-is the per-site webhook secret the platform issues at registration. A request
-without a valid signature is rejected before any handler logic runs.
+HMAC-SHA256 signature over the request timestamp and raw body
+(`<timestamp>.<body>`), sent as `X-Webhook-Signature-V2: sha256=<hex>` with the
+timestamp in `X-Webhook-Timestamp` (ISO-8601), and compared with
+`hash_equals()`. The key is the per-site webhook secret the platform issues at
+registration. A request is rejected before any handler logic runs when the
+signature is missing or wrong, or when the timestamp is missing, malformed, or
+more than 300 seconds from the site's clock in either direction. The older
+body-only `X-Webhook-Signature` is not accepted.
 
 Every admin AJAX action verifies a nonce with `check_ajax_referer()` and
 requires the `manage_options` capability.
