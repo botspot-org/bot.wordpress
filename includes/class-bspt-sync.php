@@ -52,16 +52,14 @@ class Bspt_Sync
      */
     public static function handle_webhook($request)
     {
-        $signature = $request->get_header("X-Webhook-Signature");
         $raw_body = $request->get_body();
         $secret = Bspt_Options::get("webhook_secret");
 
-        if (!$secret || !$signature) {
+        if (!$secret) {
             return new WP_REST_Response(["error" => "Unauthorized"], 401);
         }
 
-        $expected = "sha256=" . hash_hmac("sha256", $raw_body, $secret);
-        if (!hash_equals($expected, $signature)) {
+        if (!Bspt_Webhook_Handler::verify_signed_request($request, $secret)) {
             return new WP_REST_Response(["error" => "Invalid signature"], 401);
         }
 

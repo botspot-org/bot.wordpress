@@ -83,7 +83,6 @@ class Bspt_Webhook_Handler
      */
     public function handle_webhook(WP_REST_Request $request)
     {
-        $signature = $request->get_header("X-Webhook-Signature");
         $payload = $request->get_body();
         $secret = get_option("bspt_webhook_secret", "");
 
@@ -91,7 +90,7 @@ class Bspt_Webhook_Handler
             return new WP_REST_Response(["error" => "Webhook not configured"], 400);
         }
 
-        if (!$this->verify_signature($payload, $signature, $secret)) {
+        if (!self::verify_signed_request($request, $secret)) {
             return new WP_REST_Response(["error" => "Invalid signature"], 401);
         }
 
@@ -152,7 +151,7 @@ class Bspt_Webhook_Handler
      * Handle remote trigger resync request.
      *
      * Allows locus-core to remotely trigger a full content resync.
-     * Authenticated via X-Webhook-Signature header using the shared webhook secret.
+     * Authenticated via X-Webhook-Signature-V2 header using the shared webhook secret.
      *
      * @since    2.12.0
      * @param    WP_REST_Request    $request    The request object.
@@ -160,15 +159,13 @@ class Bspt_Webhook_Handler
      */
     public function handle_trigger_resync(WP_REST_Request $request)
     {
-        $signature = $request->get_header("X-Webhook-Signature");
-        $payload = $request->get_body();
         $secret = get_option("bspt_webhook_secret", "");
 
         if (empty($secret)) {
             return new WP_REST_Response(["error" => "Webhook not configured"], 400);
         }
 
-        if (!$this->verify_signature($payload, $signature, $secret)) {
+        if (!self::verify_signed_request($request, $secret)) {
             return new WP_REST_Response(["error" => "Invalid signature"], 401);
         }
 
@@ -215,22 +212,71 @@ class Bspt_Webhook_Handler
     }
 
     /**
-     * Verify HMAC signature of webhook payload.
+     * Verify a webhook request's timestamped signature.
      *
-     * @since    2.8.0
-     * @param    string    $payload      Raw request body.
-     * @param    string    $signature    Signature from X-Webhook-Signature header.
-     * @param    string    $secret       Shared secret.
-     * @return   bool                    True if signature is valid.
+     * Requires X-Webhook-Signature-V2 = "sha256=" . HMAC-SHA256(secret,
+     * "<X-Webhook-Timestamp>." . body) and a timestamp within 300 seconds of
+     * this site's clock in either direction. Logs the reason on failure.
+     *
+     * The body-only X-Webhook-Signature is deliberately not accepted as a
+     * fallback: a captured request could be replayed forever, and a fallback
+     * would let an attacker strip the V2 header to reach it.
+     *
+     * @since    3.7.10
+     * @param    WP_REST_Request    $request    The request object.
+     * @param    string             $secret     Shared secret.
+     * @param    int|null           $now        Current Unix time; defaults to time().
+     * @return   bool                           True if the request is authentic and fresh.
      */
-    private function verify_signature($payload, $signature, $secret)
+    public static function verify_signed_request($request, $secret, $now = null)
     {
+        $signature = $request->get_header("X-Webhook-Signature-V2");
+        $timestamp = $request->get_header("X-Webhook-Timestamp");
+
+        if (empty($secret)) {
+            return self::reject_signature("no webhook secret configured");
+        }
         if (empty($signature)) {
-            return false;
+            return self::reject_signature("missing V2 signature");
+        }
+        if (empty($timestamp)) {
+            return self::reject_signature("missing timestamp");
         }
 
-        $expected = "sha256=" . hash_hmac("sha256", $payload, $secret);
-        return hash_equals($expected, $signature);
+        // strtotime() accepts "now", "@123" and bare dates; the sender emits
+        // one ISO-8601 shape, so accept only that.
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/', $timestamp)) {
+            return self::reject_signature("unparseable timestamp");
+        }
+        try {
+            $sent_at = (new DateTimeImmutable($timestamp))->getTimestamp();
+        } catch (Exception $e) {
+            return self::reject_signature("unparseable timestamp");
+        }
+
+        $now = $now === null ? time() : $now;
+        if (abs($now - $sent_at) > 300) {
+            return self::reject_signature("timestamp outside 300 second window");
+        }
+
+        $expected = "sha256=" . hash_hmac("sha256", $timestamp . "." . $request->get_body(), $secret);
+        if (!hash_equals($expected, $signature)) {
+            return self::reject_signature("V2 signature mismatch");
+        }
+
+        return true;
+    }
+
+    /**
+     * Bspt_Logger::log_error() also writes the admin error store, which an
+     * unauthenticated caller must not be able to fill or flood, so rejections
+     * go to error_log only.
+     */
+    private static function reject_signature($reason)
+    {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Rejections must reach the server log without touching the admin error store.
+        error_log("[BotSpot WP] Webhook rejected: " . $reason);
+        return false;
     }
 
     /**
