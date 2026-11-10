@@ -82,19 +82,6 @@ if (!function_exists('wp_remote_post')) {
     }
 }
 
-if (!class_exists('Bspt_Logger')) {
-    class Bspt_Logger
-    {
-        public static function log_error($message)
-        {
-            $GLOBALS['bspt_test_errors'][] = $message;
-        }
-        public static function log_debug($message)
-        {
-        }
-    }
-}
-
 class WordPressRegistrationTest extends TestCase
 {
     public static function setUpBeforeClass(): void

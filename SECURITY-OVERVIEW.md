@@ -92,11 +92,13 @@ The plugin exposes four REST routes that the platform calls: three aliases of a
 fan-in webhook endpoint (`bspt/v1/webhook`, `botspot/v1/webhook`,
 `botspot-wp/v1/webhook`) and a resync trigger (`bspt/v1/trigger-resync`). All
 four accept unauthenticated HTTP at the WordPress level and authenticate in the
-handler instead, by verifying an HMAC-SHA256 signature computed over the raw
-request body with the site's webhook secret. The signature arrives as
-`X-Webhook-Signature: sha256=<hex>` and is compared in constant time with
-`hash_equals()`. Requests with a missing or wrong signature are rejected before
-anything else happens. If no webhook secret is configured, every request to
+handler instead, by verifying an HMAC-SHA256 signature computed over the
+request timestamp and raw body (`<timestamp>.<body>`) with the site's webhook
+secret. The signature arrives as `X-Webhook-Signature-V2: sha256=<hex>`, the
+timestamp as `X-Webhook-Timestamp`, and the signature is compared in constant
+time with `hash_equals()`. Requests with a missing or wrong signature, or a
+missing, malformed, or more than 300-second-old or future timestamp, are
+rejected before anything else happens. If no webhook secret is configured, every request to
 these routes is refused.
 
 These endpoints trigger a content resync, apply platform-pushed display
@@ -126,17 +128,18 @@ connection, trigger a sync, or read the stored credentials.
 
 ## Where the data goes
 
-The BotSpot platform runs on Google Cloud in the European Union. The API,
-databases, and vector store are in `europe-north1` (Finland). The enrichment
-workers, the text embedding model, and the entity and inference models run in
-`europe-west4` (Netherlands). Content is not copied outside the EU.
+The BotSpot platform runs on Google Cloud. The API, the databases and the
+content store run in `europe-north1` (Finland). The enrichment workers and the
+AI models run in `europe-west4` (Netherlands). Your content and its backups
+stay in those two regions.
 
-The processing chain uses Google Vertex AI for embeddings and for the Gemini
-models that generate the appendix, both called within those EU regions.
-PostgreSQL, Qdrant, and Memgraph hold the content, its vectors, and the derived
-knowledge graph, all self-hosted in the same project rather than with a
-third-party vendor. WorkOS validates API keys and holds organization identity;
-it receives no page content.
+Google's generative AI service writes the appendix. It runs on a global
+endpoint. That endpoint gives no guarantee about the processing location. The
+model that indexes your content runs in `europe-west4`.
+
+BotSpot hosts the content stores itself, in the same project. No third-party
+database vendor holds your content. WorkOS validates API keys and holds
+organization identity. It receives no page content.
 
 All tenant data is scoped by organization ID at every layer: separate Qdrant
 collections per tenant, tenant tags on every graph node, and organization

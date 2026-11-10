@@ -122,6 +122,19 @@ if (!function_exists('update_option')) {
         return true;
     }
 }
+// Logger stub shared by every test; errors land in a test-readable global.
+if (!class_exists('Bspt_Logger')) {
+    class Bspt_Logger
+    {
+        public static function log_error($message)
+        {
+            $GLOBALS['bspt_test_errors'][] = $message;
+        }
+        public static function log_debug($message)
+        {
+        }
+    }
+}
 if (!function_exists('sanitize_text_field')) {
     function sanitize_text_field($str) { return trim(strip_tags((string) $str)); }
 }
