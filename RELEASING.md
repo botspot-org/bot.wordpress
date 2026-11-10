@@ -11,6 +11,11 @@ Merging a PR from `main` into `release` publishes the plugin. Nothing else does.
 5. a few hours later: just verify-published
 ```
 
+> **The approval in step 4 does not happen today.** The `wporg` environment has
+> no required reviewers (checked 2026-11-10), so merging in step 3 publishes to
+> wp.org without a pause. Treat the merge as the irreversible step until an
+> admin adds reviewers; see Setup below.
+
 The `v<version>` git tag is created by CI at the **end**, on success — so a tag
 means "this shipped", not "someone meant to ship this".
 
@@ -217,7 +222,8 @@ Per repository, in **Settings > Environments** — the pipeline cannot publish
 without this:
 
 - An environment named `wporg`
-- Required reviewers (this is what creates the approval pause)
+- Required reviewers (this is what creates the approval pause; adding them
+  needs repository admin, and this repository has none configured yet)
 - Secrets `SVN_USERNAME` and `SVN_PW`
 
 `SVN_PW` is the SVN-specific password from your wordpress.org profile's
