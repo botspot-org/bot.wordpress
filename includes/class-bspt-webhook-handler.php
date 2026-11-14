@@ -423,6 +423,15 @@ class Bspt_Webhook_Handler
     }
 
     /**
+     * HTTP status of the last register_webhook() call, 0 when none was made or
+     * the request failed before a response. Lets a caller tell a rejected key
+     * (401/403) from a conflict (409) or an outage.
+     *
+     * @var int
+     */
+    public static $last_register_status = 0;
+
+    /**
      * Register this site as a WordPress integration with locus-core.
      *
      * Called during plugin activation or when the API key is first configured.
@@ -438,6 +447,7 @@ class Bspt_Webhook_Handler
      */
     public static function register_webhook()
     {
+        self::$last_register_status = 0;
         $api_url = Bspt_Options::get_locus_api_url();
         $api_key = Bspt_Options::get("api_key");
 
@@ -474,6 +484,7 @@ class Bspt_Webhook_Handler
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
+        self::$last_register_status = (int) $status_code;
 
         // A core older than the endpoint. The plugin updates on its own schedule,
         // so it reaches sites whose core has not been deployed yet.
@@ -512,6 +523,9 @@ class Bspt_Webhook_Handler
 
         if (!empty($body["site_id"])) {
             update_option("bspt_site_id", $body["site_id"]);
+        }
+        if (!empty($body["tenant_id"])) {
+            Bspt_Options::set("tenant_id", $body["tenant_id"]);
         }
 
         return true;
