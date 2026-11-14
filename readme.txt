@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.7.10
+Stable tag: 3.7.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,6 +129,11 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.11 =
+
+* Fix: Connect now registers the site with bot.spot, so the site shows as connected in the bot.spot dashboard right away instead of only after its first pages sync.
+* Fix: Connect subscribes to the appendix and settings updates the plugin handles, and shows a clear message for an invalid key, a domain connected to another integration, or an unreachable server.
 
 = 3.7.10 =
 
@@ -322,6 +327,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.7.11 =
+
+Connecting a site now shows it in the bot.spot dashboard right away. If your site is connected but does not appear there, click Connect again after you update.
 
 = 3.7.10 =
 
