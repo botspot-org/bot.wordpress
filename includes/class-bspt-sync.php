@@ -1038,6 +1038,7 @@ class Bspt_Sync
         $payload = [
             "domain" => $domain,
             "pages" => $pages,
+            "source_type" => "wordpress",
         ];
 
         $headers = [

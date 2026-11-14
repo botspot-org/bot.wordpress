@@ -138,6 +138,16 @@ class WordPressRegistrationTest extends TestCase
         $this->assertSame('hook-uuid', get_option('bspt_webhook_id'));
         $this->assertSame('hook-secret', get_option('bspt_webhook_secret'));
         $this->assertSame('site-uuid', get_option('bspt_site_id'));
+        $this->assertSame('org_01WP', Bspt_Options::get('tenant_id'));
+        $this->assertSame(200, Bspt_Webhook_Handler::$last_register_status);
+    }
+
+    public function testRecordsTheStatusSoConnectCanExplainARejectedKey()
+    {
+        $this->stage('/integrations/wordpress/register', 401, ['detail' => 'bad key']);
+
+        $this->assertFalse(Bspt_Webhook_Handler::register_webhook());
+        $this->assertSame(401, Bspt_Webhook_Handler::$last_register_status);
     }
 
     public function testSendsTheSiteUrlSoCoreCanClaimTheDomain()

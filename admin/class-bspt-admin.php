@@ -689,8 +689,8 @@ class Bspt_Admin
     /**
      * Handle AJAX connection registration
      *
-     * POST directly to core /api/v1/webhooks with API key + site info,
-     * store returned webhook_id, webhook_secret, and tenant_id (org_id).
+     * Registers the site and webhook with core and stores the returned
+     * credentials.
      *
      * @since    1.1.0
      */
@@ -715,68 +715,24 @@ class Bspt_Admin
             return;
         }
 
-        // Register webhook directly with locus-core.
-        // The WebhookRead response includes id, secret, and org_id, so we get
-        // everything we need in a single call - no locus-connectors dependency.
-        $locus_api_url = Bspt_Options::get_locus_api_url();
-        $webhook_url = rest_url("botspot-wp/v1/webhook");
-
-        $response = wp_remote_post(
-            rtrim($locus_api_url, "/") . "/api/v1/webhooks",
-            [
-                "headers" => [
-                    "Content-Type" => "application/json",
-                    "X-API-Key" => $api_key,
-                ],
-                "body" => wp_json_encode([
-                    "url" => $webhook_url,
-                    "events" => ["content.indexed", "content.enriched"],
-                    "name" => "WordPress - " . get_bloginfo("name"),
-                ]),
-                "timeout" => 15,
-            ]
-        );
-
-        if (is_wp_error($response)) {
-            wp_send_json_error([
-                "message" => sprintf(
-                    /* translators: %s: error message from the failed connection attempt */
-                    __("Connection failed: %s", "botspot"),
-                    $response->get_error_message()
-                ),
-            ]);
+        // The register endpoint validates the key, claims the site as
+        // source_type wordpress (which is what the Dashboard reads to show the
+        // integration as connected) and returns the webhook credentials. The
+        // key stays saved on failure so the admin can retry.
+        if (!Bspt_Webhook_Handler::register_webhook()) {
+            $status_code = Bspt_Webhook_Handler::$last_register_status;
+            if (401 === $status_code || 403 === $status_code) {
+                $message = __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botspot");
+            } elseif (409 === $status_code) {
+                $message = __("Connection failed: this domain is already connected to another integration in bot.spot. Disconnect it there first.", "botspot");
+            } else {
+                $message = $status_code
+                    /* translators: %d: HTTP status code */
+                    ? sprintf(__("Connection failed: HTTP %d", "botspot"), $status_code)
+                    : __("Connection failed: could not reach bot.spot.", "botspot");
+            }
+            wp_send_json_error(["message" => $message]);
             return;
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-
-        if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
-            $error_msg = is_array($body) && isset($body["detail"])
-                ? $body["detail"]
-                : sprintf("HTTP %d", $status_code);
-            // Friendly copy for auth failures — the most common cause of
-            // webhook registration failing is a wrong / truncated key.
-            $friendly = ($status_code === 401 || $status_code === 403)
-                ? __("Connection failed: Invalid Access Key. Please ensure you copied the entire key from the bot.spot dashboard.", "botspot")
-                /* translators: %s: error message from the failed connection attempt */
-                : sprintf(__("Connection failed: %s", "botspot"), $error_msg);
-            wp_send_json_error(["message" => $friendly]);
-            return;
-        }
-
-        // Store everything from the webhook create response
-        if (!empty($body["id"])) {
-            Bspt_Options::set("webhook_id", $body["id"]);
-            // Also alias as connection_id for backwards compat with existing
-            // code that checks connection_id as the "is connected" signal
-            Bspt_Options::set("connection_id", $body["id"]);
-        }
-        if (!empty($body["secret"])) {
-            Bspt_Options::set("webhook_secret", $body["secret"]);
-        }
-        if (!empty($body["org_id"])) {
-            Bspt_Options::set("tenant_id", $body["org_id"]);
         }
 
         // Trigger initial bulk sync to provision site and pages
@@ -784,7 +740,7 @@ class Bspt_Admin
 
         wp_send_json_success([
             "message" => __("Connected successfully.", "botspot"),
-            "connection_id" => isset($body["id"]) ? $body["id"] : "",
+            "connection_id" => Bspt_Options::get("connection_id"),
         ]);
     }
 
