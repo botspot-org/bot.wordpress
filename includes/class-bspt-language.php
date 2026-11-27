@@ -150,4 +150,20 @@ class Bspt_Language
         $home = wp_parse_url(home_url("/"), PHP_URL_HOST);
         return is_string($host) && is_string($home) && strtolower($host) === strtolower($home);
     }
+
+    /**
+     * Whether any language is served from a domain other than the home_url() host.
+     *
+     * @since    3.7.12
+     * @return   bool
+     */
+    public static function serves_other_domains()
+    {
+        foreach (self::site_languages() as $home) {
+            if (!self::is_home_host($home)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

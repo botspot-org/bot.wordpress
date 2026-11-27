@@ -90,6 +90,8 @@ class Bspt_Options
         "sync_sensitivity" => "medium",
         "sync_post_types" => ["post", "page"],
         "send_author" => true,
+        // "core" once an ingest answer said core pulls this site; see Bspt_Sync::record_sync_engine().
+        "sync_engine" => "push",
 
         // Display
         "appendix_enabled" => true,

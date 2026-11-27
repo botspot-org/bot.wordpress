@@ -7,17 +7,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-// bulk_sync() and register_page_stubs() both enumerate posts through
-// get_posts(). Returning an empty set ends the batch loop on its first
-// iteration and short-circuits register_page_stubs() before it makes an HTTP
-// call, so the recorded arguments are all these tests need.
-if (!function_exists('get_posts')) {
-    function get_posts($args = [])
-    {
-        $GLOBALS['bspt_test_post_queries'][] = $args;
-        return [];
-    }
-}
 if (!function_exists('get_site_url')) {
     function get_site_url($blog_id = null, $path = '')
     {
