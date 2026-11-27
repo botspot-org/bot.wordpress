@@ -481,6 +481,7 @@ class Bspt_Webhook_Handler
                 "headers" => [
                     "X-API-Key" => $api_key,
                     "Content-Type" => "application/json",
+                    "X-Plugin-Version" => defined("BSPT_VERSION") ? BSPT_VERSION : "unknown",
                 ],
                 "body" => wp_json_encode([
                     "site_url" => home_url(),

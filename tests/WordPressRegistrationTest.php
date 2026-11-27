@@ -168,6 +168,20 @@ class WordPressRegistrationTest extends TestCase
         $this->assertSame('Example Site', $body['site_name']);
     }
 
+    public function testReportsThePluginVersionSoCoreCanChooseTheSyncEngine()
+    {
+        $this->stage('/integrations/wordpress/register', 200, [
+            'webhook_id' => 'hook-uuid',
+            'webhook_secret' => 'hook-secret',
+        ]);
+
+        Bspt_Webhook_Handler::register_webhook();
+
+        $headers = $GLOBALS['bspt_test_requests'][0]['args']['headers'];
+        $this->assertArrayHasKey('X-Plugin-Version', $headers);
+        $this->assertSame(defined('BSPT_VERSION') ? BSPT_VERSION : 'unknown', $headers['X-Plugin-Version']);
+    }
+
     /**
      * The endpoint reads no posts, so a site with none registers the same way.
      * This is the case BOT-350 reports as invisible in the Dashboard.
