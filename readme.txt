@@ -134,7 +134,7 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 
 = 3.7.12 =
 
-* New: bot.spot can read your published posts and pages itself, through two signed routes on your site. When bot.spot moves your site to scheduled sync, it picks up new and changed posts on its own and removes posts that you unpublish, trash or delete. Drafts, private posts and password-protected posts are never returned.
+* New: bot.spot can read your published posts and pages itself, through two signed routes on your site. When bot.spot moves your site to scheduled sync, it picks up new and changed posts on its own and removes posts that you unpublish, trash or delete. Drafts, private posts and password-protected posts are never returned. Posts on a language's own domain keep syncing as before.
 * Changed: when bot.spot reads your site itself, saving a post only asks bot.spot to check the site, and the post screens no longer show a per-post sync status.
 * Changed: on sites with Yoast SEO 14.0 or later, the plugin reads the page's structured data directly from Yoast, without an extra request to your own site.
 
