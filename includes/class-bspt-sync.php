@@ -312,7 +312,12 @@ class Bspt_Sync
             return false;
         }
 
-        $payload = self::build_ingest_payload($post);
+        // A post on a language's own domain goes to that domain's Site in core,
+        // which ingests it: it always gets the full render, and its answer says
+        // nothing about this site's engine.
+        $home_host = Bspt_Language::is_home_host(get_permalink($post->ID));
+        $hint = $home_host && self::on_core_engine();
+        $payload = self::build_ingest_payload($post, $hint);
 
         // Snapshot source JSON-LD before enrichment (schema versioning)
         $source_jsonld = $payload["structured_data"]["data"]["source_jsonld"] ?? null;
@@ -356,6 +361,11 @@ class Bspt_Sync
         if ($status_code >= 200 && $status_code < 300) {
             // Store artifact_id from response for webhook mapping
             $body = json_decode(wp_remote_retrieve_body($response), true);
+            if ($home_host && !self::record_sync_engine($body) && $hint) {
+                // The site left the core engine, so core ingested the hint's
+                // builder-only body. The full render replaces it.
+                return self::send_webhook($post, $event, $change_meta);
+            }
             if (!empty($body["artifact_id"])) {
                 update_post_meta($post->ID, "_bspt_artifact_id", $body["artifact_id"]);
             }
@@ -379,9 +389,10 @@ class Bspt_Sync
      *
      * @since    2.0.0
      * @param    WP_Post   $post    The post object.
+     * @param    bool      $hint    True on the core engine: core ignores the body and pulls the post.
      * @return   array              IngestPayload-compatible array.
      */
-    private static function build_ingest_payload($post)
+    private static function build_ingest_payload($post, $hint = false)
     {
         $permalink = get_permalink($post->ID);
         $categories = wp_get_post_categories($post->ID, ["fields" => "names"]);
@@ -416,14 +427,17 @@ class Bspt_Sync
         // Extract existing page JSON-LD from SEO plugins (source layer for merge)
         $source_jsonld = self::extract_page_jsonld($post->ID);
 
-        // Fetch rendered HTML from the live page for reliable content extraction
-        list($content, $content_source) = self::fetch_rendered_content($post, $permalink);
+        // Fetch rendered HTML from the live page for reliable content extraction.
+        // A hint skips the loopback request: core renders the post itself.
+        list($content, $content_source) = $hint
+            ? [Bspt_Page_Builder::extract_content($post), "core_engine"]
+            : self::fetch_rendered_content($post, $permalink);
         $page_builder = Bspt_Page_Builder::detect_builder($post->ID);
 
         // Record which path produced the body so a site that silently falls back
         // on every post (basic auth, unreachable permalink) is inspectable
         // without WP_DEBUG. Write only on change: build_ingest_payload also runs
-        // in the bulk loop (see :977), and an unconditional update_post_meta
+        // in the bulk loop (see send_batch()), and an unconditional update_post_meta
         // there is one extra postmeta write per post per run. In steady state
         // the value does not change, so this costs a cached read and no write.
         if ($content_source !== get_post_meta($post->ID, "_bspt_content_source", true)) {
@@ -1089,16 +1103,11 @@ class Bspt_Sync
 
         $sync_post_types = $post_type ? [$post_type] : Bspt_Options::get("sync_post_types", ["post", "page"]);
 
-        // Register page stubs first for immediate platform visibility
-        self::register_page_stubs($sync_post_types);
-
         $locus_api_url = Bspt_Options::get_locus_api_url();
         $endpoint = rtrim($locus_api_url, "/") . "/api/v1/connector/ingest/batch";
         $batch_size = 100;
         $offset = 0;
-        $total_processed = 0;
-        $total_success = 0;
-        $total_failed = 0;
+        $totals = ["processed" => 0, "success" => 0, "failed" => 0];
 
         $headers = [
             "Content-Type" => "application/json",
@@ -1107,120 +1116,174 @@ class Bspt_Sync
             "X-Plugin-Version" => defined('BSPT_VERSION') ? BSPT_VERSION : 'unknown',
         ];
 
+        $other_domains = Bspt_Language::serves_other_domains();
+        $home_on_core = false;
+        if (self::on_core_engine()) {
+            // One hint queues core's full run, which reads every home-host post
+            // itself. A failed hint says nothing about the engine, so it does
+            // not start the push walk.
+            $queued = self::queue_core_run($sync_post_types, $endpoint, $headers);
+            if ($queued === null) {
+                return false;
+            }
+            $home_on_core = $queued;
+        }
+        if ($home_on_core && !$other_domains) {
+            return ["status" => "queued", "total" => 1, "processed" => 1, "failed" => 0];
+        }
+
+        if (!self::on_core_engine()) {
+            // Register page stubs first for immediate platform visibility
+            self::register_page_stubs($sync_post_types);
+        }
+
         while (true) {
-            $posts = get_posts([
-                "post_type" => $sync_post_types,
-                "post_status" => "publish",
-                "has_password" => false,
-                "posts_per_page" => $batch_size,
-                "offset" => $offset,
-                "orderby" => "ID",
-                "order" => "ASC",
-            ]);
+            $posts = self::eligible_posts($sync_post_types, $offset, $batch_size);
 
             if (empty($posts)) {
                 break;
             }
 
-            $items = [];
-            $post_hashes = [];
+            // Core decides a batch by its first item's host, so home-host posts
+            // and posts on a language's own domain never share a batch.
+            $home = [];
+            $other = [];
             foreach ($posts as $post) {
-                $payload = self::build_ingest_payload($post);
-                $items[] = $payload;
-
-                // Snapshot source JSON-LD before enrichment (schema versioning)
-                $source_jsonld = $payload["structured_data"]["data"]["source_jsonld"] ?? null;
-                if ($source_jsonld !== null) {
-                    update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", wp_json_encode($source_jsonld));
-                } elseif (!get_post_meta($post->ID, "_bspt_pre_enrich_jsonld", true)) {
-                    update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", "");
-                }
-
-                $post_hashes[$post->ID] = [
-                    "hash" => self::compute_content_hash($post),
-                    "word_count" => str_word_count(
-                        wp_strip_all_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt),
-                    ),
-                ];
-            }
-
-            $payload = ["items" => $items];
-            $json_body = wp_json_encode($payload);
-
-            $response = wp_remote_post($endpoint, [
-                "headers" => $headers,
-                "body" => $json_body,
-                "timeout" => 60,
-                "data_format" => "body",
-            ]);
-
-            $chunk_count = count($items);
-            $total_processed += $chunk_count;
-
-            if (is_wp_error($response)) {
-                self::log_error(
-                    sprintf("Bulk sync batch failed (offset %d): %s", $offset, $response->get_error_message()),
-                );
-                $total_failed += $chunk_count;
-            } else {
-                $status_code = wp_remote_retrieve_response_code($response);
-                $body = json_decode(wp_remote_retrieve_body($response), true);
-
-                if ($status_code >= 200 && $status_code < 300 && is_array($body)) {
-                    $batch_accepted = isset($body["accepted"]) ? (int) $body["accepted"] : 0;
-                    $batch_rejected = isset($body["rejected"]) ? (int) $body["rejected"] : 0;
-                    $total_success += $batch_accepted;
-                    $total_failed += $batch_rejected;
-
-                    // Store artifact_ids from batch response (matched by index)
-                    $artifact_ids = isset($body["artifact_ids"]) ? (array) $body["artifact_ids"] : [];
-
-                    // Update meta for all posts in accepted batch
-                    foreach ($posts as $idx => $post) {
-                        $meta = $post_hashes[$post->ID];
-                        update_post_meta($post->ID, "_bspt_sync_hash", $meta["hash"]);
-                        update_post_meta($post->ID, "_bspt_last_synced_at", current_time("mysql"));
-                        update_post_meta($post->ID, "_bspt_sync_status", "synced");
-                        update_post_meta($post->ID, "_bspt_sync_word_count", $meta["word_count"]);
-                        if (!empty($artifact_ids[$idx])) {
-                            update_post_meta($post->ID, "_bspt_artifact_id", $artifact_ids[$idx]);
-                        }
-                    }
-
-                    if (!empty($body["errors"])) {
-                        foreach ($body["errors"] as $error) {
-                            $detail = is_array($error)
-                                ? sprintf("index=%s code=%s detail=%s",
-                                    isset($error["index"]) ? $error["index"] : "?",
-                                    isset($error["error_code"]) ? $error["error_code"] : "?",
-                                    isset($error["detail"]) ? $error["detail"] : "?")
-                                : (string) $error;
-                            self::log_error(sprintf("Batch item error: %s", $detail));
-                        }
-                    }
+                if (Bspt_Language::is_home_host(get_permalink($post->ID))) {
+                    $home[] = $post;
                 } else {
-                    self::log_error(sprintf("Bulk sync batch returned HTTP %d (offset %d)", $status_code, $offset));
-                    $total_failed += $chunk_count;
+                    $other[] = $post;
                 }
             }
 
-            $offset += $batch_size;
+            // Each home-host batch call to a core-engine site queues a MANUAL FULL
+            // run, and a second one could apply a large unpublish that the first
+            // run refused. Home-host batches stop at the first core answer.
+            if ($home && !$home_on_core) {
+                $home_on_core = self::send_batch($home, $endpoint, $headers, $offset, $totals, true);
+            }
+            if ($other) {
+                self::send_batch($other, $endpoint, $headers, $offset, $totals, false);
+            }
 
-            if (count($posts) < $batch_size) {
+            if (count($posts) < $batch_size || ($home_on_core && !$other_domains)) {
                 break;
             }
+            $offset += $batch_size;
         }
 
-        if ($total_processed === 0) {
+        if ($totals["processed"] === 0) {
             return ["status" => "completed", "total" => 0, "processed" => 0];
         }
 
         return [
-            "status" => $total_failed === 0 ? "completed" : "partial",
-            "total" => $total_processed,
-            "processed" => $total_success,
-            "failed" => $total_failed,
+            "status" => $totals["failed"] === 0 ? "completed" : "partial",
+            "total" => $totals["processed"],
+            "processed" => $totals["success"],
+            "failed" => $totals["failed"],
         ];
+    }
+
+    /**
+     * Send one batch of posts and write their push status.
+     *
+     * @since    3.7.12
+     * @param    WP_Post[]    $posts        Posts of one host group.
+     * @param    string       $endpoint     The batch ingest URL.
+     * @param    array        $headers      The batch request headers.
+     * @param    int          $offset       Walk offset, for log lines.
+     * @param    array        $totals       "processed", "success" and "failed" counts, updated in place.
+     * @param    bool         $home_host    True when the posts are on the home_url() host.
+     * @return   bool                       True when core answered that it pulls this site.
+     */
+    private static function send_batch(array $posts, $endpoint, array $headers, $offset, array &$totals, $home_host)
+    {
+        $items = [];
+        $post_hashes = [];
+        foreach ($posts as $post) {
+            $payload = self::build_ingest_payload($post);
+            $items[] = $payload;
+
+            // Snapshot source JSON-LD before enrichment (schema versioning)
+            $source_jsonld = $payload["structured_data"]["data"]["source_jsonld"] ?? null;
+            if ($source_jsonld !== null) {
+                update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", wp_json_encode($source_jsonld));
+            } elseif (!get_post_meta($post->ID, "_bspt_pre_enrich_jsonld", true)) {
+                update_post_meta($post->ID, "_bspt_pre_enrich_jsonld", "");
+            }
+
+            $post_hashes[$post->ID] = [
+                "hash" => self::compute_content_hash($post),
+                "word_count" => str_word_count(
+                    wp_strip_all_tags($post->post_title . " " . $post->post_content . " " . $post->post_excerpt),
+                ),
+            ];
+        }
+
+        $response = wp_remote_post($endpoint, [
+            "headers" => $headers,
+            "body" => wp_json_encode(["items" => $items]),
+            "timeout" => 60,
+            "data_format" => "body",
+        ]);
+
+        $chunk_count = count($items);
+        $totals["processed"] += $chunk_count;
+
+        if (is_wp_error($response)) {
+            self::log_error(
+                sprintf("Bulk sync batch failed (offset %d): %s", $offset, $response->get_error_message()),
+            );
+            $totals["failed"] += $chunk_count;
+            return false;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
+            self::log_error(sprintf("Bulk sync batch returned HTTP %d (offset %d)", $status_code, $offset));
+            $totals["failed"] += $chunk_count;
+            return false;
+        }
+
+        $totals["success"] += isset($body["accepted"]) ? (int) $body["accepted"] : 0;
+        $totals["failed"] += isset($body["rejected"]) ? (int) $body["rejected"] : 0;
+
+        // Only a home-host answer names this site's engine. On core, core queued
+        // its run instead of ingesting, so no post here was pushed.
+        if ($home_host && self::record_sync_engine($body)) {
+            return true;
+        }
+
+        // Store artifact_ids from batch response (matched by index)
+        $artifact_ids = isset($body["artifact_ids"]) ? (array) $body["artifact_ids"] : [];
+
+        // Update meta for all posts in accepted batch
+        foreach ($posts as $idx => $post) {
+            $meta = $post_hashes[$post->ID];
+            update_post_meta($post->ID, "_bspt_sync_hash", $meta["hash"]);
+            update_post_meta($post->ID, "_bspt_last_synced_at", current_time("mysql"));
+            update_post_meta($post->ID, "_bspt_sync_status", "synced");
+            update_post_meta($post->ID, "_bspt_sync_word_count", $meta["word_count"]);
+            if (!empty($artifact_ids[$idx])) {
+                update_post_meta($post->ID, "_bspt_artifact_id", $artifact_ids[$idx]);
+            }
+        }
+
+        if (!empty($body["errors"])) {
+            foreach ($body["errors"] as $error) {
+                $detail = is_array($error)
+                    ? sprintf("index=%s code=%s detail=%s",
+                        isset($error["index"]) ? $error["index"] : "?",
+                        isset($error["error_code"]) ? $error["error_code"] : "?",
+                        isset($error["detail"]) ? $error["detail"] : "?")
+                    : (string) $error;
+                self::log_error(sprintf("Batch item error: %s", $detail));
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -1270,6 +1333,105 @@ class Bspt_Sync
         }
 
         return $result;
+    }
+
+    /**
+     * Whether core's last 2xx answer to a push said that core pulls this site.
+     *
+     * @since    3.7.12
+     * @return   bool
+     */
+    public static function on_core_engine()
+    {
+        return Bspt_Options::get("sync_engine") === "core";
+    }
+
+    /**
+     * Store the engine that a 2xx ingest answer names.
+     *
+     * Only a 2xx answer comes here: an error says nothing about the engine.
+     *
+     * @since    3.7.12
+     * @param    mixed    $body    The decoded answer.
+     * @return   bool              True when core pulls this site.
+     */
+    private static function record_sync_engine($body)
+    {
+        $core = is_array($body) && isset($body["sync_engine"]) && $body["sync_engine"] === "core";
+        $engine = $core ? "core" : "push";
+        if ($engine !== Bspt_Options::get("sync_engine")) {
+            // The status pill reads the engine through this cached snapshot.
+            delete_transient("bspt_status_snapshot");
+        }
+        Bspt_Options::set("sync_engine", $engine);
+        return $core;
+    }
+
+    /**
+     * One page of posts eligible for a bulk sync, shared by the walk and the hint.
+     *
+     * @since    3.7.12
+     * @param    string[]    $post_types    Post types to sync.
+     * @param    int         $offset        Rows to skip.
+     * @param    int         $limit         Page size.
+     * @return   WP_Post[]
+     */
+    private static function eligible_posts($post_types, $offset, $limit)
+    {
+        return get_posts([
+            "post_type" => $post_types,
+            "post_status" => "publish",
+            "has_password" => false,
+            "posts_per_page" => $limit,
+            "offset" => $offset,
+            "orderby" => "ID",
+            "order" => "ASC",
+        ]);
+    }
+
+    /**
+     * Ask core for its full sync with one hint item instead of walking every home-host post.
+     *
+     * The hint is the first home-host post of the first page: core decides a
+     * batch by its first item's host, and only the home host syncs through core.
+     *
+     * @since    3.7.12
+     * @param    string[]    $post_types    Post types to sync.
+     * @param    string      $endpoint      The batch ingest URL.
+     * @param    array       $headers       The batch request headers.
+     * @return   bool|null                  True when core pulls this site, false when a 2xx answer says it does not or the first page has no home-host post, null when the call failed.
+     */
+    private static function queue_core_run($post_types, $endpoint, $headers)
+    {
+        $posts = self::eligible_posts($post_types, 0, 100);
+        $hint = null;
+        foreach ($posts as $post) {
+            if (Bspt_Language::is_home_host(get_permalink($post->ID))) {
+                $hint = $post;
+                break;
+            }
+        }
+        if ($hint === null) {
+            return false;
+        }
+
+        $response = wp_remote_post($endpoint, [
+            "headers" => $headers,
+            "body" => wp_json_encode(["items" => [self::build_ingest_payload($hint, true)]]),
+            "timeout" => 60,
+            "data_format" => "body",
+        ]);
+        if (is_wp_error($response)) {
+            self::log_error("Bulk sync hint failed: " . $response->get_error_message());
+            return null;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code < 200 || $status_code >= 300) {
+            self::log_error(sprintf("Bulk sync hint returned HTTP %d", $status_code));
+            return null;
+        }
+        return self::record_sync_engine(json_decode(wp_remote_retrieve_body($response), true));
     }
 
     /**

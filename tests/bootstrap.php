@@ -105,6 +105,19 @@ if (!function_exists('get_permalink')) {
             : 'https://example.com/?p=' . $id;
     }
 }
+// bulk_sync() and register_page_stubs() enumerate posts through get_posts().
+// Every call's arguments are recorded. A test stages the posts in
+// $GLOBALS['bspt_test_get_posts']; offset and posts_per_page page through
+// them as a real query would, and the default empty set ends the batch loop
+// on its first pass.
+if (!function_exists('get_posts')) {
+    function get_posts($args = []) {
+        $GLOBALS['bspt_test_post_queries'][] = $args;
+        $posts = isset($GLOBALS['bspt_test_get_posts']) ? $GLOBALS['bspt_test_get_posts'] : [];
+        $per_page = isset($args['posts_per_page']) ? (int) $args['posts_per_page'] : -1;
+        return array_slice($posts, isset($args['offset']) ? (int) $args['offset'] : 0, $per_page > 0 ? $per_page : null);
+    }
+}
 if (!function_exists('wp_strip_all_tags')) {
     function wp_strip_all_tags($text, $remove_breaks = false) {
         $text = preg_replace('@<(script|style)[^>]*?>.*?</\\1>@si', '', (string) $text);

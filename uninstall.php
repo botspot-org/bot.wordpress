@@ -30,6 +30,7 @@ $bspt_options = [
     "bspt_sync_sensitivity",
     "bspt_sync_post_types",
     "bspt_send_author",
+    "bspt_sync_engine",
     // Display
     "bspt_injection_enabled", // legacy
     "bspt_appendix_enabled",

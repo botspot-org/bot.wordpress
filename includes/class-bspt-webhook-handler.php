@@ -211,7 +211,7 @@ class Bspt_Webhook_Handler
 
         if ($result === false) {
             return new WP_REST_Response([
-                "error" => "Sync failed - check API key configuration",
+                "error" => "Sync failed. Check error log for details",
             ], 500);
         }
 
