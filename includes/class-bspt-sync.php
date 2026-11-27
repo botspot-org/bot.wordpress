@@ -437,7 +437,7 @@ class Bspt_Sync
         // Record which path produced the body so a site that silently falls back
         // on every post (basic auth, unreachable permalink) is inspectable
         // without WP_DEBUG. Write only on change: build_ingest_payload also runs
-        // in the bulk loop (see :977), and an unconditional update_post_meta
+        // in the bulk loop (see send_batch()), and an unconditional update_post_meta
         // there is one extra postmeta write per post per run. In steady state
         // the value does not change, so this costs a cached read and no write.
         if ($content_source !== get_post_meta($post->ID, "_bspt_content_source", true)) {
@@ -1138,15 +1138,7 @@ class Bspt_Sync
         }
 
         while (true) {
-            $posts = get_posts([
-                "post_type" => $sync_post_types,
-                "post_status" => "publish",
-                "has_password" => false,
-                "posts_per_page" => $batch_size,
-                "offset" => $offset,
-                "orderby" => "ID",
-                "order" => "ASC",
-            ]);
+            $posts = self::eligible_posts($sync_post_types, $offset, $batch_size);
 
             if (empty($posts)) {
                 break;
@@ -1366,8 +1358,35 @@ class Bspt_Sync
     private static function record_sync_engine($body)
     {
         $core = is_array($body) && isset($body["sync_engine"]) && $body["sync_engine"] === "core";
-        Bspt_Options::set("sync_engine", $core ? "core" : "push");
+        $engine = $core ? "core" : "push";
+        if ($engine !== Bspt_Options::get("sync_engine")) {
+            // The status pill reads the engine through this cached snapshot.
+            delete_transient("bspt_status_snapshot");
+        }
+        Bspt_Options::set("sync_engine", $engine);
         return $core;
+    }
+
+    /**
+     * One page of posts eligible for a bulk sync, shared by the walk and the hint.
+     *
+     * @since    3.7.12
+     * @param    string[]    $post_types    Post types to sync.
+     * @param    int         $offset        Rows to skip.
+     * @param    int         $limit         Page size.
+     * @return   WP_Post[]
+     */
+    private static function eligible_posts($post_types, $offset, $limit)
+    {
+        return get_posts([
+            "post_type" => $post_types,
+            "post_status" => "publish",
+            "has_password" => false,
+            "posts_per_page" => $limit,
+            "offset" => $offset,
+            "orderby" => "ID",
+            "order" => "ASC",
+        ]);
     }
 
     /**
@@ -1384,14 +1403,7 @@ class Bspt_Sync
      */
     private static function queue_core_run($post_types, $endpoint, $headers)
     {
-        $posts = get_posts([
-            "post_type" => $post_types,
-            "post_status" => "publish",
-            "has_password" => false,
-            "posts_per_page" => 100,
-            "orderby" => "ID",
-            "order" => "ASC",
-        ]);
+        $posts = self::eligible_posts($post_types, 0, 100);
         $hint = null;
         foreach ($posts as $post) {
             if (Bspt_Language::is_home_host(get_permalink($post->ID))) {
@@ -1410,11 +1422,13 @@ class Bspt_Sync
             "data_format" => "body",
         ]);
         if (is_wp_error($response)) {
+            self::log_error("Bulk sync hint failed: " . $response->get_error_message());
             return null;
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
         if ($status_code < 200 || $status_code >= 300) {
+            self::log_error(sprintf("Bulk sync hint returned HTTP %d", $status_code));
             return null;
         }
         return self::record_sync_engine(json_decode(wp_remote_retrieve_body($response), true));

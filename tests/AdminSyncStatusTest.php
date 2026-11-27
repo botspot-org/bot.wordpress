@@ -27,6 +27,12 @@ if (!function_exists('get_post_type')) {
     }
 }
 
+if (!function_exists('add_settings_error')) {
+    function add_settings_error($setting, $code, $message, $type = 'error')
+    {
+    }
+}
+
 class AdminSyncStatusTest extends TestCase
 {
     public static function setUpBeforeClass(): void
@@ -92,5 +98,17 @@ class AdminSyncStatusTest extends TestCase
         $html = ob_get_clean();
 
         $this->assertSame('<span style="color: #999;">&#8212;</span>', $html);
+    }
+
+    public function test_a_key_change_resets_the_engine_with_the_connection()
+    {
+        $GLOBALS['bspt_test_options']['bspt_api_key'] = 'sk_old';
+        $GLOBALS['bspt_test_options']['bspt_connection_id'] = 'conn-1';
+        $GLOBALS['bspt_test_options']['bspt_sync_engine'] = 'core';
+
+        (new Bspt_Admin('botspot', 'test'))->sanitize_secret_field_api_key('sk_new');
+
+        $this->assertSame('', get_option('bspt_connection_id'));
+        $this->assertSame('push', get_option('bspt_sync_engine'));
     }
 }

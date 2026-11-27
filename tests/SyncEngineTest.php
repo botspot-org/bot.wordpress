@@ -18,6 +18,14 @@ if (!function_exists('current_time')) {
     }
 }
 
+if (!function_exists('delete_transient')) {
+    function delete_transient($key)
+    {
+        unset($GLOBALS['bspt_test_transients'][$key]);
+        return true;
+    }
+}
+
 class SyncEngineTest extends TestCase
 {
     public static function setUpBeforeClass(): void
@@ -172,6 +180,10 @@ class SyncEngineTest extends TestCase
         $this->assertSame('core', get_option('bspt_sync_engine'));
         $this->assertSame(100, $result['processed']);
         $this->assertSame('', get_post_meta(1001, '_bspt_sync_status', true));
+        $paging = array_filter($GLOBALS['bspt_test_post_queries'], function ($query) {
+            return isset($query['offset']);
+        });
+        $this->assertCount(1, $paging);
     }
 
     public function test_a_bulk_sync_on_the_core_engine_sends_one_hint_and_no_stubs()
@@ -271,6 +283,21 @@ class SyncEngineTest extends TestCase
 
         $this->assertCount(1, $GLOBALS['bspt_test_requests']);
         $this->assertSame('core', get_option('bspt_sync_engine'));
+        $this->assertNotEmpty($GLOBALS['bspt_test_errors']);
+    }
+
+    public function test_a_new_engine_clears_the_cached_status_pill()
+    {
+        $GLOBALS['bspt_test_transients'] = ['bspt_status_snapshot' => ['state' => 'ok']];
+        $this->stage('/connector/ingest', 201, ['artifact_id' => 'artifact-16', 'sync_engine' => 'core']);
+
+        Bspt_Sync::send_webhook($this->post(16), 'content.updated');
+        $this->assertSame('core', get_option('bspt_sync_engine'));
+        $this->assertArrayNotHasKey('bspt_status_snapshot', $GLOBALS['bspt_test_transients']);
+
+        $GLOBALS['bspt_test_transients'] = ['bspt_status_snapshot' => ['state' => 'ok']];
+        Bspt_Sync::send_webhook($this->post(16), 'content.updated');
+        $this->assertArrayHasKey('bspt_status_snapshot', $GLOBALS['bspt_test_transients']);
     }
 
     public function test_a_bulk_hint_that_core_ingests_falls_back_to_the_full_walk()

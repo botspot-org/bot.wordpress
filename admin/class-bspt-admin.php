@@ -1095,7 +1095,7 @@ class Bspt_Admin
 
         if ($result === false) {
             wp_send_json_error([
-                "message" => __("Sync failed - check API key configuration.", "botspot"),
+                "message" => __("Sync failed. Check error log for details.", "botspot"),
             ]);
             return;
         }
