@@ -104,10 +104,13 @@ class Bspt_Site_Sync
             return self::invalid();
         }
 
-        return new WP_REST_Response(
-            self::inventory_page(self::viewable_types($body["bundles"]), $after === null ? 0 : $after[0], $body["limit"]),
-            200
-        );
+        $page = self::inventory_page(self::viewable_types($body["bundles"]), $after === null ? 0 : $after[0], $body["limit"]);
+        if ($page === null) {
+            // Not translated, like the other strings only core reads.
+            return new WP_REST_Response(["error" => "Inventory query failed"], 500);
+        }
+
+        return new WP_REST_Response($page, 200);
     }
 
     /**
@@ -120,7 +123,7 @@ class Bspt_Site_Sync
      * @param    string[]    $post_types    Post types to list.
      * @param    int         $after_id      ID of the last post core has seen; 0 for the first page.
      * @param    int         $limit         Page size core asked for.
-     * @return   array                      The inventory response body.
+     * @return   array|null                 The inventory response body; null when the query failed.
      */
     public static function inventory_page(array $post_types, $after_id, $limit)
     {
@@ -138,6 +141,10 @@ class Bspt_Site_Sync
                     array_merge($post_types, [(int) $after_id, $limit + 1])
                 )
             );
+            // A failed query returns [], which core would read as the end of the site.
+            if ($wpdb->last_error !== "") {
+                return null;
+            }
         }
 
         return self::build_inventory_page(array_map("intval", $ids), $limit);
@@ -236,7 +243,10 @@ class Bspt_Site_Sync
             return self::error_entry($url, "host_mismatch", 400);
         }
 
-        $post_id = url_to_postid($url);
+        $post_id = self::query_var_post_id($url, $post_types);
+        if (!$post_id) {
+            $post_id = url_to_postid($url);
+        }
         $post = $post_id ? get_post($post_id) : null;
         // url_to_postid() answers a ?p= URL without a status check, so a draft
         // behind a plain permalink resolves to its ID.
@@ -251,6 +261,38 @@ class Bspt_Site_Sync
         }
 
         return self::rendered_entry($url, $post);
+    }
+
+    /**
+     * The post of a plain-permalink URL such as /?product=mug.
+     *
+     * url_to_postid() resolves only p, page_id and attachment_id there, and
+     * answers the static front page or 0 for a custom post type.
+     *
+     * @since    3.7.12
+     * @param    string      $url           The URL as core sent it.
+     * @param    string[]    $post_types    Post types core syncs.
+     * @return   int                        The post ID, 0 when no query variable matches.
+     */
+    private static function query_var_post_id($url, array $post_types)
+    {
+        $query = wp_parse_url($url, PHP_URL_QUERY);
+        if (!is_string($query)) {
+            return 0;
+        }
+        parse_str($query, $vars);
+        foreach ($post_types as $type) {
+            $object = get_post_type_object($type);
+            $key = $object && is_string($object->query_var) ? $object->query_var : "";
+            if ($key !== "" && isset($vars[$key]) && is_string($vars[$key]) && $vars[$key] !== "") {
+                $post = get_page_by_path($vars[$key], OBJECT, $type);
+                if ($post) {
+                    return (int) $post->ID;
+                }
+            }
+        }
+
+        return 0;
     }
 
     /**

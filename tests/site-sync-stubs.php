@@ -77,6 +77,7 @@ class Bspt_Test_Wpdb
     public $posts = 'wp_posts';
     public $prepared = [];
     public $ids = [];
+    public $last_error = '';
 
     public function prepare($query, $args)
     {
@@ -94,6 +95,9 @@ class Bspt_Test_Yoast_Meta_Surface
 {
     public function for_post($post_id)
     {
+        if (!empty($GLOBALS['bspt_test_yoast_throws'])) {
+            throw new RuntimeException('schema filter failed');
+        }
         if (!isset($GLOBALS['bspt_test_yoast_schema'][$post_id])) {
             return false;
         }
@@ -159,16 +163,31 @@ if (!function_exists('register_rest_route')) {
 if (!function_exists('is_post_type_viewable')) {
     function is_post_type_viewable($post_type)
     {
-        $viewable = isset($GLOBALS['bspt_test_viewable_types'])
-            ? $GLOBALS['bspt_test_viewable_types']
-            : ['post', 'page', 'product'];
-        return in_array($post_type, $viewable, true);
+        return in_array($post_type, ['post', 'page', 'product'], true);
     }
 }
 if (!function_exists('url_to_postid')) {
     function url_to_postid($url)
     {
         return isset($GLOBALS['bspt_test_url_ids'][$url]) ? $GLOBALS['bspt_test_url_ids'][$url] : 0;
+    }
+}
+if (!function_exists('get_post_type_object')) {
+    function get_post_type_object($post_type)
+    {
+        return isset($GLOBALS['bspt_test_query_vars'][$post_type])
+            ? (object) ['query_var' => $GLOBALS['bspt_test_query_vars'][$post_type]]
+            : null;
+    }
+}
+if (!defined('OBJECT')) {
+    define('OBJECT', 'OBJECT');
+}
+if (!function_exists('get_page_by_path')) {
+    function get_page_by_path($path, $output = OBJECT, $post_type = 'page')
+    {
+        $key = $post_type . ':' . $path;
+        return isset($GLOBALS['bspt_test_posts_by_path'][$key]) ? $GLOBALS['bspt_test_posts_by_path'][$key] : null;
     }
 }
 if (!function_exists('get_post_thumbnail_id')) {

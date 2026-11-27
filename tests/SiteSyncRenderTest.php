@@ -72,7 +72,10 @@ class SiteSyncRenderTest extends TestCase
             $GLOBALS['bspt_test_pll_post_languages'],
             $GLOBALS['bspt_test_yoast_schema'],
             $GLOBALS['bspt_test_terms'],
-            $GLOBALS['bspt_test_thumbnails']
+            $GLOBALS['bspt_test_thumbnails'],
+            $GLOBALS['bspt_test_yoast_throws'],
+            $GLOBALS['bspt_test_query_vars'],
+            $GLOBALS['bspt_test_posts_by_path']
         );
     }
 
@@ -81,9 +84,9 @@ class SiteSyncRenderTest extends TestCase
         $GLOBALS['bspt_test_posts'][$properties['ID']] = new WP_Post($properties);
     }
 
-    private function render_one($url, $send_author = false)
+    private function render_one($url, $send_author = false, array $bundles = ['post', 'page'])
     {
-        $body = ['op' => 'render', 'bundles' => ['post', 'page'], 'send_author' => $send_author, 'urls' => [$url]];
+        $body = ['op' => 'render', 'bundles' => $bundles, 'send_author' => $send_author, 'urls' => [$url]];
         return Bspt_Site_Sync::handle_render(bspt_test_signed_request(json_encode($body)))->get_data()['items'][0];
     }
 
@@ -163,6 +166,36 @@ class SiteSyncRenderTest extends TestCase
             return false;
         };
         $this->assertSame('not_synced', $this->render_one('https://example.com/hello-world/')['error']);
+    }
+
+    public function test_a_custom_post_type_behind_a_plain_permalink_resolves_by_its_query_var()
+    {
+        $this->post(['ID' => 107, 'post_type' => 'product', 'post_title' => 'Mug']);
+        $GLOBALS['bspt_test_query_vars'] = ['product' => 'product'];
+        $GLOBALS['bspt_test_posts_by_path'] = ['product:mug' => $GLOBALS['bspt_test_posts'][107]];
+
+        $entry = $this->render_one('https://example.com/?product=mug', false, ['post', 'product']);
+
+        $this->assertSame(107, $entry['nid']);
+        $this->assertSame('product', $entry['bundle']);
+    }
+
+    public function test_a_post_of_a_type_the_request_does_not_name_is_not_synced_behind_a_plain_permalink()
+    {
+        $this->post(['ID' => 107, 'post_type' => 'product']);
+        $GLOBALS['bspt_test_query_vars'] = ['product' => 'product'];
+        $GLOBALS['bspt_test_posts_by_path'] = ['product:mug' => $GLOBALS['bspt_test_posts'][107]];
+        $GLOBALS['bspt_test_url_ids']['https://example.com/?product=mug'] = 107;
+
+        $this->assertSame('not_synced', $this->render_one('https://example.com/?product=mug')['error']);
+    }
+
+    public function test_a_throwing_yoast_leaves_the_entry_without_source_jsonld()
+    {
+        $GLOBALS['bspt_test_yoast_throws'] = true;
+
+        $this->assertNull(Bspt_Sync::extract_page_jsonld(101));
+        $this->assertNull($this->render_one('https://example.com/hello-world/')['source_jsonld']);
     }
 
     public function test_the_author_stays_on_the_site_when_send_author_is_off()

@@ -85,6 +85,25 @@ class SiteSyncInventoryTest extends TestCase
         );
     }
 
+    public function test_the_fixture_response_comes_from_string_ids_as_a_query_returns_them()
+    {
+        $GLOBALS['wpdb']->ids = ['101', '102', '103', '104'];
+
+        $response = $this->inventory(['limit' => 3]);
+
+        $this->assertSame(bspt_test_fixture('inventory_response'), $response->get_data());
+    }
+
+    public function test_a_failed_query_is_an_error_not_an_empty_end_of_the_site()
+    {
+        $GLOBALS['wpdb']->last_error = 'Lost connection to MySQL server';
+
+        $response = $this->inventory([]);
+
+        $this->assertSame(500, $response->get_status());
+        $this->assertSame(['error' => 'Inventory query failed'], $response->get_data());
+    }
+
     public function test_the_fixture_request_reads_published_unprotected_posts_of_the_requested_types()
     {
         $response = Bspt_Site_Sync::handle_inventory(bspt_test_signed_request(bspt_test_fixture('inventory_request', true)));

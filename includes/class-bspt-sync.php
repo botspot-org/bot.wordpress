@@ -776,10 +776,15 @@ class Bspt_Sync
         // In process, not through Yoast's REST route: a loopback request holds
         // a second PHP worker per post, and core's render calls carry 20 posts.
         if (function_exists("YoastSEO")) {
-            $meta = YoastSEO()->meta->for_post($post_id);
-            $schema = $meta ? $meta->schema : null;
-            if (is_array($schema) && $schema) {
-                $jsonld = $schema;
+            // A throwing wpseo_schema_* filter must not fail the post save or a 20-URL render call.
+            try {
+                $meta = YoastSEO()->meta->for_post($post_id);
+                $schema = $meta ? $meta->schema : null;
+                if (is_array($schema) && $schema) {
+                    $jsonld = $schema;
+                }
+            } catch (\Throwable $e) {
+                self::log_debug(sprintf("Post %d: Yoast schema failed: %s", $post_id, $e->getMessage()));
             }
         }
 
