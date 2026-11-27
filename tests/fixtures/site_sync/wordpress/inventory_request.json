@@ -1,0 +1,7 @@
+{
+  "op": "inventory",
+  "bundles": ["post", "page"],
+  "send_author": false,
+  "after": null,
+  "limit": 2000
+}

@@ -150,6 +150,11 @@ class Bspt
         require_once BSPT_PLUGIN_PATH . "includes/class-bspt-sync.php";
 
         /**
+         * The routes core's pull sync calls.
+         */
+        require_once BSPT_PLUGIN_PATH . "includes/class-bspt-site-sync.php";
+
+        /**
          * Cache invalidation helpers (plugin transients + external page caches).
          */
         require_once BSPT_PLUGIN_PATH . "includes/class-bspt-cache.php";

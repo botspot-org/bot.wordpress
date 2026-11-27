@@ -1,0 +1,71 @@
+{
+  "items": [
+    {
+      "url": "https://example.com/hello-world/",
+      "nid": 101,
+      "uuid": "101",
+      "langcode": "en",
+      "bundle": "post",
+      "title": "Hello world",
+      "description": "The first post on the site.",
+      "created": 1763990000,
+      "changed": 1764000000,
+      "html": "<article><h1>Hello world</h1><p>Welcome to the site. This first post tells visitors what the site is about and how to reach the team.</p></article>",
+      "terms": ["news", "welcome"],
+      "categories": ["Announcements"],
+      "author": "Site Editor",
+      "media": [
+        {
+          "url": "https://example.com/wp-content/uploads/2026/11/hello.jpg",
+          "media_type": "image/jpeg",
+          "alt_text": "A waving hand",
+          "width": 1200,
+          "height": 630
+        }
+      ],
+      "source_jsonld": {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Article",
+            "@id": "https://example.com/hello-world/#article",
+            "headline": "Hello world"
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "https://example.com/hello-world/#breadcrumb",
+            "itemListElement": [
+              {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://example.com/"}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://example.com/about/",
+      "nid": 102,
+      "uuid": "102",
+      "langcode": "en",
+      "bundle": "page",
+      "title": "About us",
+      "description": "",
+      "created": 1763000000,
+      "changed": 1764000300,
+      "html": "<section><h1>About us</h1><p>We are a small team that writes about the products we make and the people who use them.</p></section>",
+      "terms": [],
+      "categories": [],
+      "media": [],
+      "source_jsonld": null
+    },
+    {
+      "url": "https://example.com/draft-post/",
+      "error": "not_found",
+      "status": 404
+    },
+    {
+      "url": "https://example.com/members-only/",
+      "error": "access_denied",
+      "status": 403
+    }
+  ]
+}
