@@ -79,6 +79,11 @@ class Bspt_Webhook_Handler
             "callback" => ["Bspt_Site_Sync", "handle_inventory"],
             "permission_callback" => "__return_true",
         ]);
+        register_rest_route("bspt/v1", "/sync/render", [
+            "methods" => "POST",
+            "callback" => ["Bspt_Site_Sync", "handle_render"],
+            "permission_callback" => "__return_true",
+        ]);
     }
 
     /**

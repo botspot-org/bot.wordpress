@@ -48,6 +48,13 @@ class Bspt_Site_Sync
     const INVENTORY_MAX_LIMIT = 500;
 
     /**
+     * Most URLs one render call may carry.
+     *
+     * @since 3.7.12
+     */
+    const MAX_URLS = 20;
+
+    /**
      * The verified, decoded body of a sync call, or the response that refuses it.
      *
      * @since    3.7.12
@@ -182,6 +189,175 @@ class Bspt_Site_Sync
             "next" => $more ? $next : null,
             "languages" => self::rest_bases($items),
         ];
+    }
+
+    /**
+     * POST bspt/v1/sync/render: one entry per URL, in the order of the request.
+     *
+     * @since    3.7.12
+     * @param    WP_REST_Request    $request    The request.
+     * @return   WP_REST_Response
+     */
+    public static function handle_render($request)
+    {
+        $body = self::verified_body($request, "render");
+        if ($body instanceof WP_REST_Response) {
+            return $body;
+        }
+
+        $urls = $body["urls"];
+        if (!self::is_string_list($urls) || $urls === [] || count($urls) > self::MAX_URLS) {
+            return self::invalid();
+        }
+
+        $post_types = self::viewable_types($body["bundles"]);
+        $hosts = self::home_hosts();
+        $items = [];
+        foreach ($urls as $url) {
+            $items[] = self::render_url($url, $post_types, $hosts);
+        }
+
+        return new WP_REST_Response(["items" => $items], 200);
+    }
+
+    /**
+     * The entry of one URL. Core reads a 403 or 404 entry as a hidden page and unpublishes it.
+     *
+     * @since    3.7.12
+     * @param    string      $url           The URL as core sent it; echoed unchanged.
+     * @param    string[]    $post_types    Post types core syncs.
+     * @param    string[]    $hosts         Lowercase hosts of the site's language homes.
+     * @return   array
+     */
+    public static function render_url($url, array $post_types, array $hosts)
+    {
+        $host = wp_parse_url($url, PHP_URL_HOST);
+        if (!is_string($host) || !in_array(strtolower($host), $hosts, true)) {
+            return self::error_entry($url, "host_mismatch", 400);
+        }
+
+        $post_id = url_to_postid($url);
+        $post = $post_id ? get_post($post_id) : null;
+        // url_to_postid() answers a ?p= URL without a status check, so a draft
+        // behind a plain permalink resolves to its ID.
+        if (!$post || $post->post_status !== "publish") {
+            return self::error_entry($url, "not_found", 404);
+        }
+        if ($post->post_password !== "") {
+            return self::error_entry($url, "access_denied", 403);
+        }
+        if (!in_array($post->post_type, $post_types, true) || !apply_filters("bspt_should_sync", true, $post->ID, $post)) {
+            return self::error_entry($url, "not_synced", 403);
+        }
+
+        return self::rendered_entry($url, $post);
+    }
+
+    /**
+     * @since    3.7.12
+     * @param    string     $url     The URL as core sent it.
+     * @param    WP_Post    $post    A published post without a password.
+     * @return   array
+     */
+    private static function rendered_entry($url, $post)
+    {
+        $entry = [
+            "url" => $url,
+            "nid" => (int) $post->ID,
+            "uuid" => (string) $post->ID,
+            "langcode" => Bspt_Language::get_post_language((int) $post->ID),
+            "bundle" => $post->post_type,
+            "title" => (string) $post->post_title,
+            "description" => (string) $post->post_excerpt,
+            "created" => self::epoch($post->post_date_gmt),
+            "changed" => self::epoch($post->post_modified_gmt),
+            "html" => Bspt_Page_Builder::extract_content($post),
+            "terms" => self::term_names((int) $post->ID, "post_tag"),
+            "categories" => self::term_names((int) $post->ID, "category"),
+        ];
+
+        // The plugin's own option decides; the request's send_author is ignored.
+        $user = Bspt_Options::get("send_author") ? get_userdata((int) $post->post_author) : false;
+        if ($user && (string) $user->display_name !== "") {
+            $entry["author"] = mb_substr((string) $user->display_name, 0, 255);
+        }
+
+        $entry["media"] = self::featured_media((int) $post->ID);
+        $entry["source_jsonld"] = Bspt_Sync::extract_page_jsonld((int) $post->ID);
+
+        return $entry;
+    }
+
+    /**
+     * @since    3.7.12
+     * @return   array
+     */
+    private static function error_entry($url, $error, $status)
+    {
+        return ["url" => $url, "error" => $error, "status" => $status];
+    }
+
+    /**
+     * Hosts of home_url() and of every language home, lowercase.
+     *
+     * @since    3.7.12
+     * @return   string[]
+     */
+    private static function home_hosts()
+    {
+        $hosts = [];
+        foreach (array_merge([home_url("/")], array_values(Bspt_Language::site_languages())) as $home) {
+            $host = wp_parse_url($home, PHP_URL_HOST);
+            if (is_string($host)) {
+                $hosts[] = strtolower($host);
+            }
+        }
+        return $hosts;
+    }
+
+    /**
+     * @since    3.7.12
+     * @return   string[]
+     */
+    private static function term_names($post_id, $taxonomy)
+    {
+        $terms = get_the_terms($post_id, $taxonomy);
+        $names = [];
+        foreach (is_array($terms) ? $terms : [] as $term) {
+            $names[] = $term->name;
+        }
+        return $names;
+    }
+
+    /**
+     * The featured image as a media entry list.
+     *
+     * @since    3.7.12
+     * @return   array
+     */
+    private static function featured_media($post_id)
+    {
+        $attachment_id = (int) get_post_thumbnail_id($post_id);
+        $image = $attachment_id ? wp_get_attachment_image_src($attachment_id, "full") : false;
+        if (!is_array($image) || empty($image[0])) {
+            return [];
+        }
+
+        $entry = [
+            "url" => $image[0],
+            "media_type" => get_post_mime_type($attachment_id) ?: "image/jpeg",
+        ];
+        $alt = trim((string) get_post_meta($attachment_id, "_wp_attachment_image_alt", true));
+        if ($alt !== "") {
+            $entry["alt_text"] = mb_substr($alt, 0, 500);
+        }
+        // Core drops a media entry whose width or height is below 1.
+        if ((int) $image[1] > 0 && (int) $image[2] > 0) {
+            $entry["width"] = (int) $image[1];
+            $entry["height"] = (int) $image[2];
+        }
+
+        return [$entry];
     }
 
     /**
