@@ -1,0 +1,33 @@
+{
+  "items": [
+    {
+      "nid": 101,
+      "uuid": "101",
+      "langcode": "en",
+      "url": "https://example.com/hello-world/",
+      "changed": 1764000000,
+      "bundle": "post"
+    },
+    {
+      "nid": 102,
+      "uuid": "102",
+      "langcode": "en",
+      "url": "https://example.com/about/",
+      "changed": 1764000300,
+      "bundle": "page"
+    },
+    {
+      "nid": 103,
+      "uuid": "103",
+      "langcode": "fi",
+      "url": "https://example.com/fi/hei-maailma/",
+      "changed": 1764000600,
+      "bundle": "post"
+    }
+  ],
+  "next": [103, "fi"],
+  "languages": {
+    "en": "https://example.com/wp-json/",
+    "fi": "https://example.com/wp-json/"
+  }
+}

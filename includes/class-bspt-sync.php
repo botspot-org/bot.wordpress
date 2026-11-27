@@ -759,32 +759,32 @@ class Bspt_Sync
     /**
      * Extract existing JSON-LD from SEO plugins for a post
      *
-     * Checks Yoast SEO and RankMath for schema output. Filters out
-     * locus-generated nodes (containing #locus- in @id) to prevent
+     * Yoast SEO: the schema graph from its Surfaces API,
+     * YoastSEO()->meta->for_post() (Yoast 14.0 and later). Rank Math: the
+     * schemas stored on the post, \RankMath\Schema\DB::get_schemas(). Filters
+     * out locus-generated nodes (containing #locus- in @id) to prevent
      * circular re-ingestion.
      *
      * @since    2.2.0
      * @param    int    $post_id    The post ID.
      * @return   array|null         JSON-LD data or null if none found.
      */
-    private static function extract_page_jsonld($post_id)
+    public static function extract_page_jsonld($post_id)
     {
         $jsonld = null;
 
-        // Try Yoast SEO first
-        if (defined("WPSEO_VERSION")) {
-            $permalink = get_permalink($post_id);
-            if ($permalink) {
-                $response = wp_remote_get(
-                    rest_url("yoast/v1/get_head") . "?url=" . urlencode($permalink),
-                    ["timeout" => 5],
-                );
-                if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-                    $body = json_decode(wp_remote_retrieve_body($response), true);
-                    if (isset($body["json"]) && is_array($body["json"])) {
-                        $jsonld = $body["json"];
-                    }
+        // In process, not through Yoast's REST route: a loopback request holds
+        // a second PHP worker per post, and core's render calls carry 20 posts.
+        if (function_exists("YoastSEO")) {
+            // A throwing wpseo_schema_* filter must not fail the post save or a 20-URL render call.
+            try {
+                $meta = YoastSEO()->meta->for_post($post_id);
+                $schema = $meta ? $meta->schema : null;
+                if (is_array($schema) && $schema) {
+                    $jsonld = $schema;
                 }
+            } catch (\Throwable $e) {
+                self::log_debug(sprintf("Post %d: Yoast schema failed: %s", $post_id, $e->getMessage()));
             }
         }
 

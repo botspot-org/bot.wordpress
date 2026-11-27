@@ -52,12 +52,14 @@ follow a separate remediation path.
 
 ## Attack surface
 
-The plugin registers four unauthenticated REST routes:
+The plugin registers six unauthenticated REST routes:
 
 - `POST /wp-json/bspt/v1/webhook`
 - `POST /wp-json/botspot/v1/webhook`
 - `POST /wp-json/botspot-wp/v1/webhook`
 - `POST /wp-json/bspt/v1/trigger-resync`
+- `POST /wp-json/bspt/v1/sync/inventory`
+- `POST /wp-json/bspt/v1/sync/render`
 
 Their `permission_callback` is `__return_true` by design. Authentication is an
 HMAC-SHA256 signature over the request timestamp and raw body
@@ -68,6 +70,12 @@ registration. A request is rejected before any handler logic runs when the
 signature is missing or wrong, or when the timestamp is missing, malformed, or
 more than 300 seconds from the site's clock in either direction. The older
 body-only `X-Webhook-Signature` is not accepted.
+
+The two sync routes also refuse a body whose `op` does not name the route or
+whose keys are not exactly that route's keys, because the signature does not
+cover the route. They return published content only: drafts, private posts and
+password-protected posts come back as error entries, and post types that the
+public cannot view are never listed.
 
 Every admin AJAX action verifies a nonce with `check_ajax_referer()` and
 requires the `manage_options` capability.

@@ -72,6 +72,18 @@ class Bspt_Webhook_Handler
             "callback" => [$this, "handle_trigger_resync"],
             "permission_callback" => "__return_true",
         ]);
+        // Core's pull sync calls these under the REST base of the registered
+        // webhook URL, so sites without pretty permalinks work too.
+        register_rest_route("bspt/v1", "/sync/inventory", [
+            "methods" => "POST",
+            "callback" => ["Bspt_Site_Sync", "handle_inventory"],
+            "permission_callback" => "__return_true",
+        ]);
+        register_rest_route("bspt/v1", "/sync/render", [
+            "methods" => "POST",
+            "callback" => ["Bspt_Site_Sync", "handle_render"],
+            "permission_callback" => "__return_true",
+        ]);
     }
 
     /**
@@ -469,6 +481,7 @@ class Bspt_Webhook_Handler
                 "headers" => [
                     "X-API-Key" => $api_key,
                     "Content-Type" => "application/json",
+                    "X-Plugin-Version" => defined("BSPT_VERSION") ? BSPT_VERSION : "unknown",
                 ],
                 "body" => wp_json_encode([
                     "site_url" => home_url(),
