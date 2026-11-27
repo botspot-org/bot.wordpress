@@ -69,12 +69,6 @@ if (!function_exists('wp_remote_retrieve_body')) {
 // payload-shape test). Kept minimal — each returns a fixed, uninteresting
 // value since the test only asserts on the page_builder/content_source
 // placement, not on titles, categories, or dates.
-if (!function_exists('get_permalink')) {
-    function get_permalink($post_id = 0)
-    {
-        return 'https://example.com/payload-shape-test/';
-    }
-}
 if (!function_exists('wp_get_post_categories')) {
     function wp_get_post_categories($post_id, $args = [])
     {

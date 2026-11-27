@@ -99,4 +99,55 @@ class Bspt_Language
 
         return substr(get_locale(), 0, 2);
     }
+
+    /**
+     * Every language the site serves, as two-letter code => that language's home URL.
+     *
+     * Polylang, then WPML, then the site locale: the codes get_post_language()
+     * can return.
+     *
+     * @since    3.7.12
+     * @return   string[]
+     */
+    public static function site_languages()
+    {
+        $languages = [];
+
+        if (function_exists("pll_languages_list") && function_exists("pll_home_url")) {
+            foreach ((array) pll_languages_list(["fields" => "slug"]) as $slug) {
+                $languages[substr((string) $slug, 0, 2)] = pll_home_url($slug);
+            }
+        }
+
+        if (has_filter("wpml_active_languages")) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party WPML integration hook.
+            $active = apply_filters("wpml_active_languages", null, ["skip_missing" => 0]);
+            foreach (is_array($active) ? $active : [] as $code => $details) {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party WPML integration hook.
+                $languages[substr((string) $code, 0, 2)] = apply_filters("wpml_permalink", home_url("/"), $code);
+            }
+        }
+
+        $languages += [substr(get_locale(), 0, 2) => home_url("/")];
+
+        return $languages;
+    }
+
+    /**
+     * Whether a URL is on the home_url() host.
+     *
+     * A language served from its own domain (Polylang "different domains",
+     * WPML "a different domain per language") is not. Core's pull sync leaves
+     * its posts out, and they keep pushing to their own Site in core.
+     *
+     * @since    3.7.12
+     * @param    string    $url    A permalink.
+     * @return   bool
+     */
+    public static function is_home_host($url)
+    {
+        $host = wp_parse_url((string) $url, PHP_URL_HOST);
+        $home = wp_parse_url(home_url("/"), PHP_URL_HOST);
+        return is_string($host) && is_string($home) && strtolower($host) === strtolower($home);
+    }
 }

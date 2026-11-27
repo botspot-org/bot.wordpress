@@ -72,6 +72,13 @@ class Bspt_Webhook_Handler
             "callback" => [$this, "handle_trigger_resync"],
             "permission_callback" => "__return_true",
         ]);
+        // Core's pull sync calls these under the REST base of the registered
+        // webhook URL, so sites without pretty permalinks work too.
+        register_rest_route("bspt/v1", "/sync/inventory", [
+            "methods" => "POST",
+            "callback" => ["Bspt_Site_Sync", "handle_inventory"],
+            "permission_callback" => "__return_true",
+        ]);
     }
 
     /**

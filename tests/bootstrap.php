@@ -11,8 +11,15 @@ define('WPINC', 'wp-includes');
 define('ABSPATH', '/tmp/');
 
 // Minimal WP stubs used by the injector / fetcher under test.
+// A test registers a filter as $GLOBALS['bspt_test_filters'][$tag] = callable.
+// It gets the arguments that a WordPress filter callback gets.
 if (!function_exists('apply_filters')) {
-    function apply_filters($tag, $value) { return $value; }
+    function apply_filters($tag, $value, ...$args) {
+        if (isset($GLOBALS['bspt_test_filters'][$tag])) {
+            return call_user_func($GLOBALS['bspt_test_filters'][$tag], $value, ...$args);
+        }
+        return $value;
+    }
 }
 if (!function_exists('wp_json_encode')) {
     function wp_json_encode($data, $flags = 0) { return json_encode($data, $flags); }
@@ -88,6 +95,14 @@ if (!function_exists('get_post')) {
     function get_post($post_id = null) {
         $store = isset($GLOBALS['bspt_test_posts']) ? $GLOBALS['bspt_test_posts'] : [];
         return isset($store[$post_id]) ? $store[$post_id] : null;
+    }
+}
+if (!function_exists('get_permalink')) {
+    function get_permalink($post = 0) {
+        $id = is_object($post) ? $post->ID : (int) $post;
+        return isset($GLOBALS['bspt_test_permalinks'][$id])
+            ? $GLOBALS['bspt_test_permalinks'][$id]
+            : 'https://example.com/?p=' . $id;
     }
 }
 if (!function_exists('wp_strip_all_tags')) {
