@@ -11,8 +11,15 @@ define('WPINC', 'wp-includes');
 define('ABSPATH', '/tmp/');
 
 // Minimal WP stubs used by the injector / fetcher under test.
+// A test registers a filter as $GLOBALS['bspt_test_filters'][$tag] = callable.
+// It gets the arguments that a WordPress filter callback gets.
 if (!function_exists('apply_filters')) {
-    function apply_filters($tag, $value) { return $value; }
+    function apply_filters($tag, $value, ...$args) {
+        if (isset($GLOBALS['bspt_test_filters'][$tag])) {
+            return call_user_func($GLOBALS['bspt_test_filters'][$tag], $value, ...$args);
+        }
+        return $value;
+    }
 }
 if (!function_exists('wp_json_encode')) {
     function wp_json_encode($data, $flags = 0) { return json_encode($data, $flags); }
@@ -88,6 +95,27 @@ if (!function_exists('get_post')) {
     function get_post($post_id = null) {
         $store = isset($GLOBALS['bspt_test_posts']) ? $GLOBALS['bspt_test_posts'] : [];
         return isset($store[$post_id]) ? $store[$post_id] : null;
+    }
+}
+if (!function_exists('get_permalink')) {
+    function get_permalink($post = 0) {
+        $id = is_object($post) ? $post->ID : (int) $post;
+        return isset($GLOBALS['bspt_test_permalinks'][$id])
+            ? $GLOBALS['bspt_test_permalinks'][$id]
+            : 'https://example.com/?p=' . $id;
+    }
+}
+// bulk_sync() and register_page_stubs() enumerate posts through get_posts().
+// Every call's arguments are recorded. A test stages the posts in
+// $GLOBALS['bspt_test_get_posts']; offset and posts_per_page page through
+// them as a real query would, and the default empty set ends the batch loop
+// on its first pass.
+if (!function_exists('get_posts')) {
+    function get_posts($args = []) {
+        $GLOBALS['bspt_test_post_queries'][] = $args;
+        $posts = isset($GLOBALS['bspt_test_get_posts']) ? $GLOBALS['bspt_test_get_posts'] : [];
+        $per_page = isset($args['posts_per_page']) ? (int) $args['posts_per_page'] : -1;
+        return array_slice($posts, isset($args['offset']) ? (int) $args['offset'] : 0, $per_page > 0 ? $per_page : null);
     }
 }
 if (!function_exists('wp_strip_all_tags')) {

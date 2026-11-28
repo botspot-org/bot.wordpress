@@ -4,7 +4,7 @@ Tags: structured-data, schema, ai, content, seo
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.7.11
+Stable tag: 3.7.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,8 @@ Data sent to BotSpot may include:
 * On each frontend page view: the requested path, the visitor's user agent string, and the referring URL. This measures how often AI and search crawlers reach the site. No cookies are set or read, and no IP address is stored.
 
 BotSpot may send webhook requests back to the WordPress site to update enrichment status, clear local caches, and push configuration changes. These requests are authenticated with an HMAC signature.
+
+BotSpot may also call two routes on the site, `bspt/v1/sync/inventory` and `bspt/v1/sync/render`, to list the published posts of the selected post types and read their title, excerpt, content, dates, tags, categories, featured image, the structured data of the SEO plugin and, when "Send author names" is on, the author display name. These requests carry the same HMAC signature as webhooks. Drafts, private posts and password-protected posts are never returned. Content that a membership plugin restricts on a published post is sent in full; exclude such posts with the `bspt_should_sync` filter.
 
 == Privacy ==
 
@@ -129,6 +131,12 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 3. Developer tab with connection, sync, cache, and diagnostic tools.
 
 == Changelog ==
+
+= 3.7.12 =
+
+* New: bot.spot can read your published posts and pages itself, through two signed routes on your site. When bot.spot moves your site to scheduled sync, it picks up new and changed posts on its own and removes posts that you unpublish, trash or delete. Drafts, private posts and password-protected posts are never returned. Posts on a language's own domain keep syncing as before.
+* Changed: when bot.spot reads your site itself, saving a post only asks bot.spot to check the site, and the post screens no longer show a per-post sync status.
+* Changed: on sites with Yoast SEO 14.0 or later, the plugin reads the page's structured data directly from Yoast, without an extra request to your own site.
 
 = 3.7.11 =
 
@@ -327,6 +335,10 @@ Yes. Each subsite connects to BotSpot independently with its own access key. Net
 * Initial push-based sync and appendix injection release.
 
 == Upgrade Notice ==
+
+= 3.7.12 =
+
+Lets bot.spot read your published content on a schedule, which also removes pages for posts you unpublish or delete. Drafts, private and password-protected posts stay private.
 
 = 3.7.11 =
 

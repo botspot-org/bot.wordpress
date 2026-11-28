@@ -1,0 +1,11 @@
+{
+  "op": "render",
+  "bundles": ["post", "page"],
+  "send_author": false,
+  "urls": [
+    "https://example.com/hello-world/",
+    "https://example.com/about/",
+    "https://example.com/draft-post/",
+    "https://example.com/members-only/"
+  ]
+}

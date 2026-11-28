@@ -323,6 +323,9 @@ class Bspt_Admin
         $status_color = $this->get_sync_status_color($status["status"]);
         ?>
         <div class="botspot-sync-meta-box">
+            <?php if ($this->pulled_by_core($post->ID)): ?>
+            <p><?php esc_html_e("bot.spot reads this site's published content itself, on a schedule and after each update.", "botspot"); ?></p>
+            <?php else: ?>
             <p>
                 <strong><?php esc_html_e("Status:", "botspot"); ?></strong>
                 <span style="color: <?php echo esc_attr(
@@ -338,6 +341,7 @@ class Bspt_Admin
  ); ?>
                 </p>
             <?php endif; ?>
+            <?php endif; ?>
             <p>
                 <button type="button" class="button botspot-sync-now" data-post-id="<?php echo esc_attr($post->ID); ?>">
                     <?php esc_html_e("Sync Now", "botspot"); ?>
@@ -346,6 +350,20 @@ class Bspt_Admin
             </p>
         </div>
         <?php
+    }
+
+    /**
+     * Whether core pulls this post, so its push status means nothing.
+     *
+     * A post on a language's own domain keeps pushing on a core-engine site.
+     *
+     * @since    3.7.12
+     * @param    int    $post_id    The post ID.
+     * @return   bool
+     */
+    private function pulled_by_core($post_id)
+    {
+        return Bspt_Sync::on_core_engine() && Bspt_Language::is_home_host(get_permalink($post_id));
     }
 
     /**
@@ -396,6 +414,11 @@ class Bspt_Admin
             $color = $enrichment_colors[$enrichment_status] ?? "#999";
             $label = $enrichment_labels[$enrichment_status] ?? ucfirst($enrichment_status);
             echo '<span style="color: ' . esc_attr($color) . ';" title="' . esc_attr($label) . '">&#9679;</span>';
+            return;
+        }
+
+        if ($this->pulled_by_core($post_id)) {
+            echo '<span style="color: #999;">&#8212;</span>';
             return;
         }
 
@@ -530,7 +553,11 @@ class Bspt_Admin
         $result = Bspt_Sync::manual_sync($post_id);
 
         if ($result) {
-            wp_send_json_success(["message" => __("Synced successfully", "botspot")]);
+            wp_send_json_success([
+                "message" => $this->pulled_by_core($post_id)
+                    ? __("Sync requested. bot.spot reads the post itself.", "botspot")
+                    : __("Synced successfully", "botspot"),
+            ]);
         } else {
             wp_send_json_error(["message" => __("Sync failed. Check error log for details.", "botspot")]);
         }
@@ -569,6 +596,7 @@ class Bspt_Admin
             Bspt_Options::set("webhook_secret", "");
             Bspt_Options::set("connection_id", "");
             Bspt_Options::set("tenant_id", "");
+            Bspt_Options::set("sync_engine", "push");
         }
     }
 
@@ -603,6 +631,7 @@ class Bspt_Admin
             Bspt_Options::set("webhook_secret", "");
             Bspt_Options::set("webhook_id", "");
             Bspt_Options::set("tenant_id", "");
+            Bspt_Options::set("sync_engine", "push");
 
             add_settings_error(
                 "bspt_api_key",
@@ -739,7 +768,9 @@ class Bspt_Admin
         Bspt_Sync::bulk_sync();
 
         wp_send_json_success([
-            "message" => __("Connected successfully.", "botspot"),
+            "message" => Bspt_Sync::on_core_engine()
+                ? __("Connected. bot.spot reads your published content itself.", "botspot")
+                : __("Connected successfully.", "botspot"),
             "connection_id" => Bspt_Options::get("connection_id"),
         ]);
     }
@@ -908,64 +939,72 @@ class Bspt_Admin
         }
 
         // ---------- Sync ----------
-        // Look for any post synced in the last 24h without a current error
-        $recent_synced = get_posts([
-            "post_type" => "any",
-            "post_status" => "publish",
-            "posts_per_page" => 1,
-            "fields" => "ids",
-            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, bounded lookup (posts_per_page => 1) used only for an admin status indicator, not a listing query.
-            "meta_query" => [
-                [
-                    "key" => "_bspt_sync_status",
-                    "value" => "synced",
-                    "compare" => "=",
-                ],
-                [
-                    // _bspt_last_synced_at is always written with current_time("mysql")
-                    // (site-local time, see Bspt_Sync), so the comparison threshold
-                    // must also be site-local — gmdate() here would silently skew the
-                    // "recent" window by the site's UTC offset.
-                    "key" => "_bspt_last_synced_at",
-                    "value" => gmdate("Y-m-d H:i:s", current_time("timestamp") - DAY_IN_SECONDS),
-                    "compare" => ">=",
-                    "type" => "DATETIME",
-                ],
-            ],
-        ]);
-        $recent_errors = get_posts([
-            "post_type" => "any",
-            "post_status" => "publish",
-            "posts_per_page" => 1,
-            "fields" => "ids",
-            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, bounded lookup (posts_per_page => 1) used only for an admin status indicator, not a listing query.
-            "meta_query" => [
-                [
-                    "key" => "_bspt_sync_status",
-                    "value" => "error",
-                    "compare" => "=",
-                ],
-            ],
-        ]);
-
-        if (!empty($recent_errors)) {
-            $sync = [
-                "status" => "error",
-                "label" => __("Sync errors", "botspot"),
-                "detail" => __("Some posts failed to sync.", "botspot"),
-            ];
-        } elseif (!empty($recent_synced)) {
+        if (Bspt_Sync::on_core_engine()) {
             $sync = [
                 "status" => "ok",
-                "label" => __("Synced", "botspot"),
-                "detail" => __("Content synced within 24 hours.", "botspot"),
+                "label" => __("Scheduled", "botspot"),
+                "detail" => __("bot.spot reads your published content itself, on a schedule.", "botspot"),
             ];
         } else {
-            $sync = [
-                "status" => "ok",
-                "label" => __("Ready", "botspot"),
-                "detail" => __("No syncs yet. Use Force Re-Sync to start.", "botspot"),
-            ];
+            // Look for any post synced in the last 24h without a current error
+            $recent_synced = get_posts([
+                "post_type" => "any",
+                "post_status" => "publish",
+                "posts_per_page" => 1,
+                "fields" => "ids",
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, bounded lookup (posts_per_page => 1) used only for an admin status indicator, not a listing query.
+                "meta_query" => [
+                    [
+                        "key" => "_bspt_sync_status",
+                        "value" => "synced",
+                        "compare" => "=",
+                    ],
+                    [
+                        // _bspt_last_synced_at is always written with current_time("mysql")
+                        // (site-local time, see Bspt_Sync), so the comparison threshold
+                        // must also be site-local — gmdate() here would silently skew the
+                        // "recent" window by the site's UTC offset.
+                        "key" => "_bspt_last_synced_at",
+                        "value" => gmdate("Y-m-d H:i:s", current_time("timestamp") - DAY_IN_SECONDS),
+                        "compare" => ">=",
+                        "type" => "DATETIME",
+                    ],
+                ],
+            ]);
+            $recent_errors = get_posts([
+                "post_type" => "any",
+                "post_status" => "publish",
+                "posts_per_page" => 1,
+                "fields" => "ids",
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, bounded lookup (posts_per_page => 1) used only for an admin status indicator, not a listing query.
+                "meta_query" => [
+                    [
+                        "key" => "_bspt_sync_status",
+                        "value" => "error",
+                        "compare" => "=",
+                    ],
+                ],
+            ]);
+
+            if (!empty($recent_errors)) {
+                $sync = [
+                    "status" => "error",
+                    "label" => __("Sync errors", "botspot"),
+                    "detail" => __("Some posts failed to sync.", "botspot"),
+                ];
+            } elseif (!empty($recent_synced)) {
+                $sync = [
+                    "status" => "ok",
+                    "label" => __("Synced", "botspot"),
+                    "detail" => __("Content synced within 24 hours.", "botspot"),
+                ];
+            } else {
+                $sync = [
+                    "status" => "ok",
+                    "label" => __("Ready", "botspot"),
+                    "detail" => __("No syncs yet. Use Force Re-Sync to start.", "botspot"),
+                ];
+            }
         }
 
         // ---------- Runtime ----------
@@ -1056,20 +1095,24 @@ class Bspt_Admin
 
         if ($result === false) {
             wp_send_json_error([
-                "message" => __("Sync failed - check API key configuration.", "botspot"),
+                "message" => __("Sync failed. Check error log for details.", "botspot"),
             ]);
             return;
         }
+
+        $message = Bspt_Sync::on_core_engine()
+            ? __("bot.spot will read all your published content itself in the next few minutes.", "botspot")
+            : sprintf(
+                /* translators: 1: number of posts synced */
+                __("Resync complete: %d post(s) synced.", "botspot"),
+                $result["processed"] ?? 0
+            );
 
         wp_send_json_success([
             "queued" => $result["processed"] ?? 0,
             "total" => $result["total"] ?? count($post_ids),
             "failed" => $result["failed"] ?? 0,
-            "message" => sprintf(
-                /* translators: 1: number of posts synced */
-                __("Resync complete: %d post(s) synced.", "botspot"),
-                $result["processed"] ?? 0
-            ),
+            "message" => $message,
         ]);
     }
 

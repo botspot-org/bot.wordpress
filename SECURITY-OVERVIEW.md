@@ -88,10 +88,12 @@ appendix subtree.
 
 ## Inbound requests from the platform
 
-The plugin exposes four REST routes that the platform calls: three aliases of a
+The plugin exposes six REST routes that the platform calls: three aliases of a
 fan-in webhook endpoint (`bspt/v1/webhook`, `botspot/v1/webhook`,
-`botspot-wp/v1/webhook`) and a resync trigger (`bspt/v1/trigger-resync`). All
-four accept unauthenticated HTTP at the WordPress level and authenticate in the
+`botspot-wp/v1/webhook`), a resync trigger (`bspt/v1/trigger-resync`), and the
+two routes of the platform's pull sync (`bspt/v1/sync/inventory` and
+`bspt/v1/sync/render`). All
+six accept unauthenticated HTTP at the WordPress level and authenticate in the
 handler instead, by verifying an HMAC-SHA256 signature computed over the
 request timestamp and raw body (`<timestamp>.<body>`) with the site's webhook
 secret. The signature arrives as `X-Webhook-Signature-V2: sha256=<hex>`, the
@@ -104,6 +106,7 @@ these routes is refused.
 These endpoints trigger a content resync, apply platform-pushed display
 settings, invalidate cached appendix entries, and record enrichment status.
 None of them write post content, create users, or execute site code.
+The two sync routes read and return published posts of the selected post types; they never return a draft, private or password-protected post.
 
 ## Credentials on your site
 
